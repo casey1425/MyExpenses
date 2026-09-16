@@ -1,0 +1,167 @@
+@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>지출 기록 | MyExpenses</PageTitle>
+
+<div class="expense-page">
+    <header class="page-heading">
+        <div>
+            <p class="eyebrow">MY EXPENSES</p>
+            <h1>지출 기록</h1>
+            <p class="subtitle">오늘의 지출을 간편하게 기록하고 확인해 보세요.</p>
+        </div>
+        <div class="today-chip">@DateTime.Today.ToString("yyyy년 M월 d일")</div>
+    </header>
+
+    <section class="summary-grid" aria-label="지출 요약">
+        <div class="summary-card primary-summary">
+            <span class="summary-label">이번 달 지출</span>
+            <strong>@MonthlyTotal.ToString("N0")<small>원</small></strong>
+            <span class="summary-note">@DateTime.Today.ToString("yyyy년 M월") 기준</span>
+        </div>
+        <div class="summary-card">
+            <span class="summary-label">기록한 지출</span>
+            <strong>@expenses.Count<small>건</small></strong>
+            <span class="summary-note">전체 기록</span>
+        </div>
+    </section>
+
+    <div class="content-grid">
+        <section class="panel entry-panel" aria-labelledby="entry-title">
+            <div class="panel-heading">
+                <div>
+                    <p class="section-kicker">NEW ENTRY</p>
+                    <h2 id="entry-title">새 지출 추가</h2>
+                </div>
+            </div>
+
+            <form @onsubmit="AddExpense" @onsubmit:preventDefault>
+                <div class="field-grid">
+                    <div class="field">
+                        <label for="expense-date">날짜</label>
+                        <input id="expense-date" type="date" @bind="expenseDate" required />
+                    </div>
+                    <div class="field">
+                        <label for="expense-amount">금액</label>
+                        <div class="amount-input">
+                            <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @bind="amount" required />
+                            <span>원</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label for="expense-category">카테고리</label>
+                    <select id="expense-category" @bind="category">
+                        @foreach (var option in categories)
+                        {
+                            <option value="@option">@option</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="expense-memo">메모 <span class="optional">선택</span></label>
+                    <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" @bind="memo" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <p class="form-error" role="alert">@errorMessage</p>
+                }
+
+                <button class="add-button" type="submit">+ 지출 기록하기</button>
+            </form>
+        </section>
+
+        <section class="panel history-panel" aria-labelledby="history-title">
+            <div class="panel-heading history-heading">
+                <div>
+                    <p class="section-kicker">HISTORY</p>
+                    <h2 id="history-title">지출 내역</h2>
+                </div>
+                <span class="count-badge">@(expenses.Count)건</span>
+            </div>
+
+            @if (expenses.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-icon" aria-hidden="true">↗</div>
+                    <h3>아직 기록이 없어요</h3>
+                    <p>첫 지출을 입력하면 이곳에 내역이 표시됩니다.</p>
+                </div>
+            }
+            else
+            {
+                <div class="expense-list">
+                    @foreach (var expense in expenses.OrderByDescending(item => item.Date).ThenByDescending(item => item.Id))
+                    {
+                        <div class="expense-row" @key="expense.Id">
+                            <div class="category-icon" aria-hidden="true">@CategoryIcon(expense.Category)</div>
+                            <div class="expense-details">
+                                <strong>@expense.Category</strong>
+                                <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
+                            </div>
+                            <div class="expense-actions">
+                                <strong>-@expense.Amount.ToString("N0")원</strong>
+                                <button type="button" class="delete-button" @onclick="() => DeleteExpense(expense.Id)" aria-label="@expense.Category 지출 삭제">삭제</button>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    private readonly string[] categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
+    private readonly List<ExpenseEntry> expenses = [];
+    private DateTime expenseDate = DateTime.Today;
+    private decimal amount;
+    private string category = "식비";
+    private string memo = string.Empty;
+    private string? errorMessage;
+    private int nextId = 1;
+
+    private decimal MonthlyTotal => expenses
+        .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
+        .Sum(item => item.Amount);
+
+    private void AddExpense()
+    {
+        if (amount <= 0 || amount != decimal.Truncate(amount))
+        {
+            errorMessage = "금액은 1원 이상의 정수로 입력해 주세요.";
+            return;
+        }
+
+        if (!categories.Contains(category))
+        {
+            errorMessage = "카테고리를 선택해 주세요.";
+            return;
+        }
+
+        expenses.Add(new ExpenseEntry(nextId++, expenseDate.Date, amount, category, memo.Trim()));
+        amount = 0;
+        memo = string.Empty;
+        errorMessage = null;
+    }
+
+    private void DeleteExpense(int id)
+    {
+        expenses.RemoveAll(item => item.Id == id);
+    }
+
+    private static string CategoryIcon(string value) => value switch
+    {
+        "식비" => "🍽",
+        "카페" => "☕",
+        "교통" => "🚆",
+        "쇼핑" => "🛍",
+        "생활" => "🏠",
+        _ => "▦"
+    };
+
+    private sealed record ExpenseEntry(int Id, DateTime Date, decimal Amount, string Category, string Memo);
+}
