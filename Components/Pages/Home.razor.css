@@ -142,6 +142,84 @@ h1 {
     gap: .75rem;
 }
 
+.filter-form {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) minmax(145px, 1fr) auto;
+    gap: .65rem;
+    align-items: end;
+    margin-bottom: 1.1rem;
+    padding: .9rem;
+    border: 1px solid #e4eaf2;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    min-width: 0;
+}
+
+.filter-field label {
+    color: #40516a;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.filter-field input, .filter-field select {
+    width: 100%;
+    min-height: 40px;
+    padding: .5rem .65rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+    font-size: .85rem;
+}
+
+.filter-field input:focus, .filter-field select:focus {
+    border-color: #4279ba;
+    outline: none;
+    box-shadow: 0 0 0 3px #4279ba20;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: .4rem;
+}
+
+.filter-apply, .filter-reset {
+    min-height: 40px;
+    padding: .45rem .75rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.filter-apply {
+    border: 1px solid #285889;
+    background: #285889;
+    color: #fff;
+}
+
+.filter-apply:hover {
+    background: #1b426e;
+}
+
+.filter-reset {
+    border: 1px solid #d8dfe7;
+    background: #fff;
+    color: #4d5d70;
+}
+
+.filter-hint {
+    margin: -.25rem 0 1rem;
+    color: #7b8b9d;
+    font-size: .78rem;
+}
+
 .delete-all-trigger {
     padding: .25rem 0;
     border: 0;
@@ -288,6 +366,12 @@ h1 {
     font-size: .86rem;
 }
 
+.save-notice {
+    margin: 0 0 .75rem;
+    color: #246a4d;
+    font-size: .86rem;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -395,6 +479,11 @@ h1 {
     .content-grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 1100px) {
+    .filter-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .filter-buttons { grid-column: 1 / -1; }
+}
+
 @media (max-width: 600px) {
     .page-heading { align-items: flex-start; flex-direction: column; }
     .summary-grid { gap: .7rem; }
@@ -402,4 +491,6 @@ h1 {
     .summary-card strong { font-size: 1.5rem; }
     .panel { padding: 1.2rem; }
     .field-grid { grid-template-columns: 1fr; gap: 0; }
+    .filter-form { grid-template-columns: 1fr; }
+    .filter-buttons { grid-column: auto; }
 }

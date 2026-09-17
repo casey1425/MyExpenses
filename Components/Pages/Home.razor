@@ -1,5 +1,6 @@
 @page "/"
 @rendermode InteractiveServer
+@using System.Globalization
 @using Microsoft.EntityFrameworkCore
 @using MyExpenses.Data
 @inject IDbContextFactory<ExpensesDbContext> DbFactory
@@ -19,14 +20,14 @@
 
     <section class="summary-grid" aria-label="지출 요약">
         <div class="summary-card primary-summary">
-            <span class="summary-label">이번 달 지출</span>
-            <strong>@MonthlyTotal.ToString("N0")<small>원</small></strong>
-            <span class="summary-note">@DateTime.Today.ToString("yyyy년 M월") 기준</span>
+            <span class="summary-label">@(activeFilter.IsActive ? "필터 결과 합계" : "이번 달 지출")</span>
+            <strong>@((activeFilter.IsActive ? FilteredTotal : MonthlyTotal).ToString("N0"))<small>원</small></strong>
+            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : $"{DateTime.Today:yyyy년 M월} 기준")</span>
         </div>
         <div class="summary-card">
-            <span class="summary-label">기록한 지출</span>
+            <span class="summary-label">@(activeFilter.IsActive ? "조회된 지출" : "기록한 지출")</span>
             <strong>@expenses.Count<small>건</small></strong>
-            <span class="summary-note">전체 기록</span>
+            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : "전체 기록")</span>
         </div>
     </section>
 
@@ -74,6 +75,11 @@
                     <p class="form-error" role="alert">@errorMessage</p>
                 }
 
+                @if (!string.IsNullOrEmpty(saveNotice))
+                {
+                    <p class="save-notice" role="status">@saveNotice</p>
+                }
+
                 <button class="add-button" type="submit">+ 지출 기록하기</button>
             </form>
         </section>
@@ -86,14 +92,45 @@
                 </div>
                 <div class="history-actions">
                     <span class="count-badge">@(expenses.Count)건</span>
-                    @if (expenses.Count > 0)
+                    @if (expenses.Count > 0 && !activeFilter.IsActive)
                     {
                         <button type="button" class="delete-all-trigger" @onclick="ShowDeleteAllConfirmation">전체 삭제</button>
                     }
                 </div>
             </div>
 
-            @if (showDeleteAllConfirmation && expenses.Count > 0)
+            <form class="filter-form" @onsubmit="ApplyFiltersAsync" @onsubmit:preventDefault>
+                <div class="filter-field">
+                    <label for="filter-month">월</label>
+                    <input id="filter-month" type="month" value="@filterMonthInput" @onchange="OnFilterMonthChanged" />
+                </div>
+                <div class="filter-field">
+                    <label for="filter-category">카테고리</label>
+                    <select id="filter-category" @bind="filterCategoryInput">
+                        <option value="">전체 카테고리</option>
+                        @foreach (var option in categories)
+                        {
+                            <option value="@option">@option</option>
+                        }
+                    </select>
+                </div>
+                <div class="filter-buttons">
+                    <button type="submit" class="filter-apply">조회</button>
+                    <button type="button" class="filter-reset" @onclick="ResetFiltersAsync">초기화</button>
+                </div>
+            </form>
+
+            @if (!string.IsNullOrEmpty(filterError))
+            {
+                <p class="form-error" role="alert">@filterError</p>
+            }
+
+            @if (activeFilter.IsActive)
+            {
+                <p class="filter-hint">전체 삭제는 필터를 초기화한 후 사용할 수 있습니다.</p>
+            }
+
+            @if (showDeleteAllConfirmation && expenses.Count > 0 && !activeFilter.IsActive)
             {
                 <div class="delete-confirm" role="alert">
                     <strong>모든 지출 기록을 삭제할까요?</strong>
@@ -114,8 +151,8 @@
             {
                 <div class="empty-state">
                     <div class="empty-icon" aria-hidden="true">↗</div>
-                    <h3>아직 기록이 없어요</h3>
-                    <p>첫 지출을 입력하면 이곳에 내역이 표시됩니다.</p>
+                    <h3>@(activeFilter.IsActive ? "조건에 맞는 기록이 없어요" : "아직 기록이 없어요")</h3>
+                    <p>@(activeFilter.IsActive ? "다른 월이나 카테고리를 선택해 보세요." : "첫 지출을 입력하면 이곳에 내역이 표시됩니다.")</p>
                 </div>
             }
             else
@@ -149,12 +186,26 @@
     private string category = "식비";
     private string memo = string.Empty;
     private string? errorMessage;
+    private string? saveNotice;
     private string? deleteError;
+    private string? filterError;
+    private string filterMonthInput = string.Empty;
+    private string filterCategoryInput = string.Empty;
+    private ExpenseFilter activeFilter = new();
     private bool showDeleteAllConfirmation;
     private bool isDeletingAll;
+    private long FilteredTotal => expenses.Sum(item => item.Amount);
     private long MonthlyTotal => expenses
         .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
         .Sum(item => item.Amount);
+    private string FilterDescription
+    {
+        get
+        {
+            var period = activeFilter.Month is DateTime month ? month.ToString("yyyy년 M월") : "전체 기간";
+            return activeFilter.Category is string category ? $"{period} · {category}" : period;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,10 +223,63 @@
     private async Task LoadExpensesAsync()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        expenses = await db.Expenses.AsNoTracking()
+        expenses = await activeFilter.ApplyTo(db.Expenses.AsNoTracking())
             .OrderByDescending(item => item.Date)
             .ThenByDescending(item => item.Id)
             .ToListAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        DateTime? month = null;
+        if (!string.IsNullOrWhiteSpace(filterMonthInput))
+        {
+            if (!DateTime.TryParseExact(filterMonthInput, "yyyy-MM", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var parsedMonth))
+            {
+                filterError = "조회할 월을 다시 선택해 주세요.";
+                return;
+            }
+
+            month = new DateTime(parsedMonth.Year, parsedMonth.Month, 1);
+        }
+
+        if (!string.IsNullOrEmpty(filterCategoryInput) && !categories.Contains(filterCategoryInput))
+        {
+            filterError = "조회할 카테고리를 다시 선택해 주세요.";
+            return;
+        }
+
+        var previousFilter = activeFilter;
+        activeFilter = new ExpenseFilter(month,
+            string.IsNullOrEmpty(filterCategoryInput) ? null : filterCategoryInput);
+
+        try
+        {
+            await LoadExpensesAsync();
+            filterError = null;
+            deleteError = null;
+            saveNotice = null;
+            showDeleteAllConfirmation = false;
+        }
+        catch (Exception ex)
+        {
+            activeFilter = previousFilter;
+            Logger.LogError(ex, "지출 내역 필터 조회에 실패했습니다.");
+            filterError = "지출 내역을 조회하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    }
+
+    private async Task ResetFiltersAsync()
+    {
+        filterMonthInput = string.Empty;
+        filterCategoryInput = string.Empty;
+        await ApplyFiltersAsync();
+    }
+
+    private void OnFilterMonthChanged(ChangeEventArgs args)
+    {
+        filterMonthInput = args.Value?.ToString() ?? string.Empty;
     }
 
     private async Task AddExpenseAsync()
@@ -195,19 +299,23 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            db.Expenses.Add(new ExpenseRecord
+            var newExpense = new ExpenseRecord
             {
                 Date = expenseDate.Date,
                 Amount = amount,
                 Category = category,
                 Memo = memo.Trim()
-            });
+            };
+            db.Expenses.Add(newExpense);
             await db.SaveChangesAsync();
             await LoadExpensesAsync();
 
             amount = 0;
             memo = string.Empty;
             errorMessage = null;
+            saveNotice = activeFilter.IsActive && !activeFilter.Matches(newExpense)
+                ? "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."
+                : null;
             showDeleteAllConfirmation = false;
         }
         catch (Exception ex)
@@ -244,6 +352,9 @@
 
     private void ShowDeleteAllConfirmation()
     {
+        if (activeFilter.IsActive || expenses.Count == 0)
+            return;
+
         deleteError = null;
         showDeleteAllConfirmation = true;
     }
@@ -255,7 +366,7 @@
 
     private async Task DeleteAllExpensesAsync()
     {
-        if (!showDeleteAllConfirmation || isDeletingAll || expenses.Count == 0)
+        if (!showDeleteAllConfirmation || isDeletingAll || activeFilter.IsActive || expenses.Count == 0)
             return;
 
         isDeletingAll = true;
