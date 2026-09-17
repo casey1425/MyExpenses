@@ -1,5 +1,9 @@
 @page "/"
 @rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using MyExpenses.Data
+@inject IDbContextFactory<ExpensesDbContext> DbFactory
+@inject ILogger<Home> Logger
 
 <PageTitle>지출 기록 | MyExpenses</PageTitle>
 
@@ -35,7 +39,7 @@
                 </div>
             </div>
 
-            <form @onsubmit="AddExpense" @onsubmit:preventDefault>
+            <form @onsubmit="AddExpenseAsync" @onsubmit:preventDefault>
                 <div class="field-grid">
                     <div class="field">
                         <label for="expense-date">날짜</label>
@@ -80,8 +84,31 @@
                     <p class="section-kicker">HISTORY</p>
                     <h2 id="history-title">지출 내역</h2>
                 </div>
-                <span class="count-badge">@(expenses.Count)건</span>
+                <div class="history-actions">
+                    <span class="count-badge">@(expenses.Count)건</span>
+                    @if (expenses.Count > 0)
+                    {
+                        <button type="button" class="delete-all-trigger" @onclick="ShowDeleteAllConfirmation">전체 삭제</button>
+                    }
+                </div>
             </div>
+
+            @if (showDeleteAllConfirmation && expenses.Count > 0)
+            {
+                <div class="delete-confirm" role="alert">
+                    <strong>모든 지출 기록을 삭제할까요?</strong>
+                    <p>저장된 @(expenses.Count)건을 모두 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                    <div class="confirm-actions">
+                        <button type="button" class="cancel-button" @onclick="CancelDeleteAll" disabled="@isDeletingAll">취소</button>
+                        <button type="button" class="confirm-delete-button" @onclick="DeleteAllExpensesAsync" disabled="@isDeletingAll">@(isDeletingAll ? "삭제 중..." : "모두 삭제")</button>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(deleteError))
+            {
+                <p class="form-error" role="alert">@deleteError</p>
+            }
 
             @if (expenses.Count == 0)
             {
@@ -104,7 +131,7 @@
                             </div>
                             <div class="expense-actions">
                                 <strong>-@expense.Amount.ToString("N0")원</strong>
-                                <button type="button" class="delete-button" @onclick="() => DeleteExpense(expense.Id)" aria-label="@expense.Category 지출 삭제">삭제</button>
+                                <button type="button" class="delete-button" @onclick="() => DeleteExpenseAsync(expense.Id)" aria-label="@expense.Category 지출 삭제">삭제</button>
                             </div>
                         </div>
                     }
@@ -116,21 +143,44 @@
 
 @code {
     private readonly string[] categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
-    private readonly List<ExpenseEntry> expenses = [];
+    private List<ExpenseRecord> expenses = [];
     private DateTime expenseDate = DateTime.Today;
-    private decimal amount;
+    private long amount;
     private string category = "식비";
     private string memo = string.Empty;
     private string? errorMessage;
-    private int nextId = 1;
-
-    private decimal MonthlyTotal => expenses
+    private string? deleteError;
+    private bool showDeleteAllConfirmation;
+    private bool isDeletingAll;
+    private long MonthlyTotal => expenses
         .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
         .Sum(item => item.Amount);
 
-    private void AddExpense()
+    protected override async Task OnInitializedAsync()
     {
-        if (amount <= 0 || amount != decimal.Truncate(amount))
+        try
+        {
+            await LoadExpensesAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "지출 내역을 불러오지 못했습니다.");
+            errorMessage = "저장된 지출 내역을 불러오지 못했습니다. 앱을 다시 실행해 주세요.";
+        }
+    }
+
+    private async Task LoadExpensesAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        expenses = await db.Expenses.AsNoTracking()
+            .OrderByDescending(item => item.Date)
+            .ThenByDescending(item => item.Id)
+            .ToListAsync();
+    }
+
+    private async Task AddExpenseAsync()
+    {
+        if (amount <= 0)
         {
             errorMessage = "금액은 1원 이상의 정수로 입력해 주세요.";
             return;
@@ -142,15 +192,90 @@
             return;
         }
 
-        expenses.Add(new ExpenseEntry(nextId++, expenseDate.Date, amount, category, memo.Trim()));
-        amount = 0;
-        memo = string.Empty;
-        errorMessage = null;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            db.Expenses.Add(new ExpenseRecord
+            {
+                Date = expenseDate.Date,
+                Amount = amount,
+                Category = category,
+                Memo = memo.Trim()
+            });
+            await db.SaveChangesAsync();
+            await LoadExpensesAsync();
+
+            amount = 0;
+            memo = string.Empty;
+            errorMessage = null;
+            showDeleteAllConfirmation = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "지출 내역을 저장하지 못했습니다.");
+            errorMessage = "지출 내역을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
     }
 
-    private void DeleteExpense(int id)
+    private async Task DeleteExpenseAsync(int id)
     {
-        expenses.RemoveAll(item => item.Id == id);
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var expense = await db.Expenses.FindAsync(id);
+            if (expense is null)
+            {
+                await LoadExpensesAsync();
+                return;
+            }
+
+            db.Expenses.Remove(expense);
+            await db.SaveChangesAsync();
+            await LoadExpensesAsync();
+            deleteError = null;
+            showDeleteAllConfirmation = false;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "지출 내역을 삭제하지 못했습니다.");
+            deleteError = "지출 내역을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    }
+
+    private void ShowDeleteAllConfirmation()
+    {
+        deleteError = null;
+        showDeleteAllConfirmation = true;
+    }
+
+    private void CancelDeleteAll()
+    {
+        showDeleteAllConfirmation = false;
+    }
+
+    private async Task DeleteAllExpensesAsync()
+    {
+        if (!showDeleteAllConfirmation || isDeletingAll || expenses.Count == 0)
+            return;
+
+        isDeletingAll = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            await db.Expenses.ExecuteDeleteAsync();
+            await LoadExpensesAsync();
+            showDeleteAllConfirmation = false;
+            deleteError = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "전체 지출 내역을 삭제하지 못했습니다.");
+            deleteError = "전체 삭제에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+        finally
+        {
+            isDeletingAll = false;
+        }
     }
 
     private static string CategoryIcon(string value) => value switch
@@ -162,6 +287,4 @@
         "생활" => "🏠",
         _ => "▦"
     };
-
-    private sealed record ExpenseEntry(int Id, DateTime Date, decimal Amount, string Category, string Memo);
 }

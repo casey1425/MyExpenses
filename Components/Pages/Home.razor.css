@@ -136,6 +136,79 @@ h1 {
     font-weight: 700;
 }
 
+.history-actions {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.delete-all-trigger {
+    padding: .25rem 0;
+    border: 0;
+    background: transparent;
+    color: #a54a51;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.delete-all-trigger:hover {
+    color: #842e36;
+    text-decoration: underline;
+}
+
+.delete-confirm {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #f0c9cc;
+    border-radius: 12px;
+    background: #fff7f7;
+    color: #75363c;
+}
+
+.delete-confirm strong {
+    font-size: .92rem;
+}
+
+.delete-confirm p {
+    margin: .4rem 0 .9rem;
+    font-size: .82rem;
+}
+
+.confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+}
+
+.cancel-button, .confirm-delete-button {
+    min-height: 36px;
+    padding: .35rem .85rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.cancel-button {
+    border: 1px solid #d8dfe7;
+    background: #fff;
+    color: #4d5d70;
+}
+
+.confirm-delete-button {
+    border: 1px solid #a73e48;
+    background: #a73e48;
+    color: #fff;
+}
+
+.confirm-delete-button:hover:not(:disabled) {
+    background: #8f3039;
+}
+
+.cancel-button:disabled, .confirm-delete-button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
 .field-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
