@@ -159,6 +159,11 @@
                 </div>
             </form>
 
+            <div class="export-actions" aria-label="CSV 내보내기">
+                <a class="export-link" href="@FilteredExportUrl">현재 조회 결과 CSV</a>
+                <a class="export-link" href="/export/expenses.csv?scope=all">전체 기록 CSV</a>
+            </div>
+
             @if (!string.IsNullOrEmpty(filterError))
             {
                 <p class="form-error" role="alert">@filterError</p>
@@ -311,6 +316,18 @@
         {
             var period = activeFilter.Month is DateTime month ? month.ToString("yyyy년 M월") : "전체 기간";
             return activeFilter.Category is string category ? $"{period} · {category}" : period;
+        }
+    }
+    private string FilteredExportUrl
+    {
+        get
+        {
+            var url = "/export/expenses.csv?scope=filtered";
+            if (activeFilter.Month is DateTime month)
+                url += $"&month={month.ToString("yyyy-MM", CultureInfo.InvariantCulture)}";
+            if (activeFilter.Category is string category)
+                url += $"&category={Uri.EscapeDataString(category)}";
+            return url;
         }
     }
 

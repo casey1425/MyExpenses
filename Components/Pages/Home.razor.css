@@ -313,6 +313,25 @@ h1 {
     color: #4d5d70;
 }
 
+.export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    margin: -.35rem 0 1.1rem;
+}
+
+.export-link {
+    color: #285889;
+    font-size: .82rem;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.export-link:hover {
+    color: #1b426e;
+}
+
 .filter-hint {
     margin: -.25rem 0 1rem;
     color: #7b8b9d;
