@@ -372,6 +372,12 @@ h1 {
     font-size: .86rem;
 }
 
+.history-notice {
+    margin: 0 0 .9rem;
+    color: #246a4d;
+    font-size: .86rem;
+}
+
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -457,6 +463,77 @@ h1 {
     flex-shrink: 0;
 }
 
+.row-actions {
+    display: flex;
+    gap: .7rem;
+}
+
+.edit-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #386b9e;
+    font-size: .76rem;
+}
+
+.edit-button:hover {
+    color: #214f7e;
+    text-decoration: underline;
+}
+
+.edit-form {
+    margin: 0 0 1rem 3.55rem;
+    padding: 1rem;
+    border: 1px solid #dce8f4;
+    border-radius: 12px;
+    background: #f8fbfe;
+}
+
+.edit-form h3 {
+    margin: 0 0 1rem;
+    font-size: .96rem;
+    font-weight: 700;
+}
+
+.edit-form .field {
+    margin-bottom: .8rem;
+}
+
+.edit-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+}
+
+.edit-cancel, .edit-save {
+    min-height: 38px;
+    padding: .4rem .85rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.edit-cancel {
+    border: 1px solid #d8dfe7;
+    background: #fff;
+    color: #4d5d70;
+}
+
+.edit-save {
+    border: 1px solid #285889;
+    background: #285889;
+    color: #fff;
+}
+
+.edit-save:hover:not(:disabled) {
+    background: #1b426e;
+}
+
+.edit-cancel:disabled, .edit-save:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
 .delete-button {
     padding: 0;
     border: 0;
@@ -493,4 +570,5 @@ h1 {
     .field-grid { grid-template-columns: 1fr; gap: 0; }
     .filter-form { grid-template-columns: 1fr; }
     .filter-buttons { grid-column: auto; }
+    .edit-form { margin-left: 0; }
 }

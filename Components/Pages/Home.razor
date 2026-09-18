@@ -92,7 +92,7 @@
                 </div>
                 <div class="history-actions">
                     <span class="count-badge">@(expenses.Count)건</span>
-                    @if (expenses.Count > 0 && !activeFilter.IsActive)
+                    @if (expenses.Count > 0 && !activeFilter.IsActive && editingId is null)
                     {
                         <button type="button" class="delete-all-trigger" @onclick="ShowDeleteAllConfirmation">전체 삭제</button>
                     }
@@ -147,6 +147,11 @@
                 <p class="form-error" role="alert">@deleteError</p>
             }
 
+            @if (!string.IsNullOrEmpty(historyNotice))
+            {
+                <p class="history-notice" role="status">@historyNotice</p>
+            }
+
             @if (expenses.Count == 0)
             {
                 <div class="empty-state">
@@ -160,16 +165,66 @@
                 <div class="expense-list">
                     @foreach (var expense in expenses.OrderByDescending(item => item.Date).ThenByDescending(item => item.Id))
                     {
-                        <div class="expense-row" @key="expense.Id">
-                            <div class="category-icon" aria-hidden="true">@CategoryIcon(expense.Category)</div>
-                            <div class="expense-details">
-                                <strong>@expense.Category</strong>
-                                <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
+                        <div class="expense-item" @key="expense.Id">
+                            <div class="expense-row">
+                                <div class="category-icon" aria-hidden="true">@CategoryIcon(expense.Category)</div>
+                                <div class="expense-details">
+                                    <strong>@expense.Category</strong>
+                                    <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
+                                </div>
+                                <div class="expense-actions">
+                                    <strong>-@expense.Amount.ToString("N0")원</strong>
+                                    <div class="row-actions">
+                                        <button type="button" class="edit-button" @onclick="() => StartEdit(expense)" disabled="@isSavingEdit" aria-label="@expense.Category 지출 수정">수정</button>
+                                        <button type="button" class="delete-button" @onclick="() => DeleteExpenseAsync(expense.Id)" disabled="@isSavingEdit" aria-label="@expense.Category 지출 삭제">삭제</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="expense-actions">
-                                <strong>-@expense.Amount.ToString("N0")원</strong>
-                                <button type="button" class="delete-button" @onclick="() => DeleteExpenseAsync(expense.Id)" aria-label="@expense.Category 지출 삭제">삭제</button>
-                            </div>
+
+                            @if (editingId == expense.Id)
+                            {
+                                <form class="edit-form" @onsubmit="SaveEditAsync" @onsubmit:preventDefault>
+                                    <h3>지출 수정</h3>
+                                    <div class="field-grid">
+                                        <div class="field">
+                                            <label for="edit-date">날짜</label>
+                                            <input id="edit-date" type="date" @bind="editDate" required />
+                                        </div>
+                                        <div class="field">
+                                            <label for="edit-amount">금액</label>
+                                            <div class="amount-input">
+                                                <input id="edit-amount" type="number" min="1" step="1" @bind="editAmount" required />
+                                                <span>원</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="field-grid">
+                                        <div class="field">
+                                            <label for="edit-category">카테고리</label>
+                                            <select id="edit-category" @bind="editCategory">
+                                                @foreach (var option in categories)
+                                                {
+                                                    <option value="@option">@option</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label for="edit-memo">메모 <span class="optional">선택</span></label>
+                                            <input id="edit-memo" type="text" maxlength="100" @bind="editMemo" />
+                                        </div>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(editError))
+                                    {
+                                        <p class="form-error" role="alert">@editError</p>
+                                    }
+
+                                    <div class="edit-form-actions">
+                                        <button type="button" class="edit-cancel" @onclick="CancelEdit" disabled="@isSavingEdit">취소</button>
+                                        <button type="submit" class="edit-save" disabled="@isSavingEdit">@(isSavingEdit ? "저장 중..." : "변경 저장")</button>
+                                    </div>
+                                </form>
+                            }
                         </div>
                     }
                 </div>
@@ -188,12 +243,20 @@
     private string? errorMessage;
     private string? saveNotice;
     private string? deleteError;
+    private string? historyNotice;
     private string? filterError;
     private string filterMonthInput = string.Empty;
     private string filterCategoryInput = string.Empty;
     private ExpenseFilter activeFilter = new();
     private bool showDeleteAllConfirmation;
     private bool isDeletingAll;
+    private int? editingId;
+    private DateTime editDate = DateTime.Today;
+    private long editAmount;
+    private string editCategory = "식비";
+    private string editMemo = string.Empty;
+    private string? editError;
+    private bool isSavingEdit;
     private long FilteredTotal => expenses.Sum(item => item.Amount);
     private long MonthlyTotal => expenses
         .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
@@ -260,7 +323,9 @@
             filterError = null;
             deleteError = null;
             saveNotice = null;
+            historyNotice = null;
             showDeleteAllConfirmation = false;
+            CancelEdit();
         }
         catch (Exception ex)
         {
@@ -325,6 +390,81 @@
         }
     }
 
+    private void StartEdit(ExpenseRecord expense)
+    {
+        if (isSavingEdit)
+            return;
+
+        editingId = expense.Id;
+        editDate = expense.Date;
+        editAmount = expense.Amount;
+        editCategory = expense.Category;
+        editMemo = expense.Memo;
+        editError = null;
+        historyNotice = null;
+        deleteError = null;
+        showDeleteAllConfirmation = false;
+    }
+
+    private void CancelEdit()
+    {
+        editingId = null;
+        editError = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (editingId is not int id || isSavingEdit)
+            return;
+
+        if (editDate == default || editAmount <= 0)
+        {
+            editError = "날짜와 1원 이상의 금액을 입력해 주세요.";
+            return;
+        }
+
+        if (!categories.Contains(editCategory) || editMemo.Length > 100)
+        {
+            editError = "카테고리와 메모를 다시 확인해 주세요.";
+            return;
+        }
+
+        isSavingEdit = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var expense = await db.Expenses.FindAsync(id);
+            if (expense is null)
+            {
+                await LoadExpensesAsync();
+                CancelEdit();
+                historyNotice = "수정할 기록을 찾을 수 없어 목록을 새로고침했습니다.";
+                return;
+            }
+
+            expense.Date = editDate.Date;
+            expense.Amount = editAmount;
+            expense.Category = editCategory;
+            expense.Memo = editMemo.Trim();
+            await db.SaveChangesAsync();
+            await LoadExpensesAsync();
+
+            historyNotice = activeFilter.IsActive && !activeFilter.Matches(expense)
+                ? "수정했습니다. 변경된 기록은 현재 조회 조건에 맞지 않아 목록에서 보이지 않습니다."
+                : "지출 기록을 수정했습니다.";
+            CancelEdit();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "지출 내역을 수정하지 못했습니다.");
+            editError = "수정 결과를 확인하지 못했습니다. 새로고침 후 다시 확인해 주세요.";
+        }
+        finally
+        {
+            isSavingEdit = false;
+        }
+    }
+
     private async Task DeleteExpenseAsync(int id)
     {
         try
@@ -341,7 +481,10 @@
             await db.SaveChangesAsync();
             await LoadExpensesAsync();
             deleteError = null;
+            historyNotice = null;
             showDeleteAllConfirmation = false;
+            if (editingId == id)
+                CancelEdit();
         }
         catch (Exception ex)
         {
@@ -352,7 +495,7 @@
 
     private void ShowDeleteAllConfirmation()
     {
-        if (activeFilter.IsActive || expenses.Count == 0)
+        if (activeFilter.IsActive || expenses.Count == 0 || editingId is not null)
             return;
 
         deleteError = null;
@@ -366,7 +509,7 @@
 
     private async Task DeleteAllExpensesAsync()
     {
-        if (!showDeleteAllConfirmation || isDeletingAll || activeFilter.IsActive || expenses.Count == 0)
+        if (!showDeleteAllConfirmation || isDeletingAll || activeFilter.IsActive || editingId is not null || expenses.Count == 0)
             return;
 
         isDeletingAll = true;
@@ -377,6 +520,8 @@
             await LoadExpensesAsync();
             showDeleteAllConfirmation = false;
             deleteError = null;
+            historyNotice = null;
+            CancelEdit();
         }
         catch (Exception ex)
         {
