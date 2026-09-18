@@ -31,6 +31,45 @@
         </div>
     </section>
 
+    <section class="panel statistics-panel" aria-labelledby="statistics-title">
+        <div class="panel-heading statistics-heading">
+            <div>
+                <p class="section-kicker">SPENDING BREAKDOWN</p>
+                <h2 id="statistics-title">카테고리별 지출</h2>
+                <p class="statistics-period">@StatisticsPeriodLabel</p>
+            </div>
+            <strong class="statistics-total">@StatisticsTotal.ToString("N0")원</strong>
+        </div>
+
+        @if (categoryStatistics.Count == 0)
+        {
+            <p class="statistics-empty">@(activeFilter.IsActive ? "조회 조건에 맞는 지출이 없어요." : "이번 달에 기록된 지출이 없어요.")</p>
+        }
+        else
+        {
+            <div class="statistics-list">
+                @foreach (var statistic in categoryStatistics)
+                {
+                    <div class="statistic-row">
+                        <div class="statistic-header">
+                            <div class="statistic-name">
+                                <span class="statistic-icon" aria-hidden="true">@CategoryIcon(statistic.Category)</span>
+                                <strong>@statistic.Category <small>@(statistic.Count)건</small></strong>
+                            </div>
+                            <div class="statistic-values">
+                                <strong>@statistic.Amount.ToString("N0")원</strong>
+                                <span>@statistic.Percentage.ToString("0.#")%</span>
+                            </div>
+                        </div>
+                        <div class="statistic-track" aria-hidden="true">
+                            <div class="statistic-fill" style="@statistic.WidthStyle"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
     <div class="content-grid">
         <section class="panel entry-panel" aria-labelledby="entry-title">
             <div class="panel-heading">
@@ -236,6 +275,7 @@
 @code {
     private readonly string[] categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
     private List<ExpenseRecord> expenses = [];
+    private IReadOnlyList<CategoryStatistic> categoryStatistics = [];
     private DateTime expenseDate = DateTime.Today;
     private long amount;
     private string category = "식비";
@@ -261,6 +301,10 @@
     private long MonthlyTotal => expenses
         .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
         .Sum(item => item.Amount);
+    private long StatisticsTotal => categoryStatistics.Sum(statistic => statistic.Amount);
+    private string StatisticsPeriodLabel => activeFilter.IsActive
+        ? FilterDescription
+        : $"{DateTime.Today:yyyy년 M월} 기준";
     private string FilterDescription
     {
         get
@@ -290,6 +334,10 @@
             .OrderByDescending(item => item.Date)
             .ThenByDescending(item => item.Id)
             .ToListAsync();
+        var statisticsExpenses = activeFilter.IsActive
+            ? expenses
+            : expenses.Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month);
+        categoryStatistics = ExpenseStatistics.ByCategory(statisticsExpenses);
     }
 
     private async Task ApplyFiltersAsync()

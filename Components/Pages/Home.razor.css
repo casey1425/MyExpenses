@@ -99,6 +99,105 @@ h1 {
     font-size: .78rem;
 }
 
+.statistics-panel {
+    margin-bottom: 1.25rem;
+}
+
+.statistics-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.statistics-period {
+    margin: .35rem 0 0;
+    color: #8a9aad;
+    font-size: .82rem;
+}
+
+.statistics-total {
+    flex-shrink: 0;
+    color: #285889;
+    font-size: 1.2rem;
+    letter-spacing: -.03em;
+}
+
+.statistics-empty {
+    margin: 0;
+    padding: 1.15rem 0;
+    color: #8a9aad;
+    font-size: .9rem;
+    text-align: center;
+}
+
+.statistics-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 2rem;
+}
+
+.statistic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .55rem;
+}
+
+.statistic-name {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.statistic-icon {
+    font-size: 1.05rem;
+}
+
+.statistic-name strong {
+    white-space: nowrap;
+    font-size: .9rem;
+}
+
+.statistic-name small {
+    margin-left: .25rem;
+    color: #97a6b7;
+    font-size: .75rem;
+    font-weight: 400;
+}
+
+.statistic-values {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+    flex-shrink: 0;
+}
+
+.statistic-values strong {
+    font-size: .9rem;
+}
+
+.statistic-values span {
+    color: #6885a5;
+    font-size: .78rem;
+}
+
+.statistic-track {
+    height: 9px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eaf0f7;
+}
+
+.statistic-fill {
+    min-width: 3px;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2d598b, #79a8d6);
+}
+
 .content-grid {
     display: grid;
     grid-template-columns: minmax(320px, .9fr) minmax(0, 1.25fr);
@@ -554,6 +653,7 @@ h1 {
 
 @media (max-width: 900px) {
     .content-grid { grid-template-columns: 1fr; }
+    .statistics-list { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1100px) {
@@ -567,6 +667,10 @@ h1 {
     .summary-card { min-height: 135px; padding: 1rem; }
     .summary-card strong { font-size: 1.5rem; }
     .panel { padding: 1.2rem; }
+    .statistics-heading { align-items: flex-start; flex-direction: column; }
+    .statistics-total { font-size: 1.05rem; }
+    .statistic-header { align-items: flex-start; }
+    .statistic-values { align-items: flex-end; flex-direction: column; gap: 0; }
     .field-grid { grid-template-columns: 1fr; gap: 0; }
     .filter-form { grid-template-columns: 1fr; }
     .filter-buttons { grid-column: auto; }
