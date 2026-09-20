@@ -31,6 +31,66 @@
         </div>
     </section>
 
+    <section class="panel budget-panel" aria-labelledby="budget-title">
+        <div class="panel-heading budget-heading">
+            <div>
+                <p class="section-kicker">MONTHLY BUDGET</p>
+                <h2 id="budget-title">월별 예산</h2>
+                <p class="budget-description">선택한 달의 전체 지출과 예산을 비교합니다.</p>
+            </div>
+        </div>
+
+        <form class="budget-form" @onsubmit="SaveBudgetAsync" @onsubmit:preventDefault>
+            <div class="budget-field">
+                <label for="budget-month">월</label>
+                <input id="budget-month" type="month" value="@budgetMonthInput" @onchange="OnBudgetMonthChangedAsync" required />
+            </div>
+            <div class="budget-field">
+                <label for="budget-amount">예산 금액</label>
+                <div class="amount-input">
+                    <input id="budget-amount" type="number" min="1" step="1" @bind="budgetInput" required />
+                    <span>원</span>
+                </div>
+            </div>
+            <div class="budget-buttons">
+                <button type="submit" class="budget-save" disabled="@isSavingBudget">@(isSavingBudget ? "저장 중..." : budgetAmount is null ? "예산 설정" : "예산 변경")</button>
+                @if (budgetAmount is not null)
+                {
+                    <button type="button" class="budget-delete" @onclick="DeleteBudgetAsync" disabled="@isSavingBudget">예산 삭제</button>
+                }
+            </div>
+        </form>
+
+        @if (!string.IsNullOrEmpty(budgetError))
+        {
+            <p class="form-error" role="alert">@budgetError</p>
+        }
+        @if (!string.IsNullOrEmpty(budgetNotice))
+        {
+            <p class="budget-notice" role="status">@budgetNotice</p>
+        }
+
+        @if (budgetAmount is long limit)
+        {
+            <div class="budget-progress">
+                <div class="budget-progress-labels">
+                    <strong>@budgetSpent.ToString("N0")원 사용</strong>
+                    <span>예산 @limit.ToString("N0")원 · @BudgetPercentage.ToString("0.#")%</span>
+                </div>
+                <div class="budget-track" role="progressbar" aria-label="예산 사용률" aria-valuenow="@Math.Min(BudgetPercentage, 100).ToString("0.#", CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100">
+                    <div class="budget-fill @(budgetSpent > limit ? "over-budget" : "")" style="width: @BudgetBarWidth%"></div>
+                </div>
+                <p class="budget-balance @(budgetSpent > limit ? "over-budget" : "")">
+                    @(budgetSpent > limit ? $"예산을 {(budgetSpent - limit):N0}원 초과했어요." : $"예산이 {(limit - budgetSpent):N0}원 남았어요.")
+                </p>
+            </div>
+        }
+        else
+        {
+            <p class="budget-empty">@budgetMonth.ToString("yyyy년 M월") 지출은 @budgetSpent.ToString("N0")원입니다. 예산을 설정하면 사용률과 남은 금액을 볼 수 있어요.</p>
+        }
+    </section>
+
     <section class="panel statistics-panel" aria-labelledby="statistics-title">
         <div class="panel-heading statistics-heading">
             <div>
@@ -293,6 +353,14 @@
     private string filterMonthInput = string.Empty;
     private string filterCategoryInput = string.Empty;
     private ExpenseFilter activeFilter = new();
+    private DateTime budgetMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private string budgetMonthInput = DateTime.Today.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private long budgetInput;
+    private long? budgetAmount;
+    private long budgetSpent;
+    private string? budgetError;
+    private string? budgetNotice;
+    private bool isSavingBudget;
     private bool showDeleteAllConfirmation;
     private bool isDeletingAll;
     private int? editingId;
@@ -307,6 +375,8 @@
         .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
         .Sum(item => item.Amount);
     private long StatisticsTotal => categoryStatistics.Sum(statistic => statistic.Amount);
+    private decimal BudgetPercentage => budgetAmount is > 0 ? (decimal)budgetSpent / budgetAmount.Value * 100 : 0;
+    private string BudgetBarWidth => Math.Min(BudgetPercentage, 100).ToString("0.#", CultureInfo.InvariantCulture);
     private string StatisticsPeriodLabel => activeFilter.IsActive
         ? FilterDescription
         : $"{DateTime.Today:yyyy년 M월} 기준";
@@ -342,6 +412,8 @@
             Logger.LogError(ex, "지출 내역을 불러오지 못했습니다.");
             errorMessage = "저장된 지출 내역을 불러오지 못했습니다. 앱을 다시 실행해 주세요.";
         }
+
+        await RefreshBudgetAsync();
     }
 
     private async Task LoadExpensesAsync()
@@ -355,6 +427,115 @@
             ? expenses
             : expenses.Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month);
         categoryStatistics = ExpenseStatistics.ByCategory(statisticsExpenses);
+    }
+
+    private async Task LoadBudgetAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var amounts = await new ExpenseFilter(budgetMonth).ApplyTo(db.Expenses.AsNoTracking())
+            .Select(item => item.Amount)
+            .ToListAsync();
+        budgetSpent = amounts.Sum();
+        budgetAmount = await db.MonthlyBudgets.AsNoTracking()
+            .Where(item => item.Month == budgetMonth)
+            .Select(item => (long?)item.Amount)
+            .SingleOrDefaultAsync();
+        budgetInput = budgetAmount ?? 0;
+    }
+
+    private async Task RefreshBudgetAsync()
+    {
+        try
+        {
+            await LoadBudgetAsync();
+            budgetError = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "월별 예산을 불러오지 못했습니다.");
+            budgetError = "예산을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    }
+
+    private async Task OnBudgetMonthChangedAsync(ChangeEventArgs args)
+    {
+        var value = args.Value?.ToString() ?? string.Empty;
+        if (!DateTime.TryParseExact(value, "yyyy-MM", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var parsedMonth))
+        {
+            budgetError = "예산을 조회할 월을 다시 선택해 주세요.";
+            return;
+        }
+
+        budgetMonth = new DateTime(parsedMonth.Year, parsedMonth.Month, 1);
+        budgetMonthInput = value;
+        budgetNotice = null;
+        await RefreshBudgetAsync();
+    }
+
+    private async Task SaveBudgetAsync()
+    {
+        if (isSavingBudget)
+            return;
+        if (budgetInput <= 0)
+        {
+            budgetError = "예산은 1원 이상의 정수로 입력해 주세요.";
+            return;
+        }
+
+        isSavingBudget = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var saved = await db.MonthlyBudgets.FindAsync(budgetMonth);
+            if (saved is null)
+                db.MonthlyBudgets.Add(new MonthlyBudget { Month = budgetMonth, Amount = budgetInput });
+            else
+                saved.Amount = budgetInput;
+            await db.SaveChangesAsync();
+            await LoadBudgetAsync();
+            budgetError = null;
+            budgetNotice = "예산을 저장했습니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "월별 예산을 저장하지 못했습니다.");
+            budgetError = "예산 저장 결과를 확인하지 못했습니다. 새로고침 후 다시 확인해 주세요.";
+        }
+        finally
+        {
+            isSavingBudget = false;
+        }
+    }
+
+    private async Task DeleteBudgetAsync()
+    {
+        if (isSavingBudget || budgetAmount is null)
+            return;
+
+        isSavingBudget = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var saved = await db.MonthlyBudgets.FindAsync(budgetMonth);
+            if (saved is not null)
+            {
+                db.MonthlyBudgets.Remove(saved);
+                await db.SaveChangesAsync();
+            }
+            await LoadBudgetAsync();
+            budgetError = null;
+            budgetNotice = "예산을 삭제했습니다. 지출 기록은 그대로 유지됩니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "월별 예산을 삭제하지 못했습니다.");
+            budgetError = "예산 삭제 결과를 확인하지 못했습니다. 새로고침 후 다시 확인해 주세요.";
+        }
+        finally
+        {
+            isSavingBudget = false;
+        }
     }
 
     private async Task ApplyFiltersAsync()
@@ -439,6 +620,7 @@
             db.Expenses.Add(newExpense);
             await db.SaveChangesAsync();
             await LoadExpensesAsync();
+            await RefreshBudgetAsync();
 
             amount = 0;
             memo = string.Empty;
@@ -513,6 +695,7 @@
             expense.Memo = editMemo.Trim();
             await db.SaveChangesAsync();
             await LoadExpensesAsync();
+            await RefreshBudgetAsync();
 
             historyNotice = activeFilter.IsActive && !activeFilter.Matches(expense)
                 ? "수정했습니다. 변경된 기록은 현재 조회 조건에 맞지 않아 목록에서 보이지 않습니다."
@@ -545,6 +728,7 @@
             db.Expenses.Remove(expense);
             await db.SaveChangesAsync();
             await LoadExpensesAsync();
+            await RefreshBudgetAsync();
             deleteError = null;
             historyNotice = null;
             showDeleteAllConfirmation = false;
@@ -583,6 +767,7 @@
             await using var db = await DbFactory.CreateDbContextAsync();
             await db.Expenses.ExecuteDeleteAsync();
             await LoadExpensesAsync();
+            await RefreshBudgetAsync();
             showDeleteAllConfirmation = false;
             deleteError = null;
             historyNotice = null;

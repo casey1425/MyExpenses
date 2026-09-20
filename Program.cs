@@ -21,6 +21,7 @@ await using (var db = await app.Services.GetRequiredService<IDbContextFactory<Ex
     .CreateDbContextAsync())
 {
     await db.Database.EnsureCreatedAsync();
+    await BudgetSchema.EnsureCreatedAsync(db);
 }
 
 if (!app.Environment.IsDevelopment())
