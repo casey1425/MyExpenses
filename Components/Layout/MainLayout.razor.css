@@ -19,6 +19,26 @@ main {
     height: 3.5rem;
     display: flex;
     align-items: center;
+    gap: .85rem;
+}
+
+.signed-in-user {
+    color: #64748b;
+    font-size: .85rem;
+}
+
+.logout-form {
+    margin: 0;
+}
+
+.logout-form button {
+    padding: .35rem .7rem;
+    border: 1px solid #d6dde6;
+    border-radius: 7px;
+    background: #fff;
+    color: #40516a;
+    font-size: .8rem;
+    font-weight: 700;
 }
 
     .top-row ::deep a, .top-row ::deep .btn-link {

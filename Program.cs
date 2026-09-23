@@ -1,5 +1,8 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MyExpenses;
 using MyExpenses.Components;
 using MyExpenses.Data;
 
@@ -7,6 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddCascadingAuthenticationState();
+
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultScheme = IdentityConstants.ApplicationScheme;
+        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+    })
+    .AddIdentityCookies();
 
 var dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "Data");
 Directory.CreateDirectory(dataDirectory);
@@ -15,6 +26,30 @@ var databasePath = Path.Combine(dataDirectory, "myexpenses.db");
 builder.Services.AddDbContextFactory<ExpensesDbContext>(options =>
     options.UseSqlite($"Data Source={databasePath}"));
 
+var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseSqlite($"Data Source={authDatabasePath}"));
+builder.Services.AddIdentityCore<IdentityUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false;
+        options.Password.RequiredLength = 10;
+        options.Password.RequireNonAlphanumeric = false;
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    })
+    .AddEntityFrameworkStores<AuthDbContext>()
+    .AddSignInManager()
+    .AddDefaultTokenProviders();
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    options.SlidingExpiration = true;
+    options.LoginPath = "/account/login";
+    options.AccessDeniedPath = "/account/login";
+});
+
 var app = builder.Build();
 
 await using (var db = await app.Services.GetRequiredService<IDbContextFactory<ExpensesDbContext>>()
@@ -22,6 +57,12 @@ await using (var db = await app.Services.GetRequiredService<IDbContextFactory<Ex
 {
     await db.Database.EnsureCreatedAsync();
     await BudgetSchema.EnsureCreatedAsync(db);
+}
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
+    await authDb.Database.EnsureCreatedAsync();
 }
 
 if (!app.Environment.IsDevelopment())
@@ -37,7 +78,8 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-app.MapGet("/export/expenses.csv", ExportExpensesAsync);
+app.MapAccountEndpoints();
+app.MapGet("/export/expenses.csv", ExportExpensesAsync).RequireAuthorization();
 
 app.Run();
 

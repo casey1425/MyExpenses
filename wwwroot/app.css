@@ -58,3 +58,105 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.account-page {
+    display: grid;
+    place-items: center;
+    min-height: calc(100vh - 7rem);
+    padding: 2rem 0;
+}
+
+.account-card {
+    width: min(100%, 440px);
+    padding: 2rem;
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(31, 52, 82, .08);
+}
+
+.account-card h1 {
+    margin: 0;
+    color: #1e293b;
+    font-size: 2rem;
+    letter-spacing: -.04em;
+}
+
+.account-kicker {
+    margin: 0 0 .45rem;
+    color: #537cbb;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+}
+
+.account-description {
+    margin: .65rem 0 1.4rem;
+    color: #718096;
+    line-height: 1.6;
+}
+
+.account-form {
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+}
+
+.account-form label {
+    margin-top: .35rem;
+    color: #40516a;
+    font-size: .84rem;
+    font-weight: 700;
+}
+
+.account-form input:not([type="checkbox"]) {
+    min-height: 44px;
+    padding: .65rem .75rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 9px;
+    color: #1e293b;
+}
+
+.account-form input:focus {
+    border-color: #4279ba;
+    outline: none;
+    box-shadow: 0 0 0 3px #4279ba20;
+}
+
+.account-form small {
+    color: #7b8b9d;
+    line-height: 1.45;
+}
+
+.account-form .remember-row {
+    display: flex;
+    align-items: center;
+    gap: .45rem;
+    font-weight: 500;
+}
+
+.account-form button {
+    min-height: 46px;
+    margin-top: .75rem;
+    border: 0;
+    border-radius: 9px;
+    background: #285889;
+    color: #fff;
+    font-weight: 700;
+}
+
+.account-error {
+    margin: 0 0 1rem;
+    padding: .75rem;
+    border-radius: 8px;
+    background: #fff2f2;
+    color: #ae3e47;
+    font-size: .86rem;
+}
+
+.account-link {
+    margin: 1.25rem 0 0;
+    color: #718096;
+    font-size: .86rem;
+    text-align: center;
+}
