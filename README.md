@@ -4,7 +4,7 @@ MyExpenses는 C#과 Blazor로 만든 개인 지출 기록 웹앱입니다. 지�
 
 ## 기능
 
-- 로그인 보호: 최초 관리자 계정 생성, 로그인 상태 유지, 로그인 실패 잠금, 로그아웃
+- Google 로그인 보호: 지정한 Gmail 계정 하나로 로그인·로그아웃
 - 지출 추가·수정·삭제: 날짜, 원 단위 금액, 카테고리, 메모 관리
 - 전체 삭제: 확인 단계를 거친 후 모든 지출 기록 삭제
 - 월·카테고리 필터: 조건에 맞는 내역, 건수, 합계 조회
@@ -18,7 +18,7 @@ MyExpenses는 C#과 Blazor로 만든 개인 지출 기록 웹앱입니다. 지�
 
 - C# / .NET 10
 - ASP.NET Core Blazor Web App (Interactive Server)
-- ASP.NET Core Identity (쿠키 인증 및 비밀번호 해싱)
+- ASP.NET Core Identity / Google OAuth 2.0 (쿠키 인증)
 - Entity Framework Core 10 / SQLite
 - HTML / CSS
 
@@ -30,10 +30,26 @@ MyExpenses는 C#과 Blazor로 만든 개인 지출 기록 웹앱입니다. 지�
 git clone https://github.com/casey1425/MyExpenses.git
 cd MyExpenses
 dotnet restore
-dotnet run --launch-profile http
 ```
 
-브라우저에서 [http://localhost:5168](http://localhost:5168)을 열면 됩니다. 앱을 종료하려면 터미널에서 `Ctrl+C`를 누르세요. 포트가 이미 사용 중이라면 `Properties/launchSettings.json`의 `applicationUrl`을 변경할 수 있습니다.
+### Google OAuth 설정
+
+1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials)에서 프로젝트와 OAuth 동의 화면을 설정합니다.
+2. OAuth 클라이언트를 **웹 애플리케이션** 유형으로 만듭니다.
+3. 승인된 리디렉션 URI에 `https://localhost:7168/signin-google`을 등록합니다.
+4. 발급된 값과 로그인에 사용할 Gmail 주소를 프로젝트 폴더에서 User Secrets에 저장합니다.
+
+```bash
+dotnet user-secrets set "Authentication:Google:ClientId" "발급받은 Client ID"
+dotnet user-secrets set "Authentication:Google:ClientSecret" "발급받은 Client Secret"
+dotnet user-secrets set "Authentication:Google:AllowedEmail" "허용할 Gmail 주소"
+dotnet dev-certs https --trust
+dotnet run --launch-profile https
+```
+
+OAuth 앱이 테스트 상태라면 같은 Gmail 주소를 Google Cloud의 테스트 사용자에도 추가해야 합니다. Client Secret과 Gmail 주소는 저장소 설정 파일에 작성하거나 Git에 커밋하지 마세요.
+
+브라우저에서 [https://localhost:7168](https://localhost:7168)을 열면 됩니다. 앱을 종료하려면 터미널에서 `Ctrl+C`를 누르세요. 포트가 이미 사용 중이라면 `Properties/launchSettings.json`의 `applicationUrl`과 Google Cloud에 등록한 리디렉션 URI를 함께 변경해야 합니다.
 
 ## 데이터 보관 및 사용 범위
 
@@ -41,4 +57,4 @@ dotnet run --launch-profile http
 
 기존 데이터베이스에 예산 테이블이 없는 경우, 앱 시작 시 지출 기록을 유지한 채 예산 테이블을 생성합니다.
 
-처음 접속하면 관리자 계정을 한 번만 만들 수 있으며, 이후에는 추가 회원가입이 차단됩니다. 현재는 단일 사용자용으로 모든 지출 기록을 한 관리자 계정이 사용합니다. 인터넷에 배포하려면 HTTPS, 비밀 키 관리, 데이터 백업 등 운영 환경의 추가 보안 설정이 필요합니다. 전체 삭제는 되돌릴 수 없습니다.
+`Authentication:Google:AllowedEmail`에 지정한 Google 계정만 로그인할 수 있습니다. 처음 로그인하면 해당 계정 정보가 `auth.db`에 자동으로 연결됩니다. 현재는 단일 사용자용으로 모든 지출 기록을 한 계정이 사용합니다. 인터넷에 배포하려면 HTTPS 주소를 Google OAuth 리디렉션 URI에 별도로 등록하고 비밀 키 관리와 데이터 백업을 구성해야 합니다. 전체 삭제는 되돌릴 수 없습니다.

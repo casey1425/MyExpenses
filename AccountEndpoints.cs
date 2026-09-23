@@ -1,73 +1,90 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MyExpenses;
 
 public static class AccountEndpoints
 {
-    private static readonly SemaphoreSlim RegistrationLock = new(1, 1);
-
     public static IEndpointRouteBuilder MapAccountEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/account/login", LoginAsync).AllowAnonymous();
-        endpoints.MapPost("/account/register", RegisterAsync).AllowAnonymous();
+        endpoints.MapGet("/account/google-login", StartGoogleLogin).AllowAnonymous();
+        endpoints.MapGet("/account/google-callback", CompleteGoogleLoginAsync).AllowAnonymous();
         endpoints.MapPost("/account/logout", LogoutAsync).RequireAuthorization();
         return endpoints;
     }
 
-    private static async Task<IResult> LoginAsync(
-        [FromForm] LoginForm form,
+    private static IResult StartGoogleLogin(
+        string? returnUrl,
+        IConfiguration configuration,
         SignInManager<IdentityUser> signInManager)
     {
-        var returnUrl = SafeReturnUrl(form.ReturnUrl);
-        var result = await signInManager.PasswordSignInAsync(
-            form.Email.Trim(), form.Password, form.RememberMe, lockoutOnFailure: true);
+        var destination = SafeReturnUrl(returnUrl);
+        if (!GoogleIsConfigured(configuration))
+            return Results.LocalRedirect(LoginUrl("Google 로그인 설정이 필요합니다. README의 설정 방법을 확인해 주세요.", destination));
 
-        if (result.Succeeded)
-            return Results.LocalRedirect(returnUrl);
-
-        var message = result.IsLockedOut
-            ? "로그인 시도가 여러 번 실패해 잠시 잠겼습니다. 5분 후 다시 시도해 주세요."
-            : "이메일 또는 비밀번호가 올바르지 않습니다.";
-        return Results.LocalRedirect(LoginUrl(message, returnUrl));
+        var callbackUrl = $"/account/google-callback?returnUrl={Uri.EscapeDataString(destination)}";
+        var properties = signInManager.ConfigureExternalAuthenticationProperties(
+            GoogleDefaults.AuthenticationScheme, callbackUrl);
+        return Results.Challenge(properties, [GoogleDefaults.AuthenticationScheme]);
     }
 
-    private static async Task<IResult> RegisterAsync(
-        [FromForm] RegisterForm form,
+    private static async Task<IResult> CompleteGoogleLoginAsync(
+        string? returnUrl,
+        string? remoteError,
+        IConfiguration configuration,
+        HttpContext httpContext,
         UserManager<IdentityUser> userManager,
         SignInManager<IdentityUser> signInManager)
     {
-        await RegistrationLock.WaitAsync();
-        try
+        var destination = SafeReturnUrl(returnUrl);
+        if (!string.IsNullOrEmpty(remoteError))
+            return Results.LocalRedirect(LoginUrl("Google 로그인이 취소되었거나 실패했습니다.", destination));
+
+        var info = await signInManager.GetExternalLoginInfoAsync();
+        if (info is null)
+            return Results.LocalRedirect(LoginUrl("Google 로그인 정보를 확인하지 못했습니다. 다시 시도해 주세요.", destination));
+
+        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+        var allowedEmail = configuration["Authentication:Google:AllowedEmail"]?.Trim();
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(allowedEmail) ||
+            !string.Equals(email, allowedEmail, StringComparison.OrdinalIgnoreCase))
         {
-            if (await userManager.Users.AnyAsync())
-                return Results.LocalRedirect(LoginUrl("이미 관리자 계정이 만들어져 있습니다.", "/"));
+            await httpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            return Results.LocalRedirect(LoginUrl("이 앱에 허용된 Google 계정이 아닙니다.", destination));
+        }
 
-            if (!string.Equals(form.Password, form.ConfirmPassword, StringComparison.Ordinal))
-                return Results.LocalRedirect(RegisterUrl("비밀번호 확인이 일치하지 않습니다."));
+        var externalResult = await signInManager.ExternalLoginSignInAsync(
+            info.LoginProvider, info.ProviderKey, isPersistent: true, bypassTwoFactor: true);
+        if (externalResult.Succeeded)
+            return Results.LocalRedirect(destination);
 
-            var email = form.Email.Trim();
-            var user = new IdentityUser
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            user = new IdentityUser
             {
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true
             };
-            var result = await userManager.CreateAsync(user, form.Password);
-            if (!result.Succeeded)
-            {
-                var message = string.Join(" ", result.Errors.Select(error => TranslateIdentityError(error.Code)));
-                return Results.LocalRedirect(RegisterUrl(message));
-            }
+            var createResult = await userManager.CreateAsync(user);
+            if (!createResult.Succeeded)
+                return Results.LocalRedirect(LoginUrl("로그인 계정을 저장하지 못했습니다.", destination));
+        }
 
-            await signInManager.SignInAsync(user, isPersistent: false);
-            return Results.LocalRedirect("/");
-        }
-        finally
+        var existingLogins = await userManager.GetLoginsAsync(user);
+        if (!existingLogins.Any(login => login.LoginProvider == info.LoginProvider &&
+                                        login.ProviderKey == info.ProviderKey))
         {
-            RegistrationLock.Release();
+            var linkResult = await userManager.AddLoginAsync(user, info);
+            if (!linkResult.Succeeded)
+                return Results.LocalRedirect(LoginUrl("Google 계정을 연결하지 못했습니다.", destination));
         }
+
+        await signInManager.SignInAsync(user, isPersistent: true, info.LoginProvider);
+        return Results.LocalRedirect(destination);
     }
 
     private static async Task<IResult> LogoutAsync(SignInManager<IdentityUser> signInManager)
@@ -85,32 +102,8 @@ public static class AccountEndpoints
     private static string LoginUrl(string message, string returnUrl) =>
         $"/account/login?error={Uri.EscapeDataString(message)}&returnUrl={Uri.EscapeDataString(returnUrl)}";
 
-    private static string RegisterUrl(string message) =>
-        $"/account/register?error={Uri.EscapeDataString(message)}";
-
-    private static string TranslateIdentityError(string code) => code switch
-    {
-        "InvalidEmail" => "올바른 이메일 주소를 입력해 주세요.",
-        "PasswordTooShort" => "비밀번호는 10자 이상이어야 합니다.",
-        "PasswordRequiresDigit" => "비밀번호에 숫자를 하나 이상 포함해 주세요.",
-        "PasswordRequiresLower" => "비밀번호에 영문 소문자를 하나 이상 포함해 주세요.",
-        "PasswordRequiresUpper" => "비밀번호에 영문 대문자를 하나 이상 포함해 주세요.",
-        "DuplicateEmail" or "DuplicateUserName" => "이미 사용 중인 이메일입니다.",
-        _ => "계정을 만들 수 없습니다. 입력 내용을 확인해 주세요."
-    };
-
-    public sealed class LoginForm
-    {
-        public string Email { get; init; } = string.Empty;
-        public string Password { get; init; } = string.Empty;
-        public bool RememberMe { get; init; }
-        public string? ReturnUrl { get; init; }
-    }
-
-    public sealed class RegisterForm
-    {
-        public string Email { get; init; } = string.Empty;
-        public string Password { get; init; } = string.Empty;
-        public string ConfirmPassword { get; init; } = string.Empty;
-    }
+    private static bool GoogleIsConfigured(IConfiguration configuration) =>
+        !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientId"]) &&
+        !string.IsNullOrWhiteSpace(configuration["Authentication:Google:ClientSecret"]) &&
+        !string.IsNullOrWhiteSpace(configuration["Authentication:Google:AllowedEmail"]);
 }

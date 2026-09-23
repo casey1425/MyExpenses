@@ -96,53 +96,30 @@ h1:focus {
     line-height: 1.6;
 }
 
-.account-form {
+.google-login-button {
     display: flex;
-    flex-direction: column;
-    gap: .55rem;
-}
-
-.account-form label {
-    margin-top: .35rem;
-    color: #40516a;
-    font-size: .84rem;
-    font-weight: 700;
-}
-
-.account-form input:not([type="checkbox"]) {
-    min-height: 44px;
-    padding: .65rem .75rem;
-    border: 1px solid #dbe4ee;
+    justify-content: center;
+    align-items: center;
+    gap: .65rem;
+    min-height: 48px;
+    border: 1px solid #d8dfe7;
     border-radius: 9px;
+    background: #fff;
+    color: #2f3e52;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.google-login-button:hover {
+    border-color: #aebdce;
+    background: #f8fafc;
     color: #1e293b;
 }
 
-.account-form input:focus {
-    border-color: #4279ba;
-    outline: none;
-    box-shadow: 0 0 0 3px #4279ba20;
-}
-
-.account-form small {
-    color: #7b8b9d;
-    line-height: 1.45;
-}
-
-.account-form .remember-row {
-    display: flex;
-    align-items: center;
-    gap: .45rem;
-    font-weight: 500;
-}
-
-.account-form button {
-    min-height: 46px;
-    margin-top: .75rem;
-    border: 0;
-    border-radius: 9px;
-    background: #285889;
-    color: #fff;
-    font-weight: 700;
+.google-login-button span {
+    color: #4285f4;
+    font-size: 1.1rem;
+    font-weight: 800;
 }
 
 .account-error {
@@ -154,9 +131,12 @@ h1:focus {
     font-size: .86rem;
 }
 
-.account-link {
-    margin: 1.25rem 0 0;
-    color: #718096;
+.account-setup {
+    margin: 0;
+    padding: .85rem;
+    border-radius: 9px;
+    background: #eef4fb;
+    color: #40516a;
     font-size: .86rem;
-    text-align: center;
+    line-height: 1.55;
 }

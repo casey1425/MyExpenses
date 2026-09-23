@@ -1,8 +1,6 @@
 @page "/account/login"
 @attribute [AllowAnonymous]
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.EntityFrameworkCore
-@inject UserManager<IdentityUser> UserManager
+@inject IConfiguration Configuration
 
 <PageTitle>로그인 | MyExpenses</PageTitle>
 
@@ -10,40 +8,28 @@
     <section class="account-card" aria-labelledby="login-title">
         <p class="account-kicker">MY EXPENSES</p>
         <h1 id="login-title">로그인</h1>
-        <p class="account-description">내 지출 기록을 확인하려면 로그인하세요.</p>
+        <p class="account-description">허용된 Google 계정으로 내 지출 기록에 로그인하세요.</p>
 
         @if (!string.IsNullOrEmpty(Error))
         {
             <p class="account-error" role="alert">@Error</p>
         }
 
-        <form method="post" action="/account/login" class="account-form">
-            <AntiforgeryToken />
-            <input type="hidden" name="ReturnUrl" value="@SafeReturnUrl" />
-            <label for="login-email">이메일</label>
-            <input id="login-email" name="Email" type="email" autocomplete="username" required autofocus />
-
-            <label for="login-password">비밀번호</label>
-            <input id="login-password" name="Password" type="password" autocomplete="current-password" required />
-
-            <label class="remember-row">
-                <input name="RememberMe" type="checkbox" value="true" />
-                로그인 상태 유지
-            </label>
-
-            <button type="submit">로그인</button>
-        </form>
-
-        @if (!hasAccount)
+        @if (GoogleIsConfigured)
         {
-            <p class="account-link">처음 실행하셨나요? <a href="/account/register">관리자 계정 만들기</a></p>
+            <a class="google-login-button" href="@GoogleLoginUrl">
+                <span aria-hidden="true">G</span>
+                Google 계정으로 로그인
+            </a>
+        }
+        else
+        {
+            <p class="account-setup">Google OAuth 설정이 아직 완료되지 않았습니다. README의 설정 방법에 따라 Client ID, Client Secret, 허용할 Gmail 주소를 등록해 주세요.</p>
         }
     </section>
 </div>
 
 @code {
-    private bool hasAccount = true;
-
     [SupplyParameterFromQuery]
     public string? Error { get; set; }
 
@@ -56,8 +42,11 @@
             ? ReturnUrl
             : "/";
 
-    protected override async Task OnInitializedAsync()
-    {
-        hasAccount = await UserManager.Users.AnyAsync();
-    }
+    private bool GoogleIsConfigured =>
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientId"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientSecret"]) &&
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:AllowedEmail"]);
+
+    private string GoogleLoginUrl =>
+        $"/account/google-login?returnUrl={Uri.EscapeDataString(SafeReturnUrl)}";
 }

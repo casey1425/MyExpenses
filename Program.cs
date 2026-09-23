@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +13,30 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddAuthentication(options =>
+var authentication = builder.Services.AddAuthentication(options =>
     {
         options.DefaultScheme = IdentityConstants.ApplicationScheme;
         options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-    })
-    .AddIdentityCookies();
+    });
+authentication.AddIdentityCookies();
+
+var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
+var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authentication.AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
+    {
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
+        options.Events.OnRemoteFailure = context =>
+        {
+            var message = Uri.EscapeDataString("Google 로그인이 취소되었거나 실패했습니다.");
+            context.Response.Redirect($"/account/login?error={message}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        };
+    });
+}
 
 var dataDirectory = Path.Combine(builder.Environment.ContentRootPath, "Data");
 Directory.CreateDirectory(dataDirectory);
@@ -32,10 +51,6 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 builder.Services.AddIdentityCore<IdentityUser>(options =>
     {
         options.SignIn.RequireConfirmedAccount = false;
-        options.Password.RequiredLength = 10;
-        options.Password.RequireNonAlphanumeric = false;
-        options.Lockout.MaxFailedAccessAttempts = 5;
-        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     })
     .AddEntityFrameworkStores<AuthDbContext>()
     .AddSignInManager()
