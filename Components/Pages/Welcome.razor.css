@@ -1,0 +1,107 @@
+.welcome-page {
+    min-height: calc(100vh - 3.5rem);
+    display: grid;
+    place-items: center;
+    padding: 3rem 1.25rem;
+    background:
+        radial-gradient(circle at top left, rgba(54, 94, 255, 0.13), transparent 35%),
+        #f7f8fc;
+}
+
+.welcome-card {
+    width: min(100%, 620px);
+    padding: 3rem;
+    border: 1px solid #e6e9f2;
+    border-radius: 28px;
+    background: #fff;
+    box-shadow: 0 24px 65px rgba(31, 42, 85, 0.12);
+    text-align: center;
+}
+
+.welcome-icon {
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    margin: 0 auto 1.4rem;
+    border-radius: 22px;
+    background: #eef2ff;
+    font-size: 2rem;
+}
+
+.welcome-kicker {
+    margin: 0 0 0.75rem;
+    color: #4863d9;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+}
+
+h1 {
+    margin: 0;
+    color: #17203b;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 1.18;
+}
+
+.welcome-description {
+    max-width: 500px;
+    margin: 1.35rem auto 0;
+    color: #65708a;
+    line-height: 1.75;
+}
+
+.feature-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 2rem 0;
+    padding: 1.25rem;
+    border-radius: 18px;
+    background: #f7f8fc;
+    color: #35405b;
+    text-align: left;
+}
+
+.feature-list span {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    margin-right: 0.55rem;
+    border-radius: 50%;
+    background: #dfe6ff;
+    color: #3854c8;
+    font-weight: 800;
+}
+
+.start-button {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 0;
+    border-radius: 14px;
+    background: #3854c8;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 750;
+    cursor: pointer;
+}
+
+.start-button:hover:not(:disabled) {
+    background: #2e46aa;
+}
+
+.start-button:disabled {
+    opacity: 0.65;
+    cursor: wait;
+}
+
+.welcome-error {
+    color: #b42318;
+}
+
+@media (max-width: 640px) {
+    .welcome-card {
+        padding: 2rem 1.25rem;
+        border-radius: 22px;
+    }
+}

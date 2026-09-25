@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <UserSecretsId>MyExpenses-4d0ee6cd-9a86-4f22-9143-c8ef8b680731</UserSecretsId>
   </PropertyGroup>

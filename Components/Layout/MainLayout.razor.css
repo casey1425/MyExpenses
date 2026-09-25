@@ -6,6 +6,26 @@
 
 main {
     flex: 1;
+    min-width: 0;
+}
+
+.site-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .55rem 1rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    color: #7a8497;
+    font-size: .8rem;
+}
+
+.site-footer a {
+    color: #5b6880;
+    text-decoration: none;
+}
+
+.site-footer a:hover {
+    text-decoration: underline;
 }
 
 .sidebar {

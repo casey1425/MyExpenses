@@ -6,6 +6,7 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -14,12 +15,20 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.HasKey(expense => expense.Id);
             entity.Property(expense => expense.Category).IsRequired().HasMaxLength(30);
             entity.Property(expense => expense.Memo).IsRequired().HasMaxLength(100);
-            entity.HasIndex(expense => expense.Date);
+            entity.Property(expense => expense.OwnerId).IsRequired();
+            entity.HasIndex(expense => new { expense.OwnerId, expense.Date });
         });
 
         modelBuilder.Entity<MonthlyBudget>(entity =>
         {
-            entity.HasKey(budget => budget.Month);
+            entity.HasKey(budget => new { budget.OwnerId, budget.Month });
+            entity.Property(budget => budget.OwnerId).IsRequired();
+        });
+
+        modelBuilder.Entity<UserProfile>(entity =>
+        {
+            entity.HasKey(profile => profile.OwnerId);
+            entity.Property(profile => profile.OwnerId).IsRequired();
         });
     }
 }

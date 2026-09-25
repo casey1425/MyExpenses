@@ -8,7 +8,7 @@
     <section class="account-card" aria-labelledby="login-title">
         <p class="account-kicker">MY EXPENSES</p>
         <h1 id="login-title">로그인</h1>
-        <p class="account-description">허용된 Google 계정으로 내 지출 기록에 로그인하세요.</p>
+        <p class="account-description">Google 계정으로 로그인하면 나만의 지출 공간이 만들어집니다.</p>
 
         @if (!string.IsNullOrEmpty(Error))
         {
@@ -21,10 +21,14 @@
                 <span aria-hidden="true">G</span>
                 Google 계정으로 로그인
             </a>
+            <p class="account-consent">
+                로그인 전 <a href="/terms">이용약관</a>과
+                <a href="/privacy">개인정보 처리방침</a>을 확인해 주세요.
+            </p>
         }
         else
         {
-            <p class="account-setup">Google OAuth 설정이 아직 완료되지 않았습니다. README의 설정 방법에 따라 Client ID, Client Secret, 허용할 Gmail 주소를 등록해 주세요.</p>
+            <p class="account-setup">Google OAuth 설정이 아직 완료되지 않았습니다. README의 설정 방법에 따라 Client ID와 Client Secret을 등록해 주세요.</p>
         }
     </section>
 </div>
@@ -44,8 +48,7 @@
 
     private bool GoogleIsConfigured =>
         !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientId"]) &&
-        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientSecret"]) &&
-        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:AllowedEmail"]);
+        !string.IsNullOrWhiteSpace(Configuration["Authentication:Google:ClientSecret"]);
 
     private string GoogleLoginUrl =>
         $"/account/google-login?returnUrl={Uri.EscapeDataString(SafeReturnUrl)}";

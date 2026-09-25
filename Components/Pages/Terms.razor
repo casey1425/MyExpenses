@@ -1,0 +1,73 @@
+@page "/terms"
+@attribute [AllowAnonymous]
+@inject IConfiguration Configuration
+
+<PageTitle>이용약관 | MyExpenses</PageTitle>
+
+<main class="legal-page">
+    <header class="legal-heading">
+        <p class="legal-kicker">MY EXPENSES</p>
+        <h1>이용약관</h1>
+        <p>시행일: 2026년 9월 23일</p>
+    </header>
+
+    <section class="legal-card">
+        <h2>1. 목적</h2>
+        <p>이 약관은 MyExpenses(이하 “서비스”)의 이용 조건과 사용자·운영자의 권리 및 책임을 정합니다.</p>
+
+        <h2>2. 서비스 내용</h2>
+        <p>서비스는 지출 기록, 예산 관리, 필터·통계, CSV 내보내기 기능을 제공합니다. 서비스는 금융기관이 아니며 입력된 내용은 금융·세무·법률 조언이 아닙니다.</p>
+
+        <h2>3. 계정</h2>
+        <ul>
+            <li>서비스는 Google 계정을 통해 로그인합니다.</li>
+            <li>사용자는 본인이 사용할 권한이 있는 계정을 사용해야 합니다.</li>
+            <li>계정을 통해 발생한 활동과 로그인 환경의 보안 관리 책임은 사용자에게 있습니다.</li>
+        </ul>
+
+        <h2>4. 사용자 데이터</h2>
+        <p>
+            사용자는 입력한 데이터에 대한 권리를 유지합니다. 운영자에게는 서비스를 저장·처리·표시하는 범위에서만 필요한 권한이 부여됩니다.
+            중요한 내역은 CSV 내보내기를 이용해 별도로 보관하는 것이 좋습니다.
+        </p>
+
+        <h2>5. 금지 행위</h2>
+        <ul>
+            <li>타인의 계정을 무단으로 사용하는 행위</li>
+            <li>서비스나 다른 사용자의 데이터에 무단으로 접근하는 행위</li>
+            <li>서비스의 안정성을 해치거나 법령을 위반하는 행위</li>
+        </ul>
+
+        <h2>6. 서비스 변경·중단</h2>
+        <p>점검, 장애, 보안 문제 또는 운영상 필요에 따라 서비스의 일부 또는 전부가 변경·중단될 수 있습니다. 예측 가능한 중요한 변경은 미리 안내하도록 노력합니다.</p>
+
+        <h2>7. 서비스 한계</h2>
+        <p>
+            운영자는 합리적인 범위에서 서비스의 안정성과 데이터 보호를 위해 노력합니다.
+            다만 법령상 제한할 수 없는 경우를 제외하고, 서비스가 항상 중단 없이 제공되거나 모든 데이터가 영구적으로 보존됨을 보증하지는 않습니다.
+        </p>
+
+        <h2>8. 이용 종료와 계정 삭제</h2>
+        <p>사용자는 <a href="/account">계정 관리</a>에서 서비스 이용을 종료할 수 있습니다. 계정 삭제는 지출, 예산, 프로필과 로그인 연결 정보를 삭제하며 되돌릴 수 없습니다.</p>
+
+        <h2>9. 약관 변경</h2>
+        <p>이 약관이 변경되면 시행일과 변경 내용을 서비스에 게시합니다.</p>
+
+        <h2>10. 준거법</h2>
+        <p>이 약관은 대한민국 법령에 따라 해석됩니다.</p>
+
+        <h2>11. 문의</h2>
+        @if (!string.IsNullOrWhiteSpace(SupportEmail))
+        {
+            <p>서비스 문의: <a href="mailto:@SupportEmail">@SupportEmail</a></p>
+        }
+        else
+        {
+            <p class="legal-setup-notice">운영 전 `Support:Email` 설정에 문의용 이메일을 등록해야 합니다.</p>
+        }
+    </section>
+</main>
+
+@code {
+    private string? SupportEmail => Configuration["Support:Email"];
+}

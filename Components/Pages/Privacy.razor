@@ -1,0 +1,82 @@
+@page "/privacy"
+@attribute [AllowAnonymous]
+@inject IConfiguration Configuration
+
+<PageTitle>개인정보 처리방침 | MyExpenses</PageTitle>
+
+<main class="legal-page">
+    <header class="legal-heading">
+        <p class="legal-kicker">MY EXPENSES</p>
+        <h1>개인정보 처리방침</h1>
+        <p>시행일: 2026년 9월 23일</p>
+    </header>
+
+    <section class="legal-card">
+        <p>
+            MyExpenses(이하 “서비스”)는 사용자의 지출을 기록하고 관리하기 위한 웹 서비스입니다.
+            서비스 운영자는 필요한 범위에서만 개인정보를 처리합니다.
+        </p>
+
+        <h2>1. 처리하는 정보</h2>
+        <ul>
+            <li><strong>Google 로그인 정보:</strong> Google 고유 식별자, 이메일 주소, 로그인 연결 정보</li>
+            <li><strong>사용자 입력 데이터:</strong> 지출 날짜, 금액, 카테고리, 메모, 월별 예산</li>
+            <li><strong>서비스 상태:</strong> 첫 시작 안내 완료 여부, 로그인 유지를 위한 필수 쿠키</li>
+        </ul>
+        <p>Google 계정의 비밀번호나 Gmail 메일 내용은 수집하지 않습니다.</p>
+
+        <h2>2. 처리 목적</h2>
+        <ul>
+            <li>사용자 본인 확인과 로그인 상태 유지</li>
+            <li>사용자별 지출·예산 데이터 분리</li>
+            <li>지출 통계, 필터, CSV 내보내기 제공</li>
+            <li>서비스 오류 확인과 보안 유지</li>
+        </ul>
+
+        <h2>3. Google 로그인</h2>
+        <p>
+            서비스는 로그인을 위해 Google OAuth를 사용합니다. Google에서 처리하는 정보는
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google 개인정보 처리방침</a>의 적용을 받습니다.
+            서비스는 로그인에 필요한 <code>openid</code>, <code>email</code>, <code>profile</code> 범위만 요청합니다.
+        </p>
+
+        <h2>4. 저장 및 보유</h2>
+        <p>
+            계정 정보와 지출 데이터는 서비스 서버의 데이터베이스에 저장됩니다.
+            사용자가 계정을 유지하는 동안 보유하며, 계정 삭제를 요청하면 활성 데이터베이스에서 계정과 연결된 데이터를 삭제합니다.
+            법령상 보존 의무가 있는 경우에는 해당 기간 동안 분리하여 보관할 수 있습니다.
+        </p>
+
+        <h2>5. 제3자 제공</h2>
+        <p>
+            운영자는 사용자의 지출 데이터를 판매하지 않으며, 법령에 따른 요구가 있거나 사용자가 동의한 경우를 제외하고
+            제3자에게 제공하지 않습니다.
+        </p>
+
+        <h2>6. 사용자의 선택과 권리</h2>
+        <p>
+            사용자는 지출 내역을 CSV로 내보낼 수 있고, 개별 기록을 수정·삭제할 수 있습니다.
+            로그인한 후 <a href="/account">계정 관리</a>에서 계정과 모든 연결 데이터를 삭제할 수 있습니다.
+        </p>
+
+        <h2>7. 어린이의 이용</h2>
+        <p>서비스는 만 14세 미만 아동을 대상으로 하지 않습니다.</p>
+
+        <h2>8. 문의</h2>
+        @if (!string.IsNullOrWhiteSpace(SupportEmail))
+        {
+            <p>개인정보 관련 문의: <a href="mailto:@SupportEmail">@SupportEmail</a></p>
+        }
+        else
+        {
+            <p class="legal-setup-notice">운영 전 `Support:Email` 설정에 개인정보 문의용 이메일을 등록해야 합니다.</p>
+        }
+
+        <h2>9. 방침의 변경</h2>
+        <p>이 방침이 변경되면 시행일과 변경 내용을 이 페이지에 게시합니다.</p>
+    </section>
+</main>
+
+@code {
+    private string? SupportEmail => Configuration["Support:Email"];
+}

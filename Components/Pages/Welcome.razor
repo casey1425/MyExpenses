@@ -1,0 +1,76 @@
+@page "/welcome"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserDataProvisioner UserDataProvisioner
+@inject NavigationManager Navigation
+
+<PageTitle>처음 시작 | MyExpenses</PageTitle>
+
+<main class="welcome-page">
+    <section class="welcome-card" aria-labelledby="welcome-title">
+        <div class="welcome-icon" aria-hidden="true">👋</div>
+        <p class="welcome-kicker">WELCOME TO MY EXPENSES</p>
+        <h1 id="welcome-title">나만의 지출 기록을<br />시작해 보세요</h1>
+        <p class="welcome-description">
+            이 공간의 지출과 예산은 로그인한 Google 계정에만 저장됩니다.
+            첫 지출을 기록하면 월별 합계와 카테고리 통계를 바로 확인할 수 있어요.
+        </p>
+
+        <div class="feature-list" aria-label="주요 기능">
+            <div><span aria-hidden="true">✓</span> 지출 기록과 카테고리별 통계</div>
+            <div><span aria-hidden="true">✓</span> 월별 예산과 사용률 관리</div>
+            <div><span aria-hidden="true">✓</span> 내 기록만 CSV로 내보내기</div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <p class="welcome-error" role="alert">@errorMessage</p>
+        }
+
+        <button type="button" class="start-button" @onclick="StartAsync" disabled="@isStarting">
+            @(isStarting ? "준비 중..." : "지출 기록 시작하기")
+        </button>
+    </section>
+</main>
+
+@code {
+    private string ownerId = string.Empty;
+    private bool isStarting;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        ownerId = authenticationState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        if (string.IsNullOrEmpty(ownerId))
+        {
+            Navigation.NavigateTo("/account/login", forceLoad: true);
+            return;
+        }
+
+        var needsOnboarding = await UserDataProvisioner.EnsureUserAsync(ownerId);
+        if (!needsOnboarding)
+            Navigation.NavigateTo("/");
+    }
+
+    private async Task StartAsync()
+    {
+        if (isStarting || string.IsNullOrEmpty(ownerId))
+            return;
+
+        isStarting = true;
+        try
+        {
+            await UserDataProvisioner.CompleteOnboardingAsync(ownerId);
+            Navigation.NavigateTo("/");
+        }
+        catch
+        {
+            errorMessage = "시작 설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+            isStarting = false;
+        }
+    }
+}

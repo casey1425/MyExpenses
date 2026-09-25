@@ -2,9 +2,13 @@
 @rendermode InteractiveServer
 @attribute [Authorize]
 @using System.Globalization
+@using System.Security.Claims
 @using Microsoft.EntityFrameworkCore
 @using MyExpenses.Data
 @inject IDbContextFactory<ExpensesDbContext> DbFactory
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserDataProvisioner UserDataProvisioner
+@inject NavigationManager Navigation
 @inject ILogger<Home> Logger
 
 <PageTitle>지출 기록 | MyExpenses</PageTitle>
@@ -340,6 +344,7 @@
 
 @code {
     private readonly string[] categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
+    private string ownerId = string.Empty;
     private List<ExpenseRecord> expenses = [];
     private IReadOnlyList<CategoryStatistic> categoryStatistics = [];
     private DateTime expenseDate = DateTime.Today;
@@ -404,6 +409,20 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        ownerId = authenticationState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        if (string.IsNullOrEmpty(ownerId))
+        {
+            Navigation.NavigateTo("/account/login", forceLoad: true);
+            return;
+        }
+
+        if (await UserDataProvisioner.EnsureUserAsync(ownerId))
+        {
+            Navigation.NavigateTo("/welcome");
+            return;
+        }
+
         try
         {
             await LoadExpensesAsync();
@@ -420,7 +439,9 @@
     private async Task LoadExpensesAsync()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        expenses = await activeFilter.ApplyTo(db.Expenses.AsNoTracking())
+        var ownedExpenses = db.Expenses.AsNoTracking()
+            .Where(item => item.OwnerId == ownerId);
+        expenses = await activeFilter.ApplyTo(ownedExpenses)
             .OrderByDescending(item => item.Date)
             .ThenByDescending(item => item.Id)
             .ToListAsync();
@@ -433,12 +454,14 @@
     private async Task LoadBudgetAsync()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        var amounts = await new ExpenseFilter(budgetMonth).ApplyTo(db.Expenses.AsNoTracking())
+        var ownedExpenses = db.Expenses.AsNoTracking()
+            .Where(item => item.OwnerId == ownerId);
+        var amounts = await new ExpenseFilter(budgetMonth).ApplyTo(ownedExpenses)
             .Select(item => item.Amount)
             .ToListAsync();
         budgetSpent = amounts.Sum();
         budgetAmount = await db.MonthlyBudgets.AsNoTracking()
-            .Where(item => item.Month == budgetMonth)
+            .Where(item => item.OwnerId == ownerId && item.Month == budgetMonth)
             .Select(item => (long?)item.Amount)
             .SingleOrDefaultAsync();
         budgetInput = budgetAmount ?? 0;
@@ -488,9 +511,14 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            var saved = await db.MonthlyBudgets.FindAsync(budgetMonth);
+            var saved = await db.MonthlyBudgets.FindAsync(ownerId, budgetMonth);
             if (saved is null)
-                db.MonthlyBudgets.Add(new MonthlyBudget { Month = budgetMonth, Amount = budgetInput });
+                db.MonthlyBudgets.Add(new MonthlyBudget
+                {
+                    OwnerId = ownerId,
+                    Month = budgetMonth,
+                    Amount = budgetInput
+                });
             else
                 saved.Amount = budgetInput;
             await db.SaveChangesAsync();
@@ -518,7 +546,7 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            var saved = await db.MonthlyBudgets.FindAsync(budgetMonth);
+            var saved = await db.MonthlyBudgets.FindAsync(ownerId, budgetMonth);
             if (saved is not null)
             {
                 db.MonthlyBudgets.Remove(saved);
@@ -613,6 +641,7 @@
             await using var db = await DbFactory.CreateDbContextAsync();
             var newExpense = new ExpenseRecord
             {
+                OwnerId = ownerId,
                 Date = expenseDate.Date,
                 Amount = amount,
                 Category = category,
@@ -681,7 +710,8 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            var expense = await db.Expenses.FindAsync(id);
+            var expense = await db.Expenses
+                .SingleOrDefaultAsync(item => item.Id == id && item.OwnerId == ownerId);
             if (expense is null)
             {
                 await LoadExpensesAsync();
@@ -719,7 +749,8 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            var expense = await db.Expenses.FindAsync(id);
+            var expense = await db.Expenses
+                .SingleOrDefaultAsync(item => item.Id == id && item.OwnerId == ownerId);
             if (expense is null)
             {
                 await LoadExpensesAsync();
@@ -766,7 +797,9 @@
         try
         {
             await using var db = await DbFactory.CreateDbContextAsync();
-            await db.Expenses.ExecuteDeleteAsync();
+            await db.Expenses
+                .Where(item => item.OwnerId == ownerId)
+                .ExecuteDeleteAsync();
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
             showDeleteAllConfirmation = false;
