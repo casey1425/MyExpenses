@@ -70,6 +70,7 @@ builder.Services.AddDbContextFactory<ExpensesDbContext>(options =>
     options.UseSqlite($"Data Source={databasePath}"));
 builder.Services.AddScoped<UserDataProvisioner>();
 builder.Services.AddScoped<UserDataDeletionService>();
+builder.Services.AddScoped<ExpenseCsvImportService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
 builder.Services.AddDbContext<AuthDbContext>(options =>
