@@ -1,6 +1,8 @@
 @page "/account/login"
 @attribute [AllowAnonymous]
 @inject IConfiguration Configuration
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
 
 <PageTitle>로그인 | MyExpenses</PageTitle>
 
@@ -52,4 +54,11 @@
 
     private string GoogleLoginUrl =>
         $"/account/google-login?returnUrl={Uri.EscapeDataString(SafeReturnUrl)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authenticationState.User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/", forceLoad: true);
+    }
 }
