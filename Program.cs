@@ -71,6 +71,7 @@ builder.Services.AddDbContextFactory<ExpensesDbContext>(options =>
 builder.Services.AddScoped<UserDataProvisioner>();
 builder.Services.AddScoped<UserDataDeletionService>();
 builder.Services.AddScoped<ExpenseCsvImportService>();
+builder.Services.AddScoped<RecurringExpenseService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
 builder.Services.AddDbContext<AuthDbContext>(options =>

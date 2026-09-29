@@ -8,6 +8,7 @@
 @inject IDbContextFactory<ExpensesDbContext> DbFactory
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserDataProvisioner UserDataProvisioner
+@inject RecurringExpenseService RecurringExpenseService
 @inject NavigationManager Navigation
 @inject ILogger<Home> Logger
 
@@ -19,6 +20,7 @@
             <p class="eyebrow">MY EXPENSES</p>
             <h1>지출 기록</h1>
             <p class="subtitle">오늘의 지출을 간편하게 기록하고 확인해 보세요.</p>
+            <a href="/recurring">정기 지출 관리 →</a>
         </div>
         <div class="today-chip">@DateTime.Today.ToString("yyyy년 M월 d일")</div>
     </header>
@@ -426,6 +428,7 @@
 
         try
         {
+            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
             await LoadExpensesAsync();
         }
         catch (Exception ex)

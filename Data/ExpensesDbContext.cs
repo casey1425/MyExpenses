@@ -7,6 +7,8 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+    public DbSet<RecurringExpenseRule> RecurringExpenseRules => Set<RecurringExpenseRule>();
+    public DbSet<RecurringExpenseOccurrence> RecurringExpenseOccurrences => Set<RecurringExpenseOccurrence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +31,22 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
         {
             entity.HasKey(profile => profile.OwnerId);
             entity.Property(profile => profile.OwnerId).IsRequired();
+        });
+
+        modelBuilder.Entity<RecurringExpenseRule>(entity =>
+        {
+            entity.HasKey(rule => rule.Id);
+            entity.Property(rule => rule.OwnerId).IsRequired();
+            entity.Property(rule => rule.Category).IsRequired().HasMaxLength(30);
+            entity.Property(rule => rule.Memo).IsRequired().HasMaxLength(100);
+            entity.HasIndex(rule => rule.OwnerId);
+        });
+
+        modelBuilder.Entity<RecurringExpenseOccurrence>(entity =>
+        {
+            entity.HasKey(occurrence => new { occurrence.RuleId, occurrence.Month });
+            entity.Property(occurrence => occurrence.OwnerId).IsRequired();
+            entity.HasIndex(occurrence => occurrence.OwnerId);
         });
     }
 }

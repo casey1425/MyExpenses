@@ -58,6 +58,26 @@ public static class BudgetSchema
                 );
                 CREATE INDEX IF NOT EXISTS "IX_Expenses_OwnerId_Date"
                     ON "Expenses" ("OwnerId", "Date");
+                CREATE TABLE IF NOT EXISTS "RecurringExpenseRules" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_RecurringExpenseRules" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "StartMonth" TEXT NOT NULL,
+                    "DayOfMonth" INTEGER NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    "Category" TEXT NOT NULL,
+                    "Memo" TEXT NOT NULL,
+                    "IsActive" INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_RecurringExpenseRules_OwnerId"
+                    ON "RecurringExpenseRules" ("OwnerId");
+                CREATE TABLE IF NOT EXISTS "RecurringExpenseOccurrences" (
+                    "RuleId" INTEGER NOT NULL,
+                    "Month" TEXT NOT NULL,
+                    "OwnerId" TEXT NOT NULL,
+                    CONSTRAINT "PK_RecurringExpenseOccurrences" PRIMARY KEY ("RuleId", "Month")
+                );
+                CREATE INDEX IF NOT EXISTS "IX_RecurringExpenseOccurrences_OwnerId"
+                    ON "RecurringExpenseOccurrences" ("OwnerId");
                 """, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);

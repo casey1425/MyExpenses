@@ -1,0 +1,293 @@
+@page "/recurring"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject RecurringExpenseService RecurringExpenseService
+@inject ILogger<Recurring> Logger
+
+<PageTitle>정기 지출 | MyExpenses</PageTitle>
+
+<main class="recurring-page">
+    <header>
+        <p class="kicker">RECURRING EXPENSES</p>
+        <h1>정기 지출</h1>
+        <p>매월 같은 날의 지출을 자동으로 기록합니다. 29~31일은 해당 월의 마지막 날에 기록돼요.</p>
+        <p>앱에 접속할 때 지난 접속 이후 도래한 지출을 채웁니다. 규칙을 중지한 기간은 소급하지 않습니다.</p>
+    </header>
+
+    <section class="rule-card" aria-labelledby="new-rule-title">
+        <h2 id="new-rule-title">새 정기 지출</h2>
+        <form @onsubmit="CreateAsync" @onsubmit:preventDefault>
+            <div class="rule-fields">
+                <label>매월 며칠
+                    <input type="number" min="1" max="31" step="1" @bind="dayOfMonth" required />
+                </label>
+                <label>금액 (원)
+                    <input type="number" min="1" step="1" @bind="amount" required />
+                </label>
+                <label>카테고리
+                    <select @bind="category">
+                        @foreach (var option in categories)
+                        {
+                            <option value="@option">@option</option>
+                        }
+                    </select>
+                </label>
+                <label>메모
+                    <input type="text" maxlength="100" @bind="memo" placeholder="예: 통신비" />
+                </label>
+            </div>
+            <button type="submit" disabled="@isBusy">등록하기</button>
+        </form>
+        <p class="help">등록한 달부터 적용됩니다. 이번 달 지정일이 이미 지났다면 즉시 기록됩니다.</p>
+    </section>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="error" role="alert">@errorMessage</p>
+    }
+    @if (!string.IsNullOrEmpty(notice))
+    {
+        <p class="notice" role="status">@notice</p>
+    }
+
+    <section class="rule-card" aria-labelledby="rules-title">
+        <h2 id="rules-title">등록한 규칙</h2>
+        @if (rules.Count == 0)
+        {
+            <p class="help">아직 등록한 정기 지출이 없습니다.</p>
+        }
+        else
+        {
+            <div class="rules-list">
+                @foreach (var rule in rules)
+                {
+                    <div class="rule-item" @key="rule.Id">
+                        @if (editingId == rule.Id)
+                        {
+                            <form @onsubmit="SaveEditAsync" @onsubmit:preventDefault>
+                                <div class="rule-fields">
+                                    <label>매월 며칠
+                                        <input type="number" min="1" max="31" step="1" @bind="editDay" required />
+                                    </label>
+                                    <label>금액 (원)
+                                        <input type="number" min="1" step="1" @bind="editAmount" required />
+                                    </label>
+                                    <label>카테고리
+                                        <select @bind="editCategory">
+                                            @foreach (var option in categories)
+                                            {
+                                                <option value="@option">@option</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label>메모
+                                        <input type="text" maxlength="100" @bind="editMemo" />
+                                    </label>
+                                </div>
+                                <div class="rule-actions">
+                                    <button type="submit" disabled="@isBusy">저장</button>
+                                    <button type="button" class="secondary" @onclick="CancelEdit" disabled="@isBusy">취소</button>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="rule-summary">
+                                <div>
+                                    <strong>@(string.IsNullOrWhiteSpace(rule.Memo) ? rule.Category : rule.Memo)</strong>
+                                    <p>매월 @(rule.DayOfMonth)일 · @rule.Amount.ToString("N0")원 · @rule.Category</p>
+                                    <small>@(rule.IsActive ? "사용 중" : "중지됨") · @rule.StartMonth.ToString("yyyy년 M월")부터</small>
+                                </div>
+                                <div class="rule-actions">
+                                    <button type="button" class="secondary" @onclick="() => StartEdit(rule)" disabled="@isBusy">수정</button>
+                                    <button type="button" class="secondary" @onclick="() => ToggleAsync(rule)" disabled="@isBusy">@(rule.IsActive ? "중지" : "다시 시작")</button>
+                                    <button type="button" class="danger" @onclick="() => ShowDelete(rule.Id)" disabled="@isBusy">삭제</button>
+                                </div>
+                            </div>
+                            @if (deletingId == rule.Id)
+                            {
+                                <div class="delete-confirm" role="alert">
+                                    <p>이 규칙을 삭제할까요? 이미 생성된 지출은 그대로 유지됩니다.</p>
+                                    <div class="rule-actions">
+                                        <button type="button" class="danger" @onclick="() => DeleteAsync(rule.Id)" disabled="@isBusy">규칙 삭제</button>
+                                        <button type="button" class="secondary" @onclick="CancelDelete" disabled="@isBusy">취소</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
+    <a href="/">← 지출 기록으로 돌아가기</a>
+</main>
+
+@code {
+    private readonly string[] categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
+    private string ownerId = string.Empty;
+    private List<RecurringExpenseRule> rules = [];
+    private int dayOfMonth = DateTime.Today.Day;
+    private long amount;
+    private string category = "생활";
+    private string memo = string.Empty;
+    private int? editingId;
+    private int editDay;
+    private long editAmount;
+    private string editCategory = "생활";
+    private string editMemo = string.Empty;
+    private int? deletingId;
+    private bool isBusy;
+    private string? errorMessage;
+    private string? notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        ownerId = state.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        if (string.IsNullOrEmpty(ownerId))
+            return;
+
+        try
+        {
+            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "정기 지출을 불러오지 못했습니다.");
+            errorMessage = "정기 지출을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    }
+
+    private async Task ReloadAsync() => rules = await RecurringExpenseService.ListAsync(ownerId);
+
+    private async Task<bool> CheckOwnerAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (string.IsNullOrEmpty(ownerId) || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
+        {
+            errorMessage = "로그인 계정이 바뀌었습니다. 페이지를 새로고침해 주세요.";
+            return false;
+        }
+        return true;
+    }
+
+    private bool Validate(int day, long value, string selectedCategory, string text)
+    {
+        if (day is >= 1 and <= 31 && value > 0 && categories.Contains(selectedCategory) && text.Trim().Length <= 100)
+            return true;
+        errorMessage = "지정일(1~31일), 1원 이상의 금액, 카테고리와 100자 이하 메모를 확인해 주세요.";
+        return false;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (isBusy || !Validate(dayOfMonth, amount, category, memo) || !await CheckOwnerAsync())
+            return;
+        isBusy = true;
+        try
+        {
+            await RecurringExpenseService.CreateAsync(ownerId, dayOfMonth, amount, category, memo);
+            var generated = await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await ReloadAsync();
+            amount = 0;
+            memo = string.Empty;
+            errorMessage = null;
+            notice = generated > 0 ? "규칙을 등록하고 이번 달 지출을 기록했습니다." : "정기 지출 규칙을 등록했습니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "정기 지출 등록에 실패했습니다.");
+            errorMessage = "등록 결과를 확인하지 못했습니다. 목록을 새로고침해 주세요.";
+        }
+        finally { isBusy = false; }
+    }
+
+    private void StartEdit(RecurringExpenseRule rule)
+    {
+        if (isBusy) return;
+        editingId = rule.Id;
+        deletingId = null;
+        editDay = rule.DayOfMonth;
+        editAmount = rule.Amount;
+        editCategory = rule.Category;
+        editMemo = rule.Memo;
+        errorMessage = null;
+        notice = null;
+    }
+
+    private void CancelEdit() => editingId = null;
+
+    private async Task SaveEditAsync()
+    {
+        if (isBusy || editingId is not int id || !Validate(editDay, editAmount, editCategory, editMemo) || !await CheckOwnerAsync())
+            return;
+        isBusy = true;
+        try
+        {
+            if (!await RecurringExpenseService.UpdateAsync(ownerId, id, editDay, editAmount, editCategory, editMemo))
+                throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
+            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await ReloadAsync();
+            editingId = null;
+            errorMessage = null;
+            notice = "규칙을 수정했습니다. 이미 생성된 지출은 바뀌지 않습니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "정기 지출 수정에 실패했습니다.");
+            errorMessage = "수정 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요.";
+        }
+        finally { isBusy = false; }
+    }
+
+    private async Task ToggleAsync(RecurringExpenseRule rule)
+    {
+        if (isBusy || !await CheckOwnerAsync()) return;
+        isBusy = true;
+        try
+        {
+            if (!await RecurringExpenseService.SetActiveAsync(ownerId, rule.Id, !rule.IsActive))
+                throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
+            if (!rule.IsActive)
+                await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await ReloadAsync();
+            errorMessage = null;
+            notice = rule.IsActive ? "규칙을 중지했습니다." : "규칙을 다시 시작했습니다. 중지 기간의 지출은 생성하지 않습니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "정기 지출 상태 변경에 실패했습니다.");
+            errorMessage = "상태 변경 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요.";
+        }
+        finally { isBusy = false; }
+    }
+
+    private void ShowDelete(int id) { deletingId = id; editingId = null; notice = null; }
+    private void CancelDelete() => deletingId = null;
+
+    private async Task DeleteAsync(int id)
+    {
+        if (isBusy || deletingId != id || !await CheckOwnerAsync()) return;
+        isBusy = true;
+        try
+        {
+            if (!await RecurringExpenseService.DeleteAsync(ownerId, id))
+                throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
+            await ReloadAsync();
+            deletingId = null;
+            errorMessage = null;
+            notice = "규칙을 삭제했습니다. 기존 지출은 유지됩니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "정기 지출 삭제에 실패했습니다.");
+            errorMessage = "삭제 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요.";
+        }
+        finally { isBusy = false; }
+    }
+}
