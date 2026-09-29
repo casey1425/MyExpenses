@@ -50,7 +50,8 @@
         <form class="budget-form" @onsubmit="SaveBudgetAsync" @onsubmit:preventDefault>
             <div class="budget-field">
                 <label for="budget-month">월</label>
-                <input id="budget-month" type="month" value="@budgetMonthInput" @onchange="OnBudgetMonthChangedAsync" required />
+                <input id="budget-month" type="month" value="@budgetMonthInput" @onchange="OnBudgetMonthChangedAsync"
+                       disabled="@(savingCategoryBudget is not null || isSavingBudget)" required />
             </div>
             <div class="budget-field">
                 <label for="budget-amount">예산 금액</label>
@@ -96,6 +97,70 @@
         {
             <p class="budget-empty">@budgetMonth.ToString("yyyy년 M월") 지출은 @budgetSpent.ToString("N0")원입니다. 예산을 설정하면 사용률과 남은 금액을 볼 수 있어요.</p>
         }
+    </section>
+
+    <section class="panel category-budget-panel" aria-labelledby="category-budget-title">
+        <div class="panel-heading">
+            <div>
+                <p class="section-kicker">CATEGORY BUDGETS</p>
+                <h2 id="category-budget-title">카테고리별 월 예산</h2>
+                <p class="budget-description">위에서 선택한 @budgetMonth.ToString("yyyy년 M월")의 지출을 각 카테고리 예산과 비교합니다. 전체 월 예산과는 별도로 설정합니다.</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(categoryBudgetError))
+        {
+            <p class="form-error" role="alert">@categoryBudgetError</p>
+        }
+        @if (!string.IsNullOrEmpty(categoryBudgetNotice))
+        {
+            <p class="budget-notice" role="status">@categoryBudgetNotice</p>
+        }
+
+        <div class="category-budget-list">
+            @foreach (var option in categories)
+            {
+                var spent = CategoryBudgetSpent(option);
+                var categoryLimit = CategoryBudgetAmount(option);
+                var percentage = CategoryBudgetPercentage(option);
+                <div class="category-budget-item" @key="option">
+                    <div class="category-budget-heading">
+                        <strong><span aria-hidden="true">@CategoryIcon(option)</span> @option</strong>
+                        <span>@spent.ToString("N0")원 사용@(categoryLimit is long configured ? $" / {configured:N0}원" : "")</span>
+                    </div>
+                    @if (categoryLimit is long configuredLimit)
+                    {
+                        <div class="budget-track" role="progressbar" aria-label="@option 예산 사용률"
+                             aria-valuenow="@Math.Min(percentage, 100).ToString("0.#", CultureInfo.InvariantCulture)"
+                             aria-valuemin="0" aria-valuemax="100">
+                            <div class="budget-fill @(spent > configuredLimit ? "over-budget" : "")"
+                                 style="width: @CategoryBudgetBarWidth(option)%"></div>
+                        </div>
+                        <p class="category-budget-balance @(spent > configuredLimit ? "over-budget" : "")">
+                            @(spent > configuredLimit ? $"{spent - configuredLimit:N0}원 초과 · {percentage:0.#}% 사용" : $"{configuredLimit - spent:N0}원 남음 · {percentage:0.#}% 사용")
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="category-budget-balance">예산 미설정</p>
+                    }
+                    <form class="category-budget-form" @onsubmit="() => SaveCategoryBudgetAsync(option)" @onsubmit:preventDefault>
+                        <label class="visually-hidden" for="category-budget-@option">@option 예산 금액</label>
+                        <div class="amount-input">
+                            <input id="category-budget-@option" type="number" min="1" step="1" required
+                                   @bind="categoryBudgetInputs[option]" />
+                            <span>원</span>
+                        </div>
+                        <button type="submit" class="budget-save" disabled="@(savingCategoryBudget is not null)">@(categoryLimit is null ? "설정" : "변경")</button>
+                        @if (categoryLimit is not null)
+                        {
+                            <button type="button" class="budget-delete" @onclick="() => DeleteCategoryBudgetAsync(option)"
+                                    disabled="@(savingCategoryBudget is not null)">삭제</button>
+                        }
+                    </form>
+                </div>
+            }
+        </div>
     </section>
 
     <section class="panel statistics-panel" aria-labelledby="statistics-title">
@@ -367,6 +432,16 @@
     private long budgetInput;
     private long? budgetAmount;
     private long budgetSpent;
+    private Dictionary<string, long> categoryBudgetSpent = [];
+    private Dictionary<string, long> categoryBudgetAmounts = [];
+    private readonly Dictionary<string, long> categoryBudgetInputs = new()
+    {
+        ["식비"] = 0, ["카페"] = 0, ["교통"] = 0,
+        ["쇼핑"] = 0, ["생활"] = 0, ["기타"] = 0
+    };
+    private string? categoryBudgetError;
+    private string? categoryBudgetNotice;
+    private string? savingCategoryBudget;
     private string? budgetError;
     private string? budgetNotice;
     private bool isSavingBudget;
@@ -386,6 +461,16 @@
     private long StatisticsTotal => categoryStatistics.Sum(statistic => statistic.Amount);
     private decimal BudgetPercentage => budgetAmount is > 0 ? (decimal)budgetSpent / budgetAmount.Value * 100 : 0;
     private string BudgetBarWidth => Math.Min(BudgetPercentage, 100).ToString("0.#", CultureInfo.InvariantCulture);
+    private long CategoryBudgetSpent(string selectedCategory) => categoryBudgetSpent.GetValueOrDefault(selectedCategory);
+    private long? CategoryBudgetAmount(string selectedCategory) =>
+        categoryBudgetAmounts.TryGetValue(selectedCategory, out var value) ? value : null;
+    private decimal CategoryBudgetPercentage(string selectedCategory)
+    {
+        var limit = CategoryBudgetAmount(selectedCategory);
+        return limit is > 0 ? (decimal)CategoryBudgetSpent(selectedCategory) / limit.Value * 100 : 0;
+    }
+    private string CategoryBudgetBarWidth(string selectedCategory) =>
+        Math.Min(CategoryBudgetPercentage(selectedCategory), 100).ToString("0.#", CultureInfo.InvariantCulture);
     private string StatisticsPeriodLabel => activeFilter.IsActive
         ? FilterDescription
         : $"{DateTime.Today:yyyy년 M월} 기준";
@@ -460,15 +545,22 @@
         await using var db = await DbFactory.CreateDbContextAsync();
         var ownedExpenses = db.Expenses.AsNoTracking()
             .Where(item => item.OwnerId == ownerId);
-        var amounts = await new ExpenseFilter(budgetMonth).ApplyTo(ownedExpenses)
-            .Select(item => item.Amount)
+        var monthExpenses = await new ExpenseFilter(budgetMonth).ApplyTo(ownedExpenses)
+            .Select(item => new { item.Category, item.Amount })
             .ToListAsync();
-        budgetSpent = amounts.Sum();
+        budgetSpent = monthExpenses.Sum(item => item.Amount);
+        categoryBudgetSpent = monthExpenses.GroupBy(item => item.Category)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Amount));
         budgetAmount = await db.MonthlyBudgets.AsNoTracking()
             .Where(item => item.OwnerId == ownerId && item.Month == budgetMonth)
             .Select(item => (long?)item.Amount)
             .SingleOrDefaultAsync();
         budgetInput = budgetAmount ?? 0;
+        categoryBudgetAmounts = await db.CategoryBudgets.AsNoTracking()
+            .Where(item => item.OwnerId == ownerId && item.Month == budgetMonth)
+            .ToDictionaryAsync(item => item.Category, item => item.Amount);
+        foreach (var option in categories)
+            categoryBudgetInputs[option] = categoryBudgetAmounts.GetValueOrDefault(option);
     }
 
     private async Task RefreshBudgetAsync()
@@ -498,6 +590,8 @@
         budgetMonth = new DateTime(parsedMonth.Year, parsedMonth.Month, 1);
         budgetMonthInput = value;
         budgetNotice = null;
+        categoryBudgetNotice = null;
+        categoryBudgetError = null;
         await RefreshBudgetAsync();
     }
 
@@ -568,6 +662,93 @@
         finally
         {
             isSavingBudget = false;
+        }
+    }
+
+    private async Task SaveCategoryBudgetAsync(string selectedCategory)
+    {
+        if (savingCategoryBudget is not null || !categories.Contains(selectedCategory))
+            return;
+        var input = categoryBudgetInputs[selectedCategory];
+        if (input <= 0)
+        {
+            categoryBudgetError = "카테고리 예산은 1원 이상의 정수로 입력해 주세요.";
+            return;
+        }
+
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
+        {
+            categoryBudgetError = "로그인 계정이 바뀌었습니다. 페이지를 새로고침해 주세요.";
+            return;
+        }
+
+        savingCategoryBudget = selectedCategory;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var saved = await db.CategoryBudgets.FindAsync(ownerId, budgetMonth, selectedCategory);
+            if (saved is null)
+                db.CategoryBudgets.Add(new CategoryBudget
+                {
+                    OwnerId = ownerId,
+                    Month = budgetMonth,
+                    Category = selectedCategory,
+                    Amount = input
+                });
+            else
+                saved.Amount = input;
+            await db.SaveChangesAsync();
+            await LoadBudgetAsync();
+            categoryBudgetError = null;
+            categoryBudgetNotice = $"{selectedCategory} 예산을 저장했습니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "카테고리 예산을 저장하지 못했습니다.");
+            categoryBudgetError = "카테고리 예산 저장 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요.";
+        }
+        finally
+        {
+            savingCategoryBudget = null;
+        }
+    }
+
+    private async Task DeleteCategoryBudgetAsync(string selectedCategory)
+    {
+        if (savingCategoryBudget is not null || !categories.Contains(selectedCategory) ||
+            CategoryBudgetAmount(selectedCategory) is null)
+            return;
+
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
+        {
+            categoryBudgetError = "로그인 계정이 바뀌었습니다. 페이지를 새로고침해 주세요.";
+            return;
+        }
+
+        savingCategoryBudget = selectedCategory;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var saved = await db.CategoryBudgets.FindAsync(ownerId, budgetMonth, selectedCategory);
+            if (saved is not null)
+            {
+                db.CategoryBudgets.Remove(saved);
+                await db.SaveChangesAsync();
+            }
+            await LoadBudgetAsync();
+            categoryBudgetError = null;
+            categoryBudgetNotice = $"{selectedCategory} 예산을 삭제했습니다. 지출 기록은 그대로 유지됩니다.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "카테고리 예산을 삭제하지 못했습니다.");
+            categoryBudgetError = "카테고리 예산 삭제 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요.";
+        }
+        finally
+        {
+            savingCategoryBudget = null;
         }
     }
 

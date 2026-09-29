@@ -6,6 +6,7 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
+    public DbSet<CategoryBudget> CategoryBudgets => Set<CategoryBudget>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<RecurringExpenseRule> RecurringExpenseRules => Set<RecurringExpenseRule>();
     public DbSet<RecurringExpenseOccurrence> RecurringExpenseOccurrences => Set<RecurringExpenseOccurrence>();
@@ -25,6 +26,13 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
         {
             entity.HasKey(budget => new { budget.OwnerId, budget.Month });
             entity.Property(budget => budget.OwnerId).IsRequired();
+        });
+
+        modelBuilder.Entity<CategoryBudget>(entity =>
+        {
+            entity.HasKey(budget => new { budget.OwnerId, budget.Month, budget.Category });
+            entity.Property(budget => budget.OwnerId).IsRequired();
+            entity.Property(budget => budget.Category).IsRequired().HasMaxLength(30);
         });
 
         modelBuilder.Entity<UserProfile>(entity =>

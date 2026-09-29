@@ -17,6 +17,9 @@ public sealed class UserDataDeletionService(IDbContextFactory<ExpensesDbContext>
         await db.MonthlyBudgets
             .Where(budget => budget.OwnerId == ownerId)
             .ExecuteDeleteAsync(cancellationToken);
+        await db.CategoryBudgets
+            .Where(budget => budget.OwnerId == ownerId)
+            .ExecuteDeleteAsync(cancellationToken);
         await db.RecurringExpenseOccurrences
             .Where(occurrence => occurrence.OwnerId == ownerId)
             .ExecuteDeleteAsync(cancellationToken);

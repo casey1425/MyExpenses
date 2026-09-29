@@ -78,6 +78,13 @@ public static class BudgetSchema
                 );
                 CREATE INDEX IF NOT EXISTS "IX_RecurringExpenseOccurrences_OwnerId"
                     ON "RecurringExpenseOccurrences" ("OwnerId");
+                CREATE TABLE IF NOT EXISTS "CategoryBudgets" (
+                    "OwnerId" TEXT NOT NULL,
+                    "Month" TEXT NOT NULL,
+                    "Category" TEXT NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    CONSTRAINT "PK_CategoryBudgets" PRIMARY KEY ("OwnerId", "Month", "Category")
+                );
                 """, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
