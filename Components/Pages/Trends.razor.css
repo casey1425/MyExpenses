@@ -1,0 +1,32 @@
+.trends-page { max-width: 1100px; margin: 0 auto; padding: 1.4rem 0 3rem; color: #1e293b; }
+.trends-heading { margin-bottom: 1.4rem; }
+.kicker { margin: 0 0 .45rem; color: #537cbb; font-size: .72rem; font-weight: 800; letter-spacing: .16em; }
+h1 { margin: 0; font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -.05em; }
+.trends-heading > p:last-child, .period-note, .comparison-help { color: #64748b; }
+.month-controls { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; margin-bottom: 1.25rem; }
+.month-controls label { font-size: .85rem; font-weight: 700; }
+input, button { min-height: 42px; padding: .5rem .8rem; border: 1px solid #dbe4ee; border-radius: 8px; }
+input { background: #fff; color: #1e293b; }
+button { border-color: #285889; background: #285889; color: #fff; font-weight: 700; }
+button:disabled, input:disabled { opacity: .6; }
+.trend-panel { margin-bottom: 1.25rem; padding: 1.5rem; border: 1px solid #e4eaf2; border-radius: 18px; background: #fff; box-shadow: 0 9px 28px rgba(31, 52, 82, .045); }
+h2 { margin: 0; font-size: 1.2rem; font-weight: 750; }
+.period-note { margin: .5rem 0 1rem; font-size: .88rem; }
+.comparison-help { margin: .7rem 0; font-size: .8rem; line-height: 1.7; }
+.comparison-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; }
+.comparison-card { display: flex; flex-direction: column; gap: .6rem; padding: 1.2rem; border: 1px solid #e4eaf2; border-radius: 12px; background: #f8fafc; }
+.comparison-card > span { color: #64748b; font-size: .83rem; }
+.comparison-card strong { font-size: 1.75rem; overflow-wrap: anywhere; }
+.comparison-card small { margin-left: .25rem; font-size: .9rem; }
+.comparison-card strong.difference { font-size: 1.2rem; }
+.increase, .increase strong { color: #b34850; }
+.decrease, .decrease strong { color: #287452; }
+.unchanged { color: #63758d; }
+.comparison-table-wrap { overflow-x: auto; }
+.comparison-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.comparison-table th, .comparison-table td { padding: .85rem .7rem; text-align: right; border-bottom: 1px solid #e4eaf2; white-space: nowrap; }
+.comparison-table th:first-child { text-align: left; }
+.comparison-table thead { background: #f8fafc; color: #40516a; }
+.error { padding: .8rem 1rem; border-radius: 8px; background: #fff2f2; color: #a34242; }
+.loading { color: #64748b; }
+@media (max-width: 800px) { .comparison-cards { grid-template-columns: 1fr; } .trend-panel { padding: 1rem; } }

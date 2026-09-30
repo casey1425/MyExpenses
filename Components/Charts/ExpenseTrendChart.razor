@@ -1,0 +1,75 @@
+@using System.Globalization
+@using MyExpenses.Data
+
+@if (Months.All(month => month.Count == 0))
+{
+    <p class="chart-empty">이 기간에 기록된 지출이 없습니다. 지출을 기록하면 월별 추이를 볼 수 있어요.</p>
+}
+else
+{
+    <div class="chart-viewport" tabindex="0" aria-label="6개월 지출 그래프. 좁은 화면에서는 좌우로 스크롤할 수 있습니다.">
+    <svg class="trend-chart" viewBox="0 0 840 300" role="img" aria-labelledby="@titleId @descriptionId">
+        <title id="@titleId">6개월 월별 지출 합계</title>
+        <desc id="@descriptionId">@ChartDescription</desc>
+        <line class="chart-grid" x1="45" y1="40" x2="820" y2="40" />
+        <line class="chart-grid" x1="45" y1="135" x2="820" y2="135" />
+        <line class="chart-baseline" x1="45" y1="230" x2="820" y2="230" />
+        @for (var index = 0; index < Months.Count; index++)
+        {
+            var point = Months[index];
+            var height = Maximum > 0 ? point.Amount / Maximum * 190 : 0;
+            var x = 75 + index * 125;
+            var y = 230 - height;
+            <g>
+                <rect class="chart-bar @(index == Months.Count - 1 ? "selected-bar" : "")"
+                      x="@Number(x)" y="@Number(y)" width="60" height="@Number(height)" rx="5">
+                    <title>@point.Month.ToString("yyyy년 M월"): @point.Amount.ToString("N0")원 · @(point.Count)건</title>
+                </rect>
+                <text class="chart-value" x="@Number(x + 30)" y="@Number(y - 10)" text-anchor="middle">@ShortAmount(point.Amount)</text>
+                <text class="chart-month" x="@Number(x + 30)" y="255" text-anchor="middle">@point.Month.ToString("yy.MM")</text>
+                @if (point.IsPartial)
+                {
+                    <g><text class="chart-partial" x="@Number(x + 30)" y="276" text-anchor="middle">오늘까지</text></g>
+                }
+            </g>
+        }
+    </svg>
+    </div>
+}
+
+<details class="chart-details">
+    <summary>월별 금액과 건수 보기</summary>
+    <div class="chart-table-wrap">
+        <table>
+            <caption class="visually-hidden">그래프에 표시된 월별 지출</caption>
+            <thead><tr><th scope="col">월</th><th scope="col">지출 합계</th><th scope="col">건수</th><th scope="col">기간</th></tr></thead>
+            <tbody>
+                @foreach (var point in Months)
+                {
+                    <tr>
+                        <th scope="row">@point.Month.ToString("yyyy.MM")</th>
+                        <td>@point.Amount.ToString("N0")원</td>
+                        <td>@(point.Count)건</td>
+                        <td>@(point.IsPartial ? "오늘까지" : "한 달 전체")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MonthlyExpenseTotal> Months { get; set; } = [];
+    private readonly string titleId = $"trend-title-{Guid.NewGuid():N}";
+    private readonly string descriptionId = $"trend-description-{Guid.NewGuid():N}";
+    private decimal Maximum => Months.Count > 0 ? Months.Max(month => month.Amount) : 0;
+    private string ChartDescription => string.Join("; ", Months.Select(month =>
+        $"{month.Month:yyyy년 M월} {month.Amount:N0}원{(month.IsPartial ? " (오늘까지)" : "")}"));
+    private static string Number(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    private static string ShortAmount(decimal amount) => amount switch
+    {
+        >= 100_000_000 => $"{amount / 100_000_000:0.#}억원",
+        >= 10_000 => $"{amount / 10_000:0.#}만원",
+        _ => $"{amount:N0}원"
+    };
+}

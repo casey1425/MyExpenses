@@ -1,0 +1,16 @@
+.chart-viewport { overflow-x: auto; }
+.trend-chart { display: block; width: 100%; min-width: 640px; height: auto; }
+.chart-grid { stroke: #e9eef5; stroke-dasharray: 4 5; }
+.chart-baseline { stroke: #d6dfeb; }
+.chart-bar { fill: #b8cce3; }
+.selected-bar { fill: #285889; }
+.chart-value { fill: #40516a; font-size: 14px; font-weight: 600; }
+.chart-month { fill: #40516a; font-size: 15px; }
+.chart-partial { fill: #537cbb; font-size: 12px; }
+.chart-empty { padding: 2.5rem 1rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 12px; }
+.chart-details { margin-top: .8rem; color: #40516a; font-size: .85rem; }
+summary { cursor: pointer; }
+.chart-table-wrap { overflow-x: auto; }
+table { width: 100%; margin-top: .8rem; border-collapse: collapse; }
+th, td { padding: .7rem; text-align: right; border-bottom: 1px solid #e4eaf2; white-space: nowrap; }
+th:first-child { text-align: left; }
