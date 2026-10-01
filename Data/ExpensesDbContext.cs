@@ -5,6 +5,7 @@ namespace MyExpenses.Data;
 public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> options) : DbContext(options)
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
+    public DbSet<UserCategory> UserCategories => Set<UserCategory>();
     public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
@@ -15,6 +16,13 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<UserCategory>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.OwnerId).IsRequired();
+            entity.Property(c => c.Name).IsRequired().HasMaxLength(30);
+            entity.HasIndex(c => new { c.OwnerId, c.Name }).IsUnique();
+        });
         modelBuilder.Entity<PaymentMethod>(entity =>
         {
             entity.HasKey(m => m.Id);

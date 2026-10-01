@@ -25,10 +25,10 @@ public sealed class ExpenseTemplateService(IDbContextFactory<ExpensesDbContext> 
     public async Task<bool> SaveAsync(string ownerId, int? id, ExpenseTemplateInput input, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
-        var values = input.Validate();
+
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await PaymentMethodService.VerifyOwnedAsync(db, ownerId, values.PaymentMethodId, cancellationToken);
+
         ExpenseTemplate? template;
         if (id is int existingId)
         {
@@ -40,6 +40,9 @@ public sealed class ExpenseTemplateService(IDbContextFactory<ExpensesDbContext> 
             template = new ExpenseTemplate { OwnerId = ownerId };
             db.ExpenseTemplates.Add(template);
         }
+        await CategoryService.VerifyAsync(db, ownerId, input.Category, id.HasValue && template.Category == input.Category, cancellationToken);
+        var values = input.Validate([input.Category]);
+        await PaymentMethodService.VerifyOwnedAsync(db, ownerId, values.PaymentMethodId, cancellationToken);
         template.Name = values.Name;
         template.Amount = values.Amount;
         template.Category = values.Category;

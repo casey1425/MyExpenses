@@ -11,6 +11,7 @@
 @inject PaymentMethodService MethodService
 @inject ExpenseService ExpenseService
 @inject BudgetService BudgetService
+@inject CategoryService CategoryService
 @inject NavigationManager Navigation
 @inject ILogger<Home> Logger
 
@@ -122,14 +123,14 @@
         }
 
         <div class="category-budget-list">
-            @foreach (var option in categories)
+            @foreach (var option in allCategories)
             {
                 var spent = CategoryBudgetSpent(option);
                 var categoryLimit = CategoryBudgetAmount(option);
                 var percentage = CategoryBudgetPercentage(option);
                 <div class="category-budget-item" @key="option">
                     <div class="category-budget-heading">
-                        <strong><span aria-hidden="true">@CategoryIcon(option)</span> @option</strong>
+                        <strong><span aria-hidden="true">@CategoryIcon(option)</span> @CategoryLabel(option)</strong>
                         <span>@spent.ToString("N0")원 사용@(categoryLimit is long configured ? $" / {configured:N0}원" : "")</span>
                     </div>
                     @if (categoryLimit is long configuredLimit)
@@ -254,7 +255,7 @@
                     <select id="expense-category" @bind="category">
                         @foreach (var option in categories)
                         {
-                            <option value="@option">@option</option>
+                            <option value="@option">@CategoryLabel(option)</option>
                         }
                     </select>
                 </div>
@@ -314,9 +315,9 @@
                     <label for="filter-category">카테고리</label>
                     <select id="filter-category" @bind="searchInput.Category">
                         <option value="">전체 카테고리</option>
-                        @foreach (var option in categories)
+                        @foreach (var option in allCategories)
                         {
-                            <option value="@option">@option</option>
+                            <option value="@option">@CategoryLabel(option)</option>
                         }
                     </select>
                 </div>
@@ -455,9 +456,9 @@
                                         <div class="field">
                                             <label for="edit-category">카테고리</label>
                                             <select id="edit-category" @bind="editCategory">
-                                                @foreach (var option in categories)
+                                                @foreach (var option in EditCategories)
                                                 {
-                                                    <option value="@option">@option</option>
+                                                    <option value="@option">@CategoryLabel(option)</option>
                                                 }
                                             </select>
                                         </div>

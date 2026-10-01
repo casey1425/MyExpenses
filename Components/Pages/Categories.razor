@@ -1,0 +1,61 @@
+@page "/categories"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject CategoryService CategoryService
+@inject ILogger<Categories> Logger
+
+<PageTitle>카테고리 관리 | MyExpenses</PageTitle>
+<main class="categories-page">
+    <header>
+        <p class="kicker">MY CATEGORIES</p>
+        <h1>카테고리 관리</h1>
+        <p>나에게 맞는 분류를 만들고 표시 순서를 바꿔 보세요.</p>
+        <a href="/">← 지출 기록으로 돌아가기</a>
+    </header>
+    @if (error is not null) { <p class="error" role="alert">@error</p> }
+    @if (notice is not null) { <p class="notice" role="status">@notice</p> }
+    <section class="card">
+        <h2>@(editingId is null ? "카테고리 추가" : "카테고리 이름 변경")</h2>
+        <p class="help">이름을 바꾸면 기존 지출·예산·템플릿·정기 지출에도 함께 반영됩니다.</p>
+        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@busy">
+                <label for="category-name">이름 (1~30자)</label>
+                <input id="category-name" maxlength="30" required placeholder="예: 구독, 여행, 의료" @bind="name" />
+                <div class="actions">
+                    <button type="submit">@(editingId is null ? "추가" : "변경 저장")</button>
+                    @if (editingId is not null) { <button type="button" class="secondary" @onclick="CancelEdit">취소</button> }
+                </div>
+            </fieldset>
+        </form>
+    </section>
+    <section class="card">
+        <div class="heading">
+            <h2>내 카테고리</h2>
+            <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>
+        </div>
+        <p class="help">보관한 카테고리는 새 지출·템플릿·정기 지출의 선택 목록에서 숨깁니다. 기존 기록·필터·통계·예산은 유지되며, 등록된 정기 지출은 계속 생성됩니다. CSV로 다시 가져오려면 먼저 복원하세요.</p>
+        @if (loading) { <p>불러오는 중...</p> }
+        else
+        {
+            @for (var index = 0; index < items.Count; index++)
+            {
+                var item = items[index];
+                var first = index == 0;
+                var last = index == items.Count - 1;
+                <article class="category-item" @key="item.Id">
+                    <div>
+                        <strong>@item.Name</strong>
+                        <span class="badge @(item.IsArchived ? "archived" : "")">@(item.IsArchived ? "보관 중" : "사용 중")</span>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="secondary" aria-label="@(item.Name + " 위로 이동")" disabled="@(busy || first)" @onclick="() => MoveAsync(item.Id, -1)">↑</button>
+                        <button type="button" class="secondary" aria-label="@(item.Name + " 아래로 이동")" disabled="@(busy || last)" @onclick="() => MoveAsync(item.Id, 1)">↓</button>
+                        <button type="button" class="secondary" disabled="@busy" @onclick="() => Edit(item)">이름 변경</button>
+                        <button type="button" class="secondary" disabled="@busy" @onclick="() => ToggleAsync(item)">@(item.IsArchived ? "복원" : "보관")</button>
+                    </div>
+                </article>
+            }
+        }
+    </section>
+</main>

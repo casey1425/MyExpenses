@@ -76,6 +76,7 @@ builder.Services.AddScoped<ExpenseTemplateService>();
 builder.Services.AddScoped<PaymentMethodService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<BudgetService>();
+builder.Services.AddScoped<CategoryService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
 builder.Services.AddDbContext<AuthDbContext>(options =>

@@ -30,6 +30,8 @@ public sealed class BudgetService(IDbContextFactory<ExpensesDbContext> dbFactory
         if (amount <= 0) throw new ArgumentException("예산은 1원 이상의 정수로 입력해 주세요.");
         month = MonthStart(month);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (category is not null) await CategoryService.VerifyAsync(db, ownerId, category, true, cancellationToken);
         if (category is null)
         {
             var budget = await db.MonthlyBudgets.FindAsync([ownerId, month], cancellationToken);
@@ -43,6 +45,7 @@ public sealed class BudgetService(IDbContextFactory<ExpensesDbContext> dbFactory
             else budget.Amount = amount;
         }
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(string ownerId, DateTime month, string? category = null, CancellationToken cancellationToken = default)
@@ -61,6 +64,6 @@ public sealed class BudgetService(IDbContextFactory<ExpensesDbContext> dbFactory
     private static void Validate(string ownerId, string? category)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
-        if (category is not null && !ExpenseCategories.IsSupported(category)) throw new ArgumentException("지원하지 않는 카테고리입니다.");
+        if (category is not null && (string.IsNullOrWhiteSpace(category) || category.Length > 30)) throw new ArgumentException("지원하지 않는 카테고리입니다.");
     }
 }

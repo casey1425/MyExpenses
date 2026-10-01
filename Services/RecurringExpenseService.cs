@@ -22,6 +22,8 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
         Validate(ownerId, dayOfMonth, amount, category, memo);
         var today = DateTime.Today;
         await using var db = await dbFactory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+        await CategoryService.VerifyAsync(db, ownerId, category);
         db.RecurringExpenseRules.Add(new RecurringExpenseRule
         {
             OwnerId = ownerId,
@@ -32,21 +34,25 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
             Memo = memo.Trim()
         });
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
     }
 
     public async Task<bool> UpdateAsync(string ownerId, int id, int dayOfMonth, long amount, string category, string memo)
     {
         Validate(ownerId, dayOfMonth, amount, category, memo);
         await using var db = await dbFactory.CreateDbContextAsync();
+        await using var transaction = await db.Database.BeginTransactionAsync();
         var rule = await db.RecurringExpenseRules.SingleOrDefaultAsync(item => item.Id == id && item.OwnerId == ownerId);
         if (rule is null)
             return false;
 
+        await CategoryService.VerifyAsync(db, ownerId, category, rule.Category == category);
         rule.DayOfMonth = dayOfMonth;
         rule.Amount = amount;
         rule.Category = category;
         rule.Memo = memo.Trim();
         await db.SaveChangesAsync();
+        await transaction.CommitAsync();
         return true;
     }
 
@@ -147,7 +153,7 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
             throw new ArgumentOutOfRangeException(nameof(dayOfMonth));
         if (amount <= 0)
             throw new ArgumentOutOfRangeException(nameof(amount));
-        if (!ExpenseCategories.IsSupported(category))
+        if (string.IsNullOrWhiteSpace(category) || category.Length > 30)
             throw new ArgumentException("지원하지 않는 카테고리입니다.", nameof(category));
         if (memo is null || memo.Trim().Length > 100)
             throw new ArgumentException("메모는 100자 이하여야 합니다.", nameof(memo));

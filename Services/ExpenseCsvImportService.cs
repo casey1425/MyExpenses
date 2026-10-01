@@ -17,6 +17,7 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await ValidateRowsAsync(db, ownerId, rows, cancellationToken);
         var methods = await ResolveMethodsAsync(db, ownerId, rows, cancellationToken);
         var known = await ExistingKeysAsync(db, ownerId, rows, cancellationToken);
         return rows.Select(row => new ExpenseCsvCandidate(row, !known.Add(Key(row, methods[(row.PaymentMethodName, row.PaymentMethodType)])))).ToList();
@@ -32,6 +33,7 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await ValidateRowsAsync(db, ownerId, rows, cancellationToken);
         var methods = await ResolveMethodsAsync(db, ownerId, rows, cancellationToken);
         HashSet<ExpenseKey> known = includeDuplicates
             ? []
@@ -59,6 +61,17 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return imported;
+    }
+
+    private static async Task ValidateRowsAsync(ExpensesDbContext db, string ownerId,
+        IReadOnlyList<ExpenseCsvRow> rows, CancellationToken cancellationToken)
+    {
+        await CategoryService.EnsureAsync(db, ownerId, cancellationToken);
+        var categories = await db.UserCategories.Where(c => c.OwnerId == ownerId && !c.IsArchived)
+            .Select(c => c.Name).ToListAsync(cancellationToken);
+        foreach (var row in rows)
+            if (!categories.Contains(row.Category) || row.Date == default || row.Amount <= 0 || row.Memo.Length > 100)
+                throw new ArgumentException($"{row.RowNumber}번째 행: 날짜·금액·메모와 사용 중인 내 카테고리를 확인해 주세요.");
     }
 
     private static async Task<HashSet<ExpenseKey>> ExistingKeysAsync(

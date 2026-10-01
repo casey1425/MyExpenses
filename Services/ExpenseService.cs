@@ -11,6 +11,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        if (filter.Category is not null) await CategoryService.VerifyAsync(db, ownerId, filter.Category, true, cancellationToken);
         var query = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod).Where(e => e.OwnerId == ownerId);
         return await filter.Order(filter.ApplyTo(query)).ToListAsync(cancellationToken);
     }
@@ -28,6 +29,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await PaymentMethodService.VerifyOwnedAsync(db, ownerId, input.PaymentMethodId, cancellationToken);
+        await CategoryService.VerifyAsync(db, ownerId, input.Category, false, cancellationToken);
         var expense = new ExpenseRecord { OwnerId = ownerId };
         Apply(expense, input);
         db.Expenses.Add(expense);
@@ -44,6 +46,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         await PaymentMethodService.VerifyOwnedAsync(db, ownerId, input.PaymentMethodId, cancellationToken);
         var expense = await db.Expenses.SingleOrDefaultAsync(e => e.OwnerId == ownerId && e.Id == id, cancellationToken);
         if (expense is null) return null;
+        await CategoryService.VerifyAsync(db, ownerId, input.Category, expense.Category == input.Category, cancellationToken);
         Apply(expense, input);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -68,7 +71,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         if (input.Date == default || input.Amount <= 0) throw new ArgumentException("날짜와 1원 이상의 금액을 입력해 주세요.");
-        if (!ExpenseCategories.IsSupported(input.Category) || input.Memo is null || input.Memo.Trim().Length > 100)
+        if (string.IsNullOrWhiteSpace(input.Category) || input.Category.Length > 30 || input.Memo is null || input.Memo.Trim().Length > 100)
             throw new ArgumentException("카테고리와 100자 이하 메모를 확인해 주세요.");
     }
 

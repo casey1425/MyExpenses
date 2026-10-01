@@ -22,6 +22,9 @@ public sealed class ExpenseTrendsService(IDbContextFactory<ExpensesDbContext> db
         var expenses = await db.Expenses.AsNoTracking()
             .Where(item => item.OwnerId == ownerId && item.Date >= firstDate && item.Date <= lastDate)
             .ToListAsync(cancellationToken);
-        return ExpenseTrends.Calculate(expenses, month, today);
+        await CategoryService.EnsureAsync(db, ownerId, cancellationToken);
+        var categories = await db.UserCategories.Where(c => c.OwnerId == ownerId).OrderBy(c => c.Position).ThenBy(c => c.Id)
+            .Select(c => c.Name).ToListAsync(cancellationToken);
+        return ExpenseTrends.Calculate(expenses, month, today, categories);
     }
 }

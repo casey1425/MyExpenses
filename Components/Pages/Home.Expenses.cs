@@ -11,6 +11,7 @@ public partial class Home
     private async Task LoadExpensesAsync()
     {
         await CheckOwnerAsync();
+        await LoadCategoriesAsync();
         var loaded = await ExpenseService.ListAsync(ownerId, activeFilter);
         await CheckOwnerAsync();
         var statisticsExpenses = activeFilter.IsActive
@@ -148,7 +149,7 @@ public partial class Home
             return;
         }
 
-        if (!categories.Contains(editCategory) || editMemo.Length > 100)
+        if (!EditCategories.Contains(editCategory) || editMemo.Length > 100)
         {
             editError = "카테고리와 메모를 다시 확인해 주세요.";
             return;

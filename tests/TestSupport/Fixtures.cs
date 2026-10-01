@@ -36,6 +36,7 @@ public static class TestComponents
         Inject("MethodService", new PaymentMethodService(factory));
         Inject("ExpenseService", new ExpenseService(factory));
         Inject("BudgetService", new BudgetService(factory));
+        Inject("CategoryService", new CategoryService(factory));
         typeof(Home).GetField("ownerId", flags)!.SetValue(home, auth.OwnerId);
         return home;
     }

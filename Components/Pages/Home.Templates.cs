@@ -66,6 +66,12 @@ public partial class Home
                 templateError = "템플릿이 삭제되었거나 사용할 수 없습니다. 목록을 새로고침해 주세요.";
                 return;
             }
+            await LoadCategoriesAsync();
+            if (!categories.Contains(template.Category))
+            {
+                templateError = "템플릿의 카테고리가 보관 중입니다. 카테고리를 복원하거나 템플릿을 수정해 주세요.";
+                return;
+            }
             await LoadPaymentMethodsAsync();
             await ExpenseService.ValidatePaymentAsync(ownerId, template.PaymentMethodId);
             amount = template.Amount;

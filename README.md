@@ -16,11 +16,12 @@ C#과 Blazor로 구현했으며, 사용자별 데이터는 SQLite에 저장됩�
 | 검색·필터 | 메모 검색, 월·카테고리·결제수단·날짜 범위·금액 범위 필터, 날짜·금액순 정렬 |
 | 예산 | 전체 월 예산과 카테고리별 월 예산, 사용률·남은 금액·초과 금액 |
 | 통계 | 조회 결과의 합계·건수·카테고리 비율, 6개월 지출 추이, 전월 비교, 결제수단별 월 합계 |
+| 카테고리 | 사용자별 추가·이름 변경·표시 순서 변경·보관·복원, 기존 데이터 유지 |
 | 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출 자동 생성 |
 | CSV | 조회 결과·전체 기록 내보내기, 검증·미리보기 후 가져오기, 중복 건너뛰기 |
 | 실행·운영 | SQLite 영구 저장, Docker 지원, 공개 소개·개인정보 처리방침·이용약관, 상태 확인 엔드포인트 |
 
-카테고리는 **식비 · 카페 · 교통 · 쇼핑 · 생활 · 기타**를 사용하며, 금액은 원 단위입니다.
+처음에는 **식비 · 카페 · 교통 · 쇼핑 · 생활 · 기타** 카테고리가 제공되며, 사용자별로 추가·변경할 수 있습니다. 금액은 원 단위입니다.
 
 ## 로컬 실행
 
@@ -131,6 +132,19 @@ curl http://localhost:10000/healthz
 로그인 후 지출 기록 화면에서 기록·검색·예산·카테고리 통계를 확인할 수 있습니다. 별도 관리 화면은 메뉴에서 열 수 있습니다. 각 항목을 펼치면 세부 동작과 제한을 확인할 수 있습니다.
 
 <details>
+<summary>사용자별 카테고리 관리</summary>
+
+**카테고리 관리** (`/categories`)에서 이름(1~30자)을 입력해 추가하고, 이름 변경·위/아래 이동·보관·복원을 할 수 있습니다. 같은 계정 안에서는 보관 중인 항목을 포함해 이름이 중복될 수 없습니다. 사용 중인 카테고리는 최소 하나 유지해야 합니다.
+
+이름 변경은 기존 지출·카테고리 예산·템플릿·정기 지출 규칙에도 같은 트랜잭션으로 반영됩니다. 표시 순서는 입력 목록·필터·예산 목록·월별 추이의 카테고리 비교에 적용됩니다. 다른 탭은 새로고침해 최신 목록을 확인하세요.
+
+보관한 카테고리는 새 지출·템플릿·정기 지출의 선택 목록에서 숨깁니다. 기존 기록과 예산·통계·필터는 유지되며 기존 기록의 다른 항목을 수정할 수 있습니다. 해당 카테고리의 템플릿을 새 지출에 사용하거나 CSV로 가져오려면 먼저 복원하거나 다른 사용 중인 카테고리로 변경해야 합니다. **기존 정기 지출 규칙은 보관 후에도 계속 생성**되므로 자동 생성을 멈추려면 정기 지출 화면에서 규칙을 중지하세요.
+
+기존 DB는 카테고리 관리 테이블만 추가하고, 사용자별 기본 카테고리와 기존 데이터에 쓰인 분류를 처음 조회할 때 등록합니다. 이름을 바꾸거나 보관해도 기본 목록을 다시 생성하지 않습니다. CSV를 가져올 때에는 파일에 있는 이름과 같은 사용 중인 카테고리를 내 계정에 먼저 등록해야 합니다.
+
+</details>
+
+<details>
 <summary>즐겨찾기 지출 템플릿</summary>
 
 로그인 후 **즐겨찾기 지출** (`/templates`)에서 이름(1~50자), 원 단위 금액, 카테고리, 메모(선택·최대 100자)를 저장합니다. 지출 기록 화면의 **새 지출 추가 → 즐겨찾기 템플릿**에서 선택하면 금액·카테고리·메모·결제수단을 입력하고 날짜는 그대로 유지합니다. 선택 시 현재 입력된 금액·카테고리·메모·결제수단을 덮어쓰므로 내용을 확인해 주세요. 필요한 내용을 수정한 후 **지출 기록하기**를 눌러야 실제 지출로 저장됩니다. 다른 탭에서 템플릿을 수정했다면 **목록 새로고침**으로 목록을 갱신할 수 있습니다.
@@ -222,7 +236,7 @@ MyExpenses/
 
 - **화면:** `*.razor`는 마크업, `*.razor.cs`는 상태·이벤트, `*.razor.css`는 컴포넌트 스타일입니다. 지출 화면의 C# 코드는 지출·예산·템플릿별 partial class로 나눴습니다.
 - **서비스:** 인증된 사용자 ID를 받아 소유자 조건을 적용합니다. 지출 화면과 CSV 내보내기는 같은 `ExpenseService` 조회 로직을 사용합니다.
-- **데이터:** 모델·입력 검증·통계 계산을 두며, 카테고리는 `ExpenseCategories`에서 공통 관리합니다. 기존 DB 스키마 보완은 `ExpensesSchema`에서 처리합니다.
+- **데이터:** 모델·입력 검증·통계 계산을 두며, 기본 카테고리와 아이콘은 `ExpenseCategories`에, 사용자별 목록·검증은 `CategoryService`에 둡니다. 기존 DB 스키마 보완은 `ExpensesSchema`에서 처리합니다.
 
 <details>
 <summary>주요 파일 전체 보기</summary>
@@ -250,6 +264,7 @@ MyExpenses/
 │       ├── Recurring.razor        # 정기 지출 규칙 관리
 │       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
 │       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
+│       ├── Categories.razor       # 사용자별 카테고리 관리
 │       ├── Trends.razor           # 월별 추이와 전월 비교
 │       ├── Login.razor            # Google 로그인 화면
 │       ├── Welcome.razor          # 신규 사용자 시작 안내
@@ -259,6 +274,7 @@ MyExpenses/
 │       └── Terms.razor            # 이용약관
 ├── Data/
 │   ├── ExpenseRecord.cs           # 지출 모델
+│   ├── UserCategory.cs            # 사용자별 카테고리·순서·보관 상태
 │   ├── ExpenseTemplate.cs         # 템플릿 모델과 입력 검증
 │   ├── PaymentMethod.cs           # 결제수단 모델과 월별 합계 결과
 │   ├── MonthlyBudget.cs           # 전체 월 예산 모델
@@ -268,7 +284,7 @@ MyExpenses/
 │   ├── ExpensesDbContext.cs       # 지출 데이터의 EF Core 컨텍스트
 │   ├── AuthDbContext.cs           # Identity 계정 EF Core 컨텍스트
 │   ├── ExpensesSchema.cs          # 기존 SQLite 스키마 보완
-│   ├── ExpenseCategories.cs       # 공통 카테고리 목록·검증·아이콘
+│   ├── ExpenseCategories.cs       # 최초 기본 카테고리와 아이콘
 │   ├── ExpenseFilter.cs           # EF Core 조회 조건과 정렬
 │   ├── ExpenseSearchInput.cs      # 화면·CSV 요청의 검색 조건 검증
 │   ├── ExpenseStatistics.cs       # 카테고리별 금액·건수·비율 계산
@@ -277,6 +293,7 @@ MyExpenses/
 │   └── ExpenseCsvImporter.cs      # CSV 파싱과 유효성 검사
 ├── Services/
 │   ├── ExpenseService.cs          # 지출 조회·CRUD·입력·결제수단 검증
+│   ├── CategoryService.cs         # 카테고리 관리·소유자 검증·참조 일괄 변경
 │   ├── BudgetService.cs           # 월별·카테고리별 예산 저장과 집계
 │   ├── ExpenseTemplateService.cs  # 사용자별 템플릿 조회·저장·삭제
 │   ├── PaymentMethodService.cs    # 결제수단 CRUD·소유자 검증·월별 집계
@@ -292,6 +309,7 @@ MyExpenses/
 │   ├── ExpenseTemplateChecks/    # 템플릿 CRUD·사용자 격리 검증
 │   ├── PaymentMethodChecks/      # 결제수단·지출·템플릿·CSV 통합 검증
 │   ├── ServiceChecks/            # 지출·예산 서비스와 화면 이벤트 회귀 검증
+│   ├── CategoryChecks/           # 카테고리·기존 DB·통합·사용자 격리 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
 ├── appsettings.json              # 공통 설정
@@ -320,6 +338,7 @@ dotnet run --project tests/ExpenseSearchChecks
 dotnet run --project tests/ExpenseTemplateChecks
 dotnet run --project tests/PaymentMethodChecks
 dotnet run --project tests/ServiceChecks
+dotnet run --project tests/CategoryChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -328,6 +347,7 @@ dotnet run --project tests/ServiceChecks
 | ExpenseTemplateChecks | 템플릿 CRUD, 사용자 격리, 기존 DB 보완, 계정 삭제 |
 | PaymentMethodChecks | 결제수단·지출·템플릿 연결, 월별 집계, 사용자 격리, CSV 4열·6열 호환, DB 업그레이드 |
 | ServiceChecks | 지출·예산 CRUD·입력 검증, 예산 간 독립성, 로그인 계정 변경 시 화면 저장 차단 |
+| CategoryChecks | 기존 DB 보완, 사용자 격리, 이름 일괄 변경, 순서·보관·복원, 지출·예산·템플릿·정기 지출·통계·CSV 연동, 계정 삭제 |
 
 검증은 외부 테스트 프레임워크 없이 실행하는 콘솔 프로그램입니다. **메모리 SQLite만 사용하므로 실제 사용자 데이터를 변경하지 않습니다.** 실패 시 오류와 0이 아닌 종료 코드를 반환하며, 공통 도구는 `tests/TestSupport/`에서 관리합니다.
 
@@ -365,7 +385,7 @@ Support__Email=...
 
 | 기본 저장 경로 | 내용 |
 | --- | --- |
-| `Data/myexpenses.db` | 지출·예산·정기 지출·템플릿·결제수단·첫 시작 완료 여부 |
+| `Data/myexpenses.db` | 지출·예산·정기 지출·템플릿·결제수단·사용자 카테고리·첫 시작 완료 여부 |
 | `Data/auth.db` | Identity 계정과 Google 로그인 연결 |
 | `Data/keys/` | ASP.NET Core 데이터 보호 키 |
 
@@ -373,6 +393,6 @@ DB와 키는 실행 시 생성되며 Git에서 제외됩니다. Docker에서는 
 
 - **사용자 분리:** 데이터는 ASP.NET Core Identity 사용자 ID로 구분합니다. 결제수단 연결도 서비스 검증과 DB 제약·트리거로 다른 사용자의 연결을 차단합니다.
 - **백업:** 앱을 중지한 뒤 **두 DB 파일과 `Data/keys/`를 함께 복사**하세요. CSV는 실제 지출만 포함하므로 전체 데이터 백업을 대신하지 않습니다.
-- **삭제:** 지출 전체 삭제는 현재 사용자의 지출만 삭제합니다. `/account`의 계정 삭제는 해당 사용자의 예산·규칙·템플릿·결제수단·프로필·로그인 연결까지 삭제하며, Google 계정 자체를 삭제하지는 않습니다. 삭제한 데이터는 되돌릴 수 없습니다.
+- **삭제:** 지출 전체 삭제는 현재 사용자의 지출만 삭제합니다. `/account`의 계정 삭제는 해당 사용자의 예산·규칙·템플릿·결제수단·사용자 카테고리·프로필·로그인 연결까지 삭제하며, Google 계정 자체를 삭제하지는 않습니다. 삭제한 데이터는 되돌릴 수 없습니다.
 - **기존 데이터:** 이전 단일 사용자 DB를 업그레이드하면 기존 데이터는 업그레이드 후 처음 로그인한 계정에 귀속됩니다.
 - **비밀 정보:** Client Secret과 `.env.docker`를 공유하거나 커밋하지 마세요. 결제수단에는 카드번호·계좌번호·금융 인증정보를 입력하지 마세요.

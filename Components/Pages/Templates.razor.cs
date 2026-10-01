@@ -8,6 +8,7 @@ namespace MyExpenses.Components.Pages;
 public partial class Templates
 {
     private string ownerId = "";
+    private IReadOnlyList<string> categoryNames = [];
     private ExpenseTemplateInput input = new();
     private List<ExpenseTemplate> templates = [];
     private List<PaymentMethod> methods = [];
@@ -38,6 +39,9 @@ public partial class Templates
         var loaded = await TemplateService.ListAsync(ownerId);
         var loadedMethods = await MethodService.ListAsync(ownerId);
         await CheckOwnerAsync();
+        categoryNames = (await CategoryService.ListAsync(ownerId)).Where(c => !c.IsArchived).Select(c => c.Name).ToList();
+        await CheckOwnerAsync();
+        if (editingId is null && !categoryNames.Contains(input.Category)) input.Category = categoryNames.FirstOrDefault() ?? "";
         templates = loaded;
         methods = loadedMethods;
     }
@@ -59,7 +63,7 @@ public partial class Templates
         notice = null;
         try
         {
-            input.Validate();
+            input.Validate(categoryNames.Concat(editingId.HasValue ? new[] { input.Category } : Array.Empty<string>()).ToList());
             await CheckOwnerAsync();
             if (!await TemplateService.SaveAsync(ownerId, editingId, input))
                 throw new InvalidOperationException("수정할 템플릿이 없습니다. 목록을 새로고침해 주세요.");
@@ -82,7 +86,7 @@ public partial class Templates
         error = notice = null;
     }
 
-    private void CancelEdit() { editingId = null; input = new(); }
+    private void CancelEdit() { editingId = null; input = new() { Category = categoryNames.FirstOrDefault() ?? "" }; }
     private void ConfirmDelete(int id) { if (!busy) { deletingId = id; notice = null; } }
 
     private async Task DeleteAsync(int id)

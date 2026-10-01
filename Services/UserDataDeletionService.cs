@@ -34,6 +34,7 @@ public sealed class UserDataDeletionService(IDbContextFactory<ExpensesDbContext>
         await db.ExpenseTemplates.Where(template => template.OwnerId == ownerId)
             .ExecuteDeleteAsync(cancellationToken);
         await db.PaymentMethods.Where(method => method.OwnerId == ownerId).ExecuteDeleteAsync(cancellationToken);
+        await db.UserCategories.Where(category => category.OwnerId == ownerId).ExecuteDeleteAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
     }

@@ -44,9 +44,13 @@ public static class ExpenseExportEndpoints
                 return Results.BadRequest(error);
         }
 
-        try { await expenseService.ValidatePaymentAsync(ownerId, filter.PaymentMethodId, cancellationToken); }
+        List<ExpenseRecord> expenses;
+        try
+        {
+            await expenseService.ValidatePaymentAsync(ownerId, filter.PaymentMethodId, cancellationToken);
+            expenses = await expenseService.ListAsync(ownerId, filter, cancellationToken);
+        }
         catch (ArgumentException ex) { return Results.BadRequest(ex.Message); }
-        var expenses = await expenseService.ListAsync(ownerId, filter, cancellationToken);
 
         var fileName = $"MyExpenses-{scope}-{DateTime.Today:yyyy-MM-dd}.csv";
         return Results.File(ExpenseCsvExporter.Create(expenses), "text/csv; charset=utf-8", fileName);

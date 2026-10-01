@@ -5,6 +5,7 @@
 @using MyExpenses.Data
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject RecurringExpenseService RecurringExpenseService
+@inject CategoryService CategoryService
 @inject ILogger<Recurring> Logger
 
 <PageTitle>정기 지출 | MyExpenses</PageTitle>
@@ -77,7 +78,7 @@
                                     </label>
                                     <label>카테고리
                                         <select @bind="editCategory">
-                                            @foreach (var option in categories)
+                                            @foreach (var option in categories.Concat(new[] { editCategory }).Distinct())
                                             {
                                                 <option value="@option">@option</option>
                                             }

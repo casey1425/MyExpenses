@@ -18,7 +18,7 @@ public static class ExpenseCsvImporter
     private static readonly string[] Header = ["날짜", "금액(원)", "카테고리", "메모"];
     private static readonly string[] PaymentHeader = ["날짜", "금액(원)", "카테고리", "메모", "결제수단", "결제유형"];
 
-    public static ExpenseCsvParseResult Parse(TextReader reader)
+    public static ExpenseCsvParseResult Parse(TextReader reader, IReadOnlyList<string>? categories = null)
     {
         ArgumentNullException.ThrowIfNull(reader);
 
@@ -86,7 +86,7 @@ public static class ExpenseCsvImporter
                 continue;
             }
 
-            if (!ExpenseCategories.IsSupported(fields[2]))
+            if (!(categories ?? ExpenseCategories.All).Contains(RemoveExportProtection(fields[2])))
             {
                 issues.Add(new ExpenseCsvIssue(rowNumber, "지원하지 않는 카테고리입니다."));
                 continue;
@@ -106,7 +106,7 @@ public static class ExpenseCsvImporter
                 issues.Add(new ExpenseCsvIssue(rowNumber, "결제수단 이름은 50자 이하이고 결제유형과 함께 입력해야 합니다. 미지정은 두 열을 비워 주세요."));
                 continue;
             }
-            rows.Add(new ExpenseCsvRow(rowNumber, date.Date, amount, fields[2], memo, methodName, methodType));
+            rows.Add(new ExpenseCsvRow(rowNumber, date.Date, amount, RemoveExportProtection(fields[2]), memo, methodName, methodType));
         }
 
         if (rows.Count == 0 && issues.Count == 0)

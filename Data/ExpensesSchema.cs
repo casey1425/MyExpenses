@@ -13,6 +13,18 @@ public static class ExpensesSchema
 
         try
         {
+            await ExecuteAsync(connection, transaction,
+                """
+                CREATE TABLE IF NOT EXISTS "UserCategories" (
+                    "Id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "Name" TEXT NOT NULL,
+                    "Position" INTEGER NOT NULL,
+                    "IsArchived" INTEGER NOT NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_UserCategories_OwnerId_Name"
+                    ON "UserCategories" ("OwnerId", "Name");
+                """, cancellationToken);
             if (!await HasColumnAsync(connection, transaction, "Expenses", "OwnerId", cancellationToken))
             {
                 await ExecuteAsync(connection, transaction,

@@ -6,7 +6,7 @@ namespace MyExpenses.Components.Pages;
 
 public partial class Recurring
 {
-    private static IReadOnlyList<string> categories => ExpenseCategories.All;
+    private IReadOnlyList<string> categories = [];
     private string ownerId = string.Empty;
     private List<RecurringExpenseRule> rules = [];
     private int dayOfMonth = DateTime.Today.Day;
@@ -42,7 +42,13 @@ public partial class Recurring
         }
     }
 
-    private async Task ReloadAsync() => rules = await RecurringExpenseService.ListAsync(ownerId);
+    private async Task ReloadAsync()
+    {
+        var loaded = await CategoryService.ListAsync(ownerId);
+        categories = loaded.Where(c => !c.IsArchived).Select(c => c.Name).ToList();
+        if (!categories.Contains(category)) category = categories.FirstOrDefault() ?? "";
+        rules = await RecurringExpenseService.ListAsync(ownerId);
+    }
 
     private async Task<bool> CheckOwnerAsync()
     {
@@ -57,7 +63,7 @@ public partial class Recurring
 
     private bool Validate(int day, long value, string selectedCategory, string text)
     {
-        if (day is >= 1 and <= 31 && value > 0 && categories.Contains(selectedCategory) && text.Trim().Length <= 100)
+        if (day is >= 1 and <= 31 && value > 0 && (categories.Contains(selectedCategory) || (editingId.HasValue && rules.Any(r => r.Id == editingId && r.Category == selectedCategory))) && text.Trim().Length <= 100)
             return true;
         errorMessage = "지정일(1~31일), 1원 이상의 금액, 카테고리와 100자 이하 메모를 확인해 주세요.";
         return false;

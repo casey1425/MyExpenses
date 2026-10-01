@@ -7,6 +7,7 @@
 @using MyExpenses.Data
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ExpenseCsvImportService ImportService
+@inject CategoryService CategoryService
 @inject ILogger<Import> Logger
 
 <PageTitle>CSV 가져오기 | MyExpenses</PageTitle>
@@ -23,6 +24,7 @@
         <p>최대 1MB, 지출 1,000건까지 지원합니다. 파일을 선택해도 바로 저장되지는 않습니다.</p>
         <InputFile @key="fileInputVersion" OnChange="ReadFileAsync" accept=".csv,text/csv"
                    disabled="@(isReading || isSaving)" aria-label="지출 CSV 파일 선택" />
+        <p class="format-hint">카테고리는 내 계정에 사용 중인 이름으로 먼저 등록해 주세요. 보관한 카테고리는 복원 후 가져올 수 있습니다.</p>
         <p class="format-hint">첫 줄: <code>날짜,금액(원),카테고리,메모,결제수단,결제유형</code> (기존 4열 파일도 지원)</p>
         <p class="format-hint">CSV의 결제수단 이름·유형을 <a href="/payment-methods">내 결제수단</a>에 먼저 등록해 주세요. 두 열이 비어 있으면 미지정입니다.</p>
         <p class="format-hint">CSV 가져오기는 지출만 복원합니다. 월별 예산은 포함되지 않습니다.</p>

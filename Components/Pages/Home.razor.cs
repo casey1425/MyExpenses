@@ -8,7 +8,11 @@ namespace MyExpenses.Components.Pages;
 
 public partial class Home
 {
-    private static IReadOnlyList<string> categories => ExpenseCategories.All;
+    private List<UserCategory> categoryItems = [];
+    private IReadOnlyList<string> categories = ExpenseCategories.All;
+    private IReadOnlyList<string> allCategories => categoryItems.Count == 0 ? categories : categoryItems.Select(c => c.Name).ToList();
+    private IEnumerable<string> EditCategories => categories.Concat(new[] { editCategory }).Distinct();
+    private string CategoryLabel(string value) => categoryItems.Any(c => c.Name == value && c.IsArchived) ? value + " (보관)" : value;
     private string ownerId = string.Empty;
     private List<ExpenseRecord> expenses = [];
     private IReadOnlyList<CategoryStatistic> categoryStatistics = [];
@@ -134,6 +138,7 @@ public partial class Home
 
         try
         {
+            await LoadCategoriesAsync();
             await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
             await LoadExpensesAsync();
         }
@@ -146,6 +151,17 @@ public partial class Home
         await RefreshBudgetAsync();
         await RefreshPaymentMethodsAsync();
         await RefreshTemplatesAsync();
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        await CheckOwnerAsync();
+        var loaded = await CategoryService.ListAsync(ownerId);
+        await CheckOwnerAsync();
+        categoryItems = loaded;
+        categories = loaded.Where(c => !c.IsArchived).Select(c => c.Name).ToList();
+        if (!categories.Contains(category)) category = categories.FirstOrDefault() ?? "";
+        foreach (var name in allCategories) categoryBudgetInputs.TryAdd(name, 0);
     }
 
     private async Task CheckOwnerAsync()

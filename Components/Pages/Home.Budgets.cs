@@ -11,6 +11,7 @@ public partial class Home
     private async Task LoadBudgetAsync()
     {
         await CheckOwnerAsync();
+        await LoadCategoriesAsync();
         var snapshot = await BudgetService.LoadAsync(ownerId, budgetMonth);
         await CheckOwnerAsync();
         budgetSpent = snapshot.Spent;
@@ -18,7 +19,7 @@ public partial class Home
         budgetAmount = snapshot.Amount;
         budgetInput = budgetAmount ?? 0;
         categoryBudgetAmounts = snapshot.CategoryAmounts;
-        foreach (var option in categories)
+        foreach (var option in allCategories)
             categoryBudgetInputs[option] = categoryBudgetAmounts.GetValueOrDefault(option);
     }
 
@@ -111,7 +112,7 @@ public partial class Home
 
     private async Task SaveCategoryBudgetAsync(string selectedCategory)
     {
-        if (savingCategoryBudget is not null || !categories.Contains(selectedCategory))
+        if (savingCategoryBudget is not null || !allCategories.Contains(selectedCategory))
             return;
         var input = categoryBudgetInputs[selectedCategory];
         if (input <= 0)
@@ -149,7 +150,7 @@ public partial class Home
 
     private async Task DeleteCategoryBudgetAsync(string selectedCategory)
     {
-        if (savingCategoryBudget is not null || !categories.Contains(selectedCategory) ||
+        if (savingCategoryBudget is not null || !allCategories.Contains(selectedCategory) ||
             CategoryBudgetAmount(selectedCategory) is null)
             return;
 

@@ -59,7 +59,8 @@ public partial class Import
             buffer.Position = 0;
             using var reader = new StreamReader(buffer, new UTF8Encoding(false, true),
                 detectEncodingFromByteOrderMarks: true);
-            parseResult = ExpenseCsvImporter.Parse(reader);
+            var categories = (await CategoryService.ListAsync(ownerId)).Where(c => !c.IsArchived).Select(c => c.Name).ToList();
+            parseResult = ExpenseCsvImporter.Parse(reader, categories);
             if (parseResult.Rows.Count > 0)
                 candidates = await ImportService.PreviewAsync(ownerId, parseResult.Rows);
         }

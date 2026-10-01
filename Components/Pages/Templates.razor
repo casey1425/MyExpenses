@@ -7,6 +7,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ExpenseTemplateService TemplateService
 @inject PaymentMethodService MethodService
+@inject CategoryService CategoryService
 @inject ILogger<Templates> Logger
 
 <PageTitle>즐겨찾기 지출 | MyExpenses</PageTitle>
@@ -31,7 +32,7 @@
                     <label>금액 (원) <input type="number" min="1" step="1" @bind="input.Amount" required /></label>
                     <label>카테고리
                         <select @bind="input.Category">
-                            @foreach (var category in ExpenseTemplateInput.Categories) { <option value="@category">@category</option> }
+                            @foreach (var category in categoryNames.Concat(editingId.HasValue ? new[] { input.Category } : Array.Empty<string>()).Distinct()) { <option value="@category">@category</option> }
                         </select>
                     </label>
                     <label>메모 (선택) <input type="text" maxlength="100" @bind="input.Memo" /></label>

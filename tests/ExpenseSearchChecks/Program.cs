@@ -50,7 +50,7 @@ var invalid = new[]
     new ExpenseSearchInput { MinAmount = "1.5" },
     new ExpenseSearchInput { MaxAmount = "9223372036854775808" },
     new ExpenseSearchInput { Search = new string('a', 101) },
-    new ExpenseSearchInput { Category = "invalid" },
+    new ExpenseSearchInput { Category = new string('a', 31) },
     new ExpenseSearchInput { Sort = "999" }
 };
 foreach (var bad in invalid) Check(!bad.TryCreate(out _, out var error) && error is not null, "Invalid input accepted");

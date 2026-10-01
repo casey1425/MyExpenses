@@ -22,7 +22,7 @@ public static class ExpenseTrends
 
     public static DateOnly MonthStart(DateOnly date) => new(date.Year, date.Month, 1);
 
-    public static ExpenseTrendsReport Calculate(IEnumerable<ExpenseRecord> expenses, DateOnly month, DateOnly today)
+    public static ExpenseTrendsReport Calculate(IEnumerable<ExpenseRecord> expenses, DateOnly month, DateOnly today, IReadOnlyList<string>? categories = null)
     {
         month = MonthStart(month);
         if (month < MinimumMonth || month > MonthStart(today))
@@ -51,7 +51,7 @@ public static class ExpenseTrends
                 isCurrentMonth && target == month);
         }).ToList();
 
-        var categoryNames = ExpenseCategories.All.Concat(current.Select(item => item.Category))
+        var categoryNames = (categories ?? ExpenseCategories.All).Concat(current.Select(item => item.Category))
             .Concat(previous.Select(item => item.Category)).Distinct();
         var comparisons = categoryNames.Select(category => new CategoryMonthComparison(category,
             Compare(current.Where(item => item.Category == category), previous.Where(item => item.Category == category))))
