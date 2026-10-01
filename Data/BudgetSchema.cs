@@ -96,6 +96,42 @@ public static class BudgetSchema
                 CREATE INDEX IF NOT EXISTS "IX_ExpenseTemplates_OwnerId" ON "ExpenseTemplates" ("OwnerId");
                 """, cancellationToken);
 
+            await ExecuteAsync(connection, transaction,
+                """
+                CREATE TABLE IF NOT EXISTS "PaymentMethods" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_PaymentMethods" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "Name" TEXT NOT NULL,
+                    "Type" TEXT NOT NULL,
+                    CONSTRAINT "AK_PaymentMethods_OwnerId_Id" UNIQUE ("OwnerId", "Id")
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_PaymentMethods_OwnerId_Name" ON "PaymentMethods" ("OwnerId", "Name");
+                """, cancellationToken);
+            foreach (var table in new[] { "Expenses", "ExpenseTemplates" })
+            {
+                if (!await HasColumnAsync(connection, transaction, table, "PaymentMethodId", cancellationToken))
+                    await ExecuteAsync(connection, transaction, $"ALTER TABLE \"{table}\" ADD COLUMN \"PaymentMethodId\" INTEGER NULL;", cancellationToken);
+                await ExecuteAsync(connection, transaction, $"CREATE INDEX IF NOT EXISTS \"IX_{table}_OwnerId_PaymentMethodId\" ON \"{table}\" (\"OwnerId\", \"PaymentMethodId\");", cancellationToken);
+            }
+            // 기존 테이블을 재작성하지 않고, 신규 DB의 복합 외래 키와 같은 소유자 검증을 적용합니다.
+            foreach (var table in new[] { "Expenses", "ExpenseTemplates" })
+            {
+                foreach (var operation in new[] { "INSERT", "UPDATE" })
+                    await ExecuteAsync(connection, transaction, $"""
+                        CREATE TRIGGER IF NOT EXISTS "TR_{table}_PaymentOwner_{operation}"
+                        BEFORE {operation} ON "{table}"
+                        WHEN NEW."PaymentMethodId" IS NOT NULL AND NOT EXISTS (
+                            SELECT 1 FROM "PaymentMethods" WHERE "Id" = NEW."PaymentMethodId" AND "OwnerId" = NEW."OwnerId")
+                        BEGIN SELECT RAISE(ABORT, 'Invalid payment method owner'); END;
+                        """, cancellationToken);
+            }
+            await ExecuteAsync(connection, transaction, """
+                CREATE TRIGGER IF NOT EXISTS "TR_PaymentMethods_Referenced_DELETE"
+                BEFORE DELETE ON "PaymentMethods"
+                WHEN EXISTS (SELECT 1 FROM "Expenses" WHERE "OwnerId" = OLD."OwnerId" AND "PaymentMethodId" = OLD."Id")
+                  OR EXISTS (SELECT 1 FROM "ExpenseTemplates" WHERE "OwnerId" = OLD."OwnerId" AND "PaymentMethodId" = OLD."Id")
+                BEGIN SELECT RAISE(ABORT, 'Payment method still referenced'); END;
+                """, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         finally

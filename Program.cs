@@ -74,6 +74,7 @@ builder.Services.AddScoped<ExpenseCsvImportService>();
 builder.Services.AddScoped<RecurringExpenseService>();
 builder.Services.AddScoped<ExpenseTrendsService>();
 builder.Services.AddScoped<ExpenseTemplateService>();
+builder.Services.AddScoped<PaymentMethodService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
 builder.Services.AddDbContext<AuthDbContext>(options =>
@@ -171,14 +172,17 @@ static async Task<IResult> ExportExpensesAsync(
             EndDate = context.Request.Query["end"].ToString(),
             MinAmount = context.Request.Query["min"].ToString(),
             MaxAmount = context.Request.Query["max"].ToString(),
-            Sort = context.Request.Query["sort"].FirstOrDefault() ?? nameof(ExpenseSort.Newest)
+            Sort = context.Request.Query["sort"].FirstOrDefault() ?? nameof(ExpenseSort.Newest),
+            PaymentMethod = context.Request.Query["payment"].ToString()
         };
         if (!input.TryCreate(out filter, out var error))
             return Results.BadRequest(error);
     }
 
     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-    var ownedExpenses = db.Expenses.AsNoTracking()
+    try { await PaymentMethodService.VerifyOwnedAsync(db, ownerId, filter.PaymentMethodId, cancellationToken); }
+    catch (ArgumentException ex) { return Results.BadRequest(ex.Message); }
+    var ownedExpenses = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod)
         .Where(expense => expense.OwnerId == ownerId);
     var expenses = await filter.Order(filter.ApplyTo(ownedExpenses))
         .ToListAsync(cancellationToken);

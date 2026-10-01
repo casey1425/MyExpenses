@@ -14,4 +14,6 @@ public sealed class ExpenseRecord
     public string Category { get; set; } = string.Empty;
 
     public string Memo { get; set; } = string.Empty;
+    public int? PaymentMethodId { get; set; }
+    public PaymentMethod? PaymentMethod { get; set; }
 }

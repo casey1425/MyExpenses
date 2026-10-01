@@ -10,6 +10,8 @@ public sealed class ExpenseTemplate
     public long Amount { get; set; }
     public string Category { get; set; } = "";
     public string Memo { get; set; } = "";
+    public int? PaymentMethodId { get; set; }
+    public PaymentMethod? PaymentMethod { get; set; }
 }
 
 public sealed class ExpenseTemplateInput
@@ -19,6 +21,7 @@ public sealed class ExpenseTemplateInput
     public string Amount { get; set; } = "";
     public string Category { get; set; } = "식비";
     public string Memo { get; set; } = "";
+    public int? PaymentMethodId { get; set; }
 
     public ExpenseTemplate Validate()
     {
@@ -28,6 +31,6 @@ public sealed class ExpenseTemplateInput
             throw new ArgumentException("금액은 1원 이상의 정수로 입력해 주세요. 최대 금액은 9,223,372,036,854,775,807원입니다.");
         if (!Categories.Contains(Category) || Memo.Trim().Length > 100)
             throw new ArgumentException("카테고리와 100자 이하 메모를 확인해 주세요.");
-        return new ExpenseTemplate { Name = Name.Trim(), Amount = amount, Category = Category, Memo = Memo.Trim() };
+        return new ExpenseTemplate { Name = Name.Trim(), Amount = amount, Category = Category, Memo = Memo.Trim(), PaymentMethodId = PaymentMethodId };
     }
 }

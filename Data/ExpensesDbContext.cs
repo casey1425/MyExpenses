@@ -6,6 +6,7 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
     public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
+    public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
     public DbSet<CategoryBudget> CategoryBudgets => Set<CategoryBudget>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -14,6 +15,15 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<PaymentMethod>(entity =>
+        {
+            entity.HasKey(m => m.Id);
+            entity.HasAlternateKey(m => new { m.OwnerId, m.Id });
+            entity.Property(m => m.OwnerId).IsRequired();
+            entity.Property(m => m.Name).IsRequired().HasMaxLength(50);
+            entity.Property(m => m.Type).IsRequired().HasMaxLength(20);
+            entity.HasIndex(m => new { m.OwnerId, m.Name }).IsUnique();
+        });
         modelBuilder.Entity<ExpenseTemplate>(entity =>
         {
             entity.HasKey(t => t.Id);
@@ -22,6 +32,8 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.Property(t => t.Category).IsRequired().HasMaxLength(30);
             entity.Property(t => t.Memo).IsRequired().HasMaxLength(100);
             entity.HasIndex(t => t.OwnerId);
+            entity.HasOne(t => t.PaymentMethod).WithMany().HasForeignKey(t => new { t.OwnerId, t.PaymentMethodId })
+                .HasPrincipalKey(m => new { m.OwnerId, m.Id }).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<ExpenseRecord>(entity =>
         {
@@ -30,6 +42,8 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.Property(expense => expense.Memo).IsRequired().HasMaxLength(100);
             entity.Property(expense => expense.OwnerId).IsRequired();
             entity.HasIndex(expense => new { expense.OwnerId, expense.Date });
+            entity.HasOne(e => e.PaymentMethod).WithMany().HasForeignKey(e => new { e.OwnerId, e.PaymentMethodId })
+                .HasPrincipalKey(m => new { m.OwnerId, m.Id }).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<MonthlyBudget>(entity =>

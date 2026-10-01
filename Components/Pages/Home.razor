@@ -10,6 +10,7 @@
 @inject UserDataProvisioner UserDataProvisioner
 @inject RecurringExpenseService RecurringExpenseService
 @inject ExpenseTemplateService TemplateService
+@inject PaymentMethodService MethodService
 @inject NavigationManager Navigation
 @inject ILogger<Home> Logger
 
@@ -262,6 +263,18 @@
                     <label for="expense-memo">메모 <span class="optional">선택</span></label>
                     <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" @bind="memo" />
                 </div>
+                <div class="field">
+                    <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
+                    <select id="expense-payment" @bind="paymentMethodId">
+                        <option value="">미지정</option>
+                        @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+                    </select>
+                    <div class="template-picker-actions">
+                        <a href="/payment-methods">결제수단 관리·월별 합계</a>
+                        <button type="button" class="filter-reset" @onclick="RefreshPaymentMethodsAsync" disabled="@paymentBusy">목록 새로고침</button>
+                    </div>
+                    @if (paymentError is not null) { <p class="form-error" role="alert">@paymentError</p> }
+                </div>
 
                 @if (!string.IsNullOrEmpty(errorMessage))
                 {
@@ -336,6 +349,14 @@
                         <option value="LowestAmount">금액 낮은순</option>
                     </select>
                 </div>
+                <div class="filter-field">
+                    <label for="filter-payment">결제수단</label>
+                    <select id="filter-payment" @bind="searchInput.PaymentMethod">
+                        <option value="">전체 결제수단</option>
+                        <option value="none">미지정</option>
+                        @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+                    </select>
+                </div>
                 <p class="filter-help">입력한 조건을 모두 만족하는 기록을 조회합니다. 종료일과 금액 경계값도 포함합니다.</p>
                 <div class="filter-buttons">
                     <button type="submit" class="filter-apply" disabled="@isSearching">@(isSearching ? "조회 중..." : "조회")</button>
@@ -402,6 +423,7 @@
                                 <div class="expense-details">
                                     <strong>@expense.Category</strong>
                                     <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
+                                    <span>결제수단: @(expense.PaymentMethod?.Name ?? "미지정")</span>
                                 </div>
                                 <div class="expense-actions">
                                     <strong>-@expense.Amount.ToString("N0")원</strong>
@@ -449,6 +471,13 @@
                                     {
                                         <p class="form-error" role="alert">@editError</p>
                                     }
+                                    <div class="field">
+                                        <label for="edit-payment">결제수단</label>
+                                        <select id="edit-payment" @bind="editPaymentMethodId">
+                                            <option value="">미지정</option>
+                                            @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+                                        </select>
+                                    </div>
 
                                     <div class="edit-form-actions">
                                         <button type="button" class="edit-cancel" @onclick="CancelEdit" disabled="@isSavingEdit">취소</button>
@@ -473,6 +502,11 @@
     private long amount;
     private string category = "식비";
     private string memo = string.Empty;
+    private List<PaymentMethod> paymentMethods = [];
+    private int? paymentMethodId;
+    private int? editPaymentMethodId;
+    private bool paymentBusy;
+    private string? paymentError;
     private List<ExpenseTemplate> templates = [];
     private string selectedTemplateId = "";
     private bool templateBusy;
@@ -546,6 +580,8 @@
             if (!string.IsNullOrEmpty(activeFilter.Search)) parts.Add($"메모: {activeFilter.Search}");
             if (activeFilter.MinAmount.HasValue || activeFilter.MaxAmount.HasValue)
                 parts.Add($"{activeFilter.MinAmount?.ToString("N0") ?? "0"}원 ~ {activeFilter.MaxAmount?.ToString("N0") ?? "제한 없음"}");
+            if (activeFilter.UnspecifiedPayment) parts.Add("결제수단: 미지정");
+            if (activeFilter.PaymentMethodId is int methodId) parts.Add($"결제수단: {paymentMethods.FirstOrDefault(m => m.Id == methodId)?.Name ?? "삭제된 수단"}");
             return string.Join(" · ", parts);
         }
     }
@@ -564,6 +600,8 @@
             if (activeFilter.MinAmount is long min) url += $"&min={min.ToString(CultureInfo.InvariantCulture)}";
             if (activeFilter.MaxAmount is long max) url += $"&max={max.ToString(CultureInfo.InvariantCulture)}";
             url += $"&sort={activeFilter.Sort}";
+            if (activeFilter.UnspecifiedPayment) url += "&payment=none";
+            if (activeFilter.PaymentMethodId is int methodId) url += $"&payment={methodId}";
             return url;
         }
     }
@@ -596,6 +634,7 @@
         }
 
         await RefreshBudgetAsync();
+        await RefreshPaymentMethodsAsync();
         await RefreshTemplatesAsync();
     }
 
@@ -604,6 +643,23 @@
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (ownerId == "" || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
             throw new InvalidOperationException("로그인 계정이 바뀌었습니다.");
+    }
+
+    private async Task LoadPaymentMethodsAsync()
+    {
+        await CheckTemplateOwnerAsync();
+        var loaded = await MethodService.ListAsync(ownerId);
+        await CheckTemplateOwnerAsync();
+        paymentMethods = loaded;
+    }
+
+    private async Task RefreshPaymentMethodsAsync()
+    {
+        if (paymentBusy || isSavingEdit) return;
+        paymentBusy = true;
+        try { await LoadPaymentMethodsAsync(); await LoadExpensesAsync(); paymentError = null; }
+        catch (Exception ex) { Logger.LogError(ex, "결제수단 조회 실패"); paymentError = "목록을 불러오지 못했습니다. 새로고침 후 확인해 주세요."; }
+        finally { paymentBusy = false; }
     }
 
     private async Task RefreshTemplatesAsync()
@@ -647,9 +703,13 @@
                 templateError = "템플릿이 삭제되었거나 사용할 수 없습니다. 목록을 새로고침해 주세요.";
                 return;
             }
+            await LoadPaymentMethodsAsync();
+            await using (var db = await DbFactory.CreateDbContextAsync())
+                await PaymentMethodService.VerifyOwnedAsync(db, ownerId, template.PaymentMethodId);
             amount = template.Amount;
             category = template.Category;
             memo = template.Memo;
+            paymentMethodId = template.PaymentMethodId;
             templateNotice = $"‘{template.Name}’을 입력했습니다. 내용을 확인한 뒤 지출 기록하기를 눌러 주세요.";
         }
         catch (Exception ex)
@@ -666,7 +726,7 @@
         if (string.IsNullOrEmpty(ownerId) || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
             throw new InvalidOperationException("로그인 계정이 변경되었습니다. 페이지를 새로고침해 주세요.");
         await using var db = await DbFactory.CreateDbContextAsync();
-        var ownedExpenses = db.Expenses.AsNoTracking()
+        var ownedExpenses = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod)
             .Where(item => item.OwnerId == ownerId);
         var loaded = await activeFilter.Order(activeFilter.ApplyTo(ownedExpenses)).ToListAsync();
         var statisticsExpenses = activeFilter.IsActive
@@ -904,6 +964,9 @@
 
         try
         {
+            await CheckTemplateOwnerAsync();
+            await using (var filterDb = await DbFactory.CreateDbContextAsync())
+                await PaymentMethodService.VerifyOwnedAsync(filterDb, ownerId, nextFilter.PaymentMethodId);
             await LoadExpensesAsync();
             filterError = null;
             deleteError = null;
@@ -911,6 +974,11 @@
             historyNotice = null;
             showDeleteAllConfirmation = false;
             CancelEdit();
+        }
+        catch (ArgumentException ex)
+        {
+            activeFilter = previousFilter;
+            filterError = ex.Message;
         }
         catch (Exception ex)
         {
@@ -948,17 +1016,22 @@
 
         try
         {
+            await CheckTemplateOwnerAsync();
             await using var db = await DbFactory.CreateDbContextAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            await PaymentMethodService.VerifyOwnedAsync(db, ownerId, paymentMethodId);
             var newExpense = new ExpenseRecord
             {
                 OwnerId = ownerId,
                 Date = expenseDate.Date,
                 Amount = amount,
                 Category = category,
-                Memo = memo.Trim()
+                Memo = memo.Trim(),
+                PaymentMethodId = paymentMethodId
             };
             db.Expenses.Add(newExpense);
             await db.SaveChangesAsync();
+            await transaction.CommitAsync();
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
 
@@ -966,11 +1039,16 @@
             memo = string.Empty;
             selectedTemplateId = "";
             templateNotice = null;
+            paymentMethodId = null;
             errorMessage = null;
             saveNotice = activeFilter.IsActive && !activeFilter.Matches(newExpense)
                 ? "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."
                 : null;
             showDeleteAllConfirmation = false;
+        }
+        catch (ArgumentException ex)
+        {
+            errorMessage = ex.Message;
         }
         catch (Exception ex)
         {
@@ -989,6 +1067,7 @@
         editAmount = expense.Amount;
         editCategory = expense.Category;
         editMemo = expense.Memo;
+        editPaymentMethodId = expense.PaymentMethodId;
         editError = null;
         historyNotice = null;
         deleteError = null;
@@ -1021,7 +1100,10 @@
         isSavingEdit = true;
         try
         {
+            await CheckTemplateOwnerAsync();
             await using var db = await DbFactory.CreateDbContextAsync();
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            await PaymentMethodService.VerifyOwnedAsync(db, ownerId, editPaymentMethodId);
             var expense = await db.Expenses
                 .SingleOrDefaultAsync(item => item.Id == id && item.OwnerId == ownerId);
             if (expense is null)
@@ -1036,7 +1118,9 @@
             expense.Amount = editAmount;
             expense.Category = editCategory;
             expense.Memo = editMemo.Trim();
+            expense.PaymentMethodId = editPaymentMethodId;
             await db.SaveChangesAsync();
+            await transaction.CommitAsync();
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
 
@@ -1044,6 +1128,10 @@
                 ? "수정했습니다. 변경된 기록은 현재 조회 조건에 맞지 않아 목록에서 보이지 않습니다."
                 : "지출 기록을 수정했습니다.";
             CancelEdit();
+        }
+        catch (ArgumentException ex)
+        {
+            editError = ex.Message;
         }
         catch (Exception ex)
         {

@@ -14,8 +14,10 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
             return [];
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var methods = await ResolveMethodsAsync(db, ownerId, rows, cancellationToken);
         var known = await ExistingKeysAsync(db, ownerId, rows, cancellationToken);
-        return rows.Select(row => new ExpenseCsvCandidate(row, !known.Add(Key(row)))).ToList();
+        return rows.Select(row => new ExpenseCsvCandidate(row, !known.Add(Key(row, methods[(row.PaymentMethodName, row.PaymentMethodType)])))).ToList();
     }
 
     public async Task<int> ImportAsync(
@@ -28,6 +30,7 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
 
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var methods = await ResolveMethodsAsync(db, ownerId, rows, cancellationToken);
         HashSet<ExpenseKey> known = includeDuplicates
             ? []
             : await ExistingKeysAsync(db, ownerId, rows, cancellationToken);
@@ -35,7 +38,8 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
         var imported = 0;
         foreach (var row in rows)
         {
-            if (!includeDuplicates && !known.Add(Key(row)))
+            var methodId = methods[(row.PaymentMethodName, row.PaymentMethodType)];
+            if (!includeDuplicates && !known.Add(Key(row, methodId)))
                 continue;
 
             db.Expenses.Add(new ExpenseRecord
@@ -44,7 +48,8 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
                 Date = row.Date,
                 Amount = row.Amount,
                 Category = row.Category,
-                Memo = row.Memo
+                Memo = row.Memo,
+                PaymentMethodId = methodId
             });
             imported++;
         }
@@ -67,11 +72,27 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
         return existing.Select(Key).ToHashSet();
     }
 
-    private static ExpenseKey Key(ExpenseCsvRow row) =>
-        new(row.Date.Date, row.Amount, row.Category, row.Memo);
+    private static async Task<Dictionary<(string, string), int?>> ResolveMethodsAsync(
+        ExpensesDbContext db, string ownerId, IReadOnlyList<ExpenseCsvRow> rows, CancellationToken cancellationToken)
+    {
+        var methods = await db.PaymentMethods.AsNoTracking().Where(m => m.OwnerId == ownerId).ToListAsync(cancellationToken);
+        var result = new Dictionary<(string, string), int?> { [("", "")] = null };
+        foreach (var row in rows)
+        {
+            var key = (row.PaymentMethodName, row.PaymentMethodType);
+            if (result.ContainsKey(key)) continue;
+            var method = methods.SingleOrDefault(m => m.Name == row.PaymentMethodName && m.Type == row.PaymentMethodType);
+            if (method is null) throw new ArgumentException($"{row.RowNumber}번째 행: 결제수단 ‘{row.PaymentMethodName}’ ({row.PaymentMethodType})을 내 계정에 먼저 등록해 주세요.");
+            result[key] = method.Id;
+        }
+        return result;
+    }
+
+    private static ExpenseKey Key(ExpenseCsvRow row, int? methodId) =>
+        new(row.Date.Date, row.Amount, row.Category, row.Memo, methodId);
 
     private static ExpenseKey Key(ExpenseRecord expense) =>
-        new(expense.Date.Date, expense.Amount, expense.Category, expense.Memo);
+        new(expense.Date.Date, expense.Amount, expense.Category, expense.Memo, expense.PaymentMethodId);
 
-    private sealed record ExpenseKey(DateTime Date, long Amount, string Category, string Memo);
+    private sealed record ExpenseKey(DateTime Date, long Amount, string Category, string Memo, int? PaymentMethodId);
 }

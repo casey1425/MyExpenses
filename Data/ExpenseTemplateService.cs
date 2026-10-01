@@ -8,7 +8,7 @@ public sealed class ExpenseTemplateService(IDbContextFactory<ExpensesDbContext> 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-        return await db.ExpenseTemplates.AsNoTracking().Where(t => t.OwnerId == ownerId)
+        return await db.ExpenseTemplates.AsNoTracking().Include(t => t.PaymentMethod).Where(t => t.OwnerId == ownerId)
             .OrderBy(t => t.Name).ThenBy(t => t.Id).ToListAsync(cancellationToken);
     }
 
@@ -25,6 +25,8 @@ public sealed class ExpenseTemplateService(IDbContextFactory<ExpensesDbContext> 
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         var values = input.Validate();
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await PaymentMethodService.VerifyOwnedAsync(db, ownerId, values.PaymentMethodId, cancellationToken);
         ExpenseTemplate? template;
         if (id is int existingId)
         {
@@ -40,7 +42,9 @@ public sealed class ExpenseTemplateService(IDbContextFactory<ExpensesDbContext> 
         template.Amount = values.Amount;
         template.Category = values.Category;
         template.Memo = values.Memo;
+        template.PaymentMethodId = values.PaymentMethodId;
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
     }
 

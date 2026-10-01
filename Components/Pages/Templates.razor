@@ -6,6 +6,7 @@
 @using MyExpenses.Data
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ExpenseTemplateService TemplateService
+@inject PaymentMethodService MethodService
 @inject ILogger<Templates> Logger
 
 <PageTitle>즐겨찾기 지출 | MyExpenses</PageTitle>
@@ -34,6 +35,12 @@
                         </select>
                     </label>
                     <label>메모 (선택) <input type="text" maxlength="100" @bind="input.Memo" /></label>
+                    <label>기본 결제수단
+                        <select @bind="input.PaymentMethodId">
+                            <option value="">미지정</option>
+                            @foreach (var method in methods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+                        </select>
+                    </label>
                 </div>
                 <div class="actions">
                     <button type="submit">@(busy ? "처리 중..." : editingId is null ? "템플릿 저장" : "수정 저장")</button>
@@ -41,6 +48,7 @@
                 </div>
             </fieldset>
         </form>
+        <p class="help"><a href="/payment-methods">결제수단 관리</a>에서 등록한 뒤 목록을 새로고침해 주세요.</p>
     </section>
 
     <section class="template-card" aria-labelledby="template-list-title">
@@ -59,6 +67,7 @@
                         <div>
                             <h3>@template.Name</h3>
                             <p>@template.Amount.ToString("N0")원 · @template.Category</p>
+                            <p class="help">결제수단: @(template.PaymentMethod?.Name ?? "미지정")</p>
                             @if (template.Memo != "") { <p class="help">@template.Memo</p> }
                         </div>
                         <div class="actions">
@@ -86,6 +95,7 @@
     private string ownerId = "";
     private ExpenseTemplateInput input = new();
     private List<ExpenseTemplate> templates = [];
+    private List<PaymentMethod> methods = [];
     private int? editingId;
     private int? deletingId;
     private bool busy;
@@ -111,8 +121,10 @@
     {
         await CheckOwnerAsync();
         var loaded = await TemplateService.ListAsync(ownerId);
+        var loadedMethods = await MethodService.ListAsync(ownerId);
         await CheckOwnerAsync();
         templates = loaded;
+        methods = loadedMethods;
     }
 
     private async Task RefreshAsync()
@@ -151,7 +163,7 @@
         if (busy) return;
         editingId = template.Id;
         deletingId = null;
-        input = new() { Name = template.Name, Amount = template.Amount.ToString(CultureInfo.InvariantCulture), Category = template.Category, Memo = template.Memo };
+        input = new() { Name = template.Name, Amount = template.Amount.ToString(CultureInfo.InvariantCulture), Category = template.Category, Memo = template.Memo, PaymentMethodId = template.PaymentMethodId };
         error = notice = null;
     }
 

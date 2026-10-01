@@ -1,0 +1,180 @@
+@page "/payment-methods"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject PaymentMethodService MethodService
+@inject ILogger<PaymentMethods> Logger
+
+<PageTitle>결제수단 | MyExpenses</PageTitle>
+<main class="methods-page">
+    <header>
+        <p class="kicker">PAYMENT METHODS</p>
+        <h1>결제수단별 지출 관리</h1>
+        <p>현금·카드·계좌이체를 구분해 기록합니다. 금융기관과 연결하지 않으며 카드번호나 계좌번호는 입력하지 마세요.</p>
+        <a href="/">← 지출 기록으로 돌아가기</a>
+    </header>
+    @if (error is not null) { <p class="error" role="alert">@error</p> }
+    @if (notice is not null) { <p class="notice" role="status">@notice</p> }
+    <section class="method-card" aria-labelledby="method-form-title">
+        <h2 id="method-form-title">@(editingId is null ? "결제수단 등록" : "결제수단 수정")</h2>
+        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@busy">
+                <div class="method-fields">
+                    <label>이름 <input type="text" maxlength="50" placeholder="예: 국민 체크카드" @bind="name" required /></label>
+                    <label>유형
+                        <select @bind="type">
+                            @foreach (var option in PaymentMethod.Types) { <option value="@option">@option</option> }
+                        </select>
+                    </label>
+                </div>
+                <div class="actions">
+                    <button type="submit">@(busy ? "처리 중..." : editingId is null ? "등록" : "변경 저장")</button>
+                    @if (editingId is not null) { <button type="button" class="secondary" @onclick="CancelEdit">취소</button> }
+                </div>
+            </fieldset>
+        </form>
+    </section>
+    <section class="method-card" aria-labelledby="method-totals-title">
+        <h2 id="method-totals-title">내 결제수단과 월별 합계</h2>
+        <div class="month-selector">
+            <label for="method-month">조회 월</label>
+            <input id="method-month" type="month" value="@monthInput" @onchange="MonthChangedAsync" disabled="@busy" />
+            <button type="button" class="secondary" @onclick="RefreshAsync" disabled="@busy">새로고침</button>
+        </div>
+        <p class="help">선택한 달 전체의 지출입니다. 지출 화면의 검색 조건과 무관하며, 기존 기록·CSV 4열 파일·정기 지출은 기본적으로 미지정입니다.</p>
+        @if (loading) { <p>불러오는 중...</p> }
+        else
+        {
+            <p class="total" role="status">@month.ToString("yyyy년 M월") · 합계 @totals.Sum(t => t.Amount).ToString("N0")원 · @totals.Sum(t => t.Count)건</p>
+            @if (methods.Count == 0) { <p class="help">아직 결제수단이 없어요. 위에서 자주 쓰는 결제수단을 등록하세요.</p> }
+            @foreach (var total in totals)
+            {
+                <article class="method-item">
+                    <div class="method-summary">
+                        <div>
+                            <h3>@total.Name @(total.Type == "" ? "" : $"({total.Type})")</h3>
+                            <p>@total.Amount.ToString("N0")원 · @total.Count 건</p>
+                        </div>
+                        @if (total.Id is int id)
+                        {
+                            var method = methods.Single(m => m.Id == id);
+                            <div class="actions">
+                                <button type="button" class="secondary" @onclick="() => Edit(method)" disabled="@busy">수정</button>
+                                <button type="button" class="danger" @onclick="() => deletingId = id" disabled="@busy">삭제</button>
+                            </div>
+                        }
+                    </div>
+                    @if (total.Id.HasValue && deletingId == total.Id)
+                    {
+                        <div class="delete-confirm" role="alert">
+                            <p>이 결제수단을 삭제할까요? 지출과 템플릿은 삭제되지 않고 결제수단만 미지정으로 변경됩니다.</p>
+                            <div class="actions">
+                                <button type="button" class="danger" @onclick="() => DeleteAsync(total.Id.Value)" disabled="@busy">결제수단 삭제</button>
+                                <button type="button" class="secondary" @onclick="() => deletingId = null" disabled="@busy">취소</button>
+                            </div>
+                        </div>
+                    }
+                </article>
+            }
+        }
+    </section>
+</main>
+
+@code {
+    private string ownerId = "";
+    private string name = "";
+    private string type = "체크카드";
+    private static DateTime KoreanToday => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Asia/Seoul").Date;
+    private DateTime month = new(KoreanToday.Year, KoreanToday.Month, 1);
+    private string monthInput = KoreanToday.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private List<PaymentMethod> methods = [];
+    private List<PaymentMethodTotal> totals = [];
+    private int? editingId;
+    private int? deletingId;
+    private bool busy;
+    private bool loading = true;
+    private string? error;
+    private string? notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ownerId = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        await RefreshAsync();
+    }
+    private async Task CheckOwnerAsync()
+    {
+        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        if (ownerId == "" || user.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId) throw new InvalidOperationException("계정이 변경되었습니다.");
+    }
+    private async Task ReloadAsync()
+    {
+        await CheckOwnerAsync();
+        var summary = await MethodService.MonthlyTotalsAsync(ownerId, month);
+        await CheckOwnerAsync();
+        // 합계와 관리 목록을 같은 조회 결과에서 구성해 다른 탭의 수정·삭제에도 일관성을 유지합니다.
+        totals = summary;
+        methods = summary.Where(t => t.Id.HasValue).Select(t => new PaymentMethod { Id = t.Id!.Value, Name = t.Name, Type = t.Type }).ToList();
+    }
+    private async Task RefreshAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try { await ReloadAsync(); error = null; }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; loading = false; }
+    }
+    private async Task MonthChangedAsync(ChangeEventArgs args)
+    {
+        if (busy) return;
+        if (!DateTime.TryParseExact(args.Value?.ToString(), "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var selected))
+        { error = "조회할 월을 선택해 주세요."; return; }
+        var previous = month;
+        month = selected;
+        busy = true;
+        try { await ReloadAsync(); monthInput = selected.ToString("yyyy-MM", CultureInfo.InvariantCulture); error = null; }
+        catch (Exception ex) { month = previous; HandleError(ex); }
+        finally { busy = false; }
+    }
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        notice = null;
+        try
+        {
+            await CheckOwnerAsync();
+            if (!await MethodService.SaveAsync(ownerId, editingId, name, type)) throw new InvalidOperationException("결제수단이 없습니다.");
+            CancelEdit();
+            await ReloadAsync();
+            error = null;
+            notice = "결제수단을 저장했습니다. 지출 입력 화면에서 선택할 수 있어요.";
+        }
+        catch (ArgumentException ex) { error = ex.Message; }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; }
+    }
+    private void Edit(PaymentMethod method) { if (!busy) { editingId = method.Id; deletingId = null; name = method.Name; type = method.Type; notice = error = null; } }
+    private void CancelEdit() { editingId = null; name = ""; type = "체크카드"; }
+    private async Task DeleteAsync(int id)
+    {
+        if (busy || deletingId != id) return;
+        busy = true;
+        notice = null;
+        try
+        {
+            await CheckOwnerAsync();
+            await MethodService.DeleteAsync(ownerId, id);
+            if (editingId == id) CancelEdit();
+            deletingId = null;
+            await ReloadAsync();
+            error = null;
+            notice = "삭제했습니다. 연결된 기록은 미지정으로 유지됩니다.";
+        }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; }
+    }
+    private void HandleError(Exception ex) { Logger.LogError(ex, "결제수단 처리 실패"); error = "처리 결과를 확인하지 못했습니다. 새로고침 후 확인해 주세요."; }
+}

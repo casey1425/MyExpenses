@@ -42,6 +42,8 @@ Check((await service.FindAsync("A", template.Id))?.Amount == 5500, "Updated valu
 var home = new Home();
 var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 typeof(Home).GetProperty("TemplateService", flags)!.SetValue(home, service);
+typeof(Home).GetProperty("MethodService", flags)!.SetValue(home, new PaymentMethodService(factory));
+typeof(Home).GetProperty("DbFactory", flags)!.SetValue(home, factory);
 typeof(Home).GetProperty("AuthenticationStateProvider", flags)!.SetValue(home, new TestAuth());
 typeof(Home).GetProperty("Logger", flags)!.SetValue(home, NullLogger<Home>.Instance);
 typeof(Home).GetField("ownerId", flags)!.SetValue(home, "A");

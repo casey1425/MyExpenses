@@ -13,6 +13,7 @@ public sealed class ExpenseSearchInput
     public string MinAmount { get; set; } = "";
     public string MaxAmount { get; set; } = "";
     public string Sort { get; set; } = nameof(ExpenseSort.Newest);
+    public string PaymentMethod { get; set; } = "";
 
     public bool TryCreate(out ExpenseFilter filter, out string? error)
     {
@@ -34,8 +35,11 @@ public sealed class ExpenseSearchInput
             error = "카테고리를 다시 선택해 주세요.";
         else if (!Enum.TryParse<ExpenseSort>(Sort, out var sort) || !Enum.IsDefined(sort))
             error = "정렬 방법을 다시 선택해 주세요.";
+        else if (PaymentMethod is not ("" or "none") && (!int.TryParse(PaymentMethod, NumberStyles.None, CultureInfo.InvariantCulture, out var methodId) || methodId <= 0))
+            error = "결제수단을 다시 선택해 주세요.";
         else
-            filter = new(month, Category == "" ? null : Category, Search.Trim(), start, end, min, max, sort);
+            filter = new(month, Category == "" ? null : Category, Search.Trim(), start, end, min, max, sort,
+                PaymentMethod is "" or "none" ? null : int.Parse(PaymentMethod, CultureInfo.InvariantCulture), PaymentMethod == "none");
         return error is null;
     }
 

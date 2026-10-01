@@ -7,7 +7,7 @@ public static class ExpenseCsvExporter
 {
     public static byte[] Create(IEnumerable<ExpenseRecord> expenses)
     {
-        var csv = new StringBuilder("날짜,금액(원),카테고리,메모\r\n");
+        var csv = new StringBuilder("날짜,금액(원),카테고리,메모,결제수단,결제유형\r\n");
 
         foreach (var expense in expenses)
         {
@@ -18,6 +18,8 @@ public static class ExpenseCsvExporter
                 .Append(EscapeText(expense.Category))
                 .Append(',')
                 .Append(EscapeText(expense.Memo))
+                .Append(',').Append(EscapeText(expense.PaymentMethod?.Name))
+                .Append(',').Append(EscapeText(expense.PaymentMethod?.Type))
                 .Append("\r\n");
         }
 

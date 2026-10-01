@@ -4,11 +4,12 @@ public enum ExpenseSort { Newest, Oldest, HighestAmount, LowestAmount }
 
 public sealed record ExpenseFilter(DateTime? Month = null, string? Category = null,
     string? Search = null, DateTime? StartDate = null, DateTime? EndDate = null,
-    long? MinAmount = null, long? MaxAmount = null, ExpenseSort Sort = ExpenseSort.Newest)
+    long? MinAmount = null, long? MaxAmount = null, ExpenseSort Sort = ExpenseSort.Newest,
+    int? PaymentMethodId = null, bool UnspecifiedPayment = false)
 {
     public bool IsActive => Month.HasValue || !string.IsNullOrEmpty(Category) ||
         !string.IsNullOrWhiteSpace(Search) || StartDate.HasValue || EndDate.HasValue ||
-        MinAmount.HasValue || MaxAmount.HasValue;
+        MinAmount.HasValue || MaxAmount.HasValue || PaymentMethodId.HasValue || UnspecifiedPayment;
 
     public IQueryable<ExpenseRecord> ApplyTo(IQueryable<ExpenseRecord> query)
     {
@@ -45,6 +46,10 @@ public sealed record ExpenseFilter(DateTime? Month = null, string? Category = nu
             query = query.Where(expense => expense.Amount >= min);
         if (MaxAmount is long max)
             query = query.Where(expense => expense.Amount <= max);
+        if (PaymentMethodId is int methodId)
+            query = query.Where(expense => expense.PaymentMethodId == methodId);
+        if (UnspecifiedPayment)
+            query = query.Where(expense => expense.PaymentMethodId == null);
         return query;
     }
 
@@ -63,5 +68,7 @@ public sealed record ExpenseFilter(DateTime? Month = null, string? Category = nu
         (!StartDate.HasValue || expense.Date >= StartDate.Value.Date) &&
         (!EndDate.HasValue || expense.Date.Date <= EndDate.Value.Date) &&
         (!MinAmount.HasValue || expense.Amount >= MinAmount) &&
-        (!MaxAmount.HasValue || expense.Amount <= MaxAmount);
+        (!MaxAmount.HasValue || expense.Amount <= MaxAmount) &&
+        (!PaymentMethodId.HasValue || expense.PaymentMethodId == PaymentMethodId) &&
+        (!UnspecifiedPayment || expense.PaymentMethodId == null);
 }
