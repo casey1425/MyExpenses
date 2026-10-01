@@ -30,6 +30,68 @@ MyExpenses는 C#과 Blazor로 만든 다중 사용자 지출 기록 웹앱입니
 - Entity Framework Core 10 / SQLite
 - HTML / CSS
 
+## 프로젝트 구조
+
+주요 파일과 폴더는 다음과 같습니다. `*.razor`는 Blazor 화면·컴포넌트이고, 같은 이름의 `*.razor.css`는 해당 컴포넌트에만 적용되는 스타일입니다.
+
+```text
+MyExpenses/
+├── Program.cs                      # 앱 시작, 서비스·인증 설정, CSV 내보내기·상태 확인 엔드포인트
+├── AccountEndpoints.cs             # Google 로그인 콜백, 로그아웃, 계정 삭제 엔드포인트
+├── MyExpenses.csproj               # .NET 대상 버전과 NuGet 패키지 참조
+├── Components/
+│   ├── App.razor                   # HTML 문서와 앱 진입점
+│   ├── Routes.razor                # 페이지 라우팅과 인증 처리
+│   ├── _Imports.razor              # 컴포넌트 공통 네임스페이스
+│   ├── Layout/                     # 공통 레이아웃, 메뉴, 연결 복구 UI
+│   ├── Charts/
+│   │   └── ExpenseTrendChart.razor  # 월별 지출 SVG 막대그래프
+│   └── Pages/
+│       ├── Home.razor              # 지출 CRUD, 검색·필터, 예산, 카테고리 통계
+│       ├── Import.razor            # CSV 가져오기와 미리보기
+│       ├── Recurring.razor         # 정기 지출 규칙 관리
+│       ├── Trends.razor            # 월별 추이와 전월 비교
+│       ├── Login.razor             # Google 로그인 화면
+│       ├── Welcome.razor           # 신규 사용자 시작 안내
+│       ├── Account.razor           # 계정·데이터 삭제 화면
+│       ├── About.razor             # 서비스 소개
+│       ├── Privacy.razor           # 개인정보 처리방침
+│       └── Terms.razor             # 이용약관
+├── Data/
+│   ├── ExpenseRecord.cs            # 지출 데이터 모델
+│   ├── MonthlyBudget.cs            # 전체 월 예산 모델
+│   ├── CategoryBudget.cs           # 카테고리별 월 예산 모델
+│   ├── RecurringExpenseRule.cs     # 정기 지출 규칙과 월별 처리 이력 모델
+│   ├── UserProfile.cs              # 사용자별 첫 시작 완료 상태
+│   ├── ExpensesDbContext.cs        # 지출·예산·정기 지출·프로필 EF Core 컨텍스트
+│   ├── AuthDbContext.cs            # Identity 계정 EF Core 컨텍스트
+│   ├── BudgetSchema.cs             # 데이터 테이블 생성과 기존 스키마 보완
+│   ├── ExpenseFilter.cs            # 조회 조건과 정렬을 EF Core 쿼리에 적용
+│   ├── ExpenseSearchInput.cs       # 화면·CSV 요청의 검색 조건 검증
+│   ├── ExpenseStatistics.cs        # 카테고리별 금액·건수·비율 계산
+│   ├── ExpenseTrends.cs            # 월별 추이와 전월 비교 계산
+│   ├── ExpenseTrendsService.cs     # 사용자별 추이 데이터 조회
+│   ├── ExpenseCsvExporter.cs       # CSV 파일 생성
+│   ├── ExpenseCsvImporter.cs       # CSV 파싱과 유효성 검사
+│   ├── ExpenseCsvImportService.cs  # 중복 확인과 사용자별 CSV 저장
+│   ├── RecurringExpenseService.cs  # 정기 지출 생성과 중복 처리 방지
+│   ├── UserDataProvisioner.cs      # 사용자 공간 초기화와 시작 상태 관리
+│   └── UserDataDeletionService.cs  # 현재 사용자 소유 데이터 삭제
+├── wwwroot/                       # 공통 CSS, Bootstrap, favicon 등 정적 파일
+├── Properties/launchSettings.json # 로컬 실행 프로필과 접속 주소
+├── tests/ExpenseSearchChecks/     # 메모리 SQLite 기반 검색·필터 검증 프로그램
+├── appsettings.json               # 공통 설정
+├── appsettings.Development.json   # 개발 환경 설정
+├── Dockerfile                     # .NET 빌드와 비루트 실행 이미지
+├── .dockerignore                  # Docker 빌드에서 제외할 파일
+├── .gitignore                     # DB·비밀 설정·빌드 결과 등의 Git 제외 규칙
+└── README.md
+```
+
+화면과 사용자 입력은 `Components/`에서 처리하고, 데이터 모델·조회 조건·통계 계산·저장 서비스는 `Data/`에 있습니다. `Program.cs`에서 서비스와 인증을 구성하고, `AccountEndpoints.cs`에서 계정 관련 HTTP 요청을 처리합니다. 지출·예산 화면의 일부 저장·조회 로직은 현재 `Home.razor`의 C# 코드에 포함되어 있습니다.
+
+실행 시 생성되는 `Data/myexpenses.db`, `Data/auth.db`, `Data/keys/`와 로컬 비밀 설정인 `.env.docker`는 Git에 포함되지 않습니다. 저장 경로를 별도로 설정하거나 Docker를 사용하면 DB와 키는 설정된 영구 저장 경로에 생성됩니다.
+
 ## 실행 방법
 
 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)가 필요합니다. macOS, Windows, Linux에서 .NET SDK가 설치된 터미널로 다음 명령을 실행하세요. VS Code는 선택 사항입니다.
