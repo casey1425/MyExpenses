@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MyExpenses.Data;
 
-public static class BudgetSchema
+public static class ExpensesSchema
 {
     public static async Task EnsureCreatedAsync(ExpensesDbContext db, CancellationToken cancellationToken = default)
     {

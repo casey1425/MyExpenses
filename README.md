@@ -34,72 +34,86 @@ MyExpenses는 C#과 Blazor로 만든 다중 사용자 지출 기록 웹앱입니
 
 ## 프로젝트 구조
 
-주요 파일과 폴더는 다음과 같습니다. `*.razor`는 Blazor 화면·컴포넌트이고, 같은 이름의 `*.razor.css`는 해당 컴포넌트에만 적용되는 스타일입니다.
+주요 파일과 폴더는 다음과 같습니다. `*.razor`는 화면 마크업, `*.razor.cs`는 화면 상태·이벤트 처리, `*.razor.css`는 해당 컴포넌트에 적용되는 스타일입니다.
 
 ```text
 MyExpenses/
-├── Program.cs                      # 앱 시작, 서비스·인증 설정, CSV 내보내기·상태 확인 엔드포인트
-├── AccountEndpoints.cs             # Google 로그인 콜백, 로그아웃, 계정 삭제 엔드포인트
-├── MyExpenses.csproj               # .NET 대상 버전과 NuGet 패키지 참조
+├── Program.cs                     # 앱 시작, 서비스·인증·DB 초기화, 엔드포인트 연결
+├── AccountEndpoints.cs            # Google 로그인 콜백, 로그아웃, 계정 삭제
+├── ExpenseExportEndpoints.cs      # 인증된 사용자의 CSV 내보내기 요청 처리
+├── MyExpenses.csproj              # .NET 대상 버전과 NuGet 패키지 참조
 ├── Components/
-│   ├── App.razor                   # HTML 문서와 앱 진입점
-│   ├── Routes.razor                # 페이지 라우팅과 인증 처리
-│   ├── _Imports.razor              # 컴포넌트 공통 네임스페이스
-│   ├── Layout/                     # 공통 레이아웃, 메뉴, 연결 복구 UI
+│   ├── App.razor                  # HTML 문서와 앱 진입점
+│   ├── Routes.razor               # 페이지 라우팅과 인증 처리
+│   ├── _Imports.razor             # 컴포넌트 공통 네임스페이스
+│   ├── Layout/                    # 공통 레이아웃, 메뉴, 연결 복구 UI
 │   ├── Charts/
-│   │   └── ExpenseTrendChart.razor  # 월별 지출 SVG 막대그래프
+│   │   └── ExpenseTrendChart.razor # 월별 지출 SVG 막대그래프
 │   └── Pages/
-│       ├── Home.razor              # 지출 CRUD, 검색·필터, 예산, 카테고리 통계
-│       ├── Import.razor            # CSV 가져오기와 미리보기
-│       ├── Recurring.razor         # 정기 지출 규칙 관리
-│       ├── Templates.razor         # 즐겨찾기 지출 템플릿 관리
-│       ├── PaymentMethods.razor    # 결제수단 관리와 월별 합계
-│       ├── Trends.razor            # 월별 추이와 전월 비교
-│       ├── Login.razor             # Google 로그인 화면
-│       ├── Welcome.razor           # 신규 사용자 시작 안내
-│       ├── Account.razor           # 계정·데이터 삭제 화면
-│       ├── About.razor             # 서비스 소개
-│       ├── Privacy.razor           # 개인정보 처리방침
-│       └── Terms.razor             # 이용약관
+│       ├── Home.razor             # 지출·예산·검색 화면 마크업
+│       ├── Home.razor.cs          # 화면 상태, 초기화, 요약 표시
+│       ├── Home.Expenses.cs       # 조회 조건과 지출 CRUD 이벤트
+│       ├── Home.Budgets.cs        # 월별·카테고리별 예산 이벤트
+│       ├── Home.Templates.cs      # 템플릿·결제수단 선택 이벤트
+│       ├── Import.razor           # CSV 가져오기와 미리보기
+│       ├── Recurring.razor        # 정기 지출 규칙 관리
+│       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
+│       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
+│       ├── Trends.razor           # 월별 추이와 전월 비교
+│       ├── Login.razor            # Google 로그인 화면
+│       ├── Welcome.razor          # 신규 사용자 시작 안내
+│       ├── Account.razor          # 계정·데이터 삭제 화면
+│       ├── About.razor            # 서비스 소개
+│       ├── Privacy.razor          # 개인정보 처리방침
+│       └── Terms.razor            # 이용약관
 ├── Data/
-│   ├── ExpenseRecord.cs            # 지출 데이터 모델
-│   ├── ExpenseTemplate.cs          # 즐겨찾기 템플릿 모델과 입력 검증
-│   ├── ExpenseTemplateService.cs   # 사용자별 템플릿 조회·저장·삭제
-│   ├── PaymentMethod.cs            # 결제수단 모델과 월별 합계 결과
-│   ├── PaymentMethodService.cs     # 결제수단 CRUD·소유자 검증·월별 집계
-│   ├── MonthlyBudget.cs            # 전체 월 예산 모델
-│   ├── CategoryBudget.cs           # 카테고리별 월 예산 모델
-│   ├── RecurringExpenseRule.cs     # 정기 지출 규칙과 월별 처리 이력 모델
-│   ├── UserProfile.cs              # 사용자별 첫 시작 완료 상태
-│   ├── ExpensesDbContext.cs        # 지출·예산·정기 지출·프로필 EF Core 컨텍스트
-│   ├── AuthDbContext.cs            # Identity 계정 EF Core 컨텍스트
-│   ├── BudgetSchema.cs             # 데이터 테이블 생성과 기존 스키마 보완
-│   ├── ExpenseFilter.cs            # 조회 조건과 정렬을 EF Core 쿼리에 적용
-│   ├── ExpenseSearchInput.cs       # 화면·CSV 요청의 검색 조건 검증
-│   ├── ExpenseStatistics.cs        # 카테고리별 금액·건수·비율 계산
-│   ├── ExpenseTrends.cs            # 월별 추이와 전월 비교 계산
-│   ├── ExpenseTrendsService.cs     # 사용자별 추이 데이터 조회
-│   ├── ExpenseCsvExporter.cs       # CSV 파일 생성
-│   ├── ExpenseCsvImporter.cs       # CSV 파싱과 유효성 검사
-│   ├── ExpenseCsvImportService.cs  # 중복 확인과 사용자별 CSV 저장
-│   ├── RecurringExpenseService.cs  # 정기 지출 생성과 중복 처리 방지
-│   ├── UserDataProvisioner.cs      # 사용자 공간 초기화와 시작 상태 관리
-│   └── UserDataDeletionService.cs  # 현재 사용자 소유 데이터 삭제
-├── wwwroot/                       # 공통 CSS, Bootstrap, favicon 등 정적 파일
+│   ├── ExpenseRecord.cs           # 지출 모델
+│   ├── ExpenseTemplate.cs         # 템플릿 모델과 입력 검증
+│   ├── PaymentMethod.cs           # 결제수단 모델과 월별 합계 결과
+│   ├── MonthlyBudget.cs           # 전체 월 예산 모델
+│   ├── CategoryBudget.cs          # 카테고리별 월 예산 모델
+│   ├── RecurringExpenseRule.cs    # 정기 지출 규칙과 월별 처리 이력
+│   ├── UserProfile.cs             # 사용자별 첫 시작 완료 상태
+│   ├── ExpensesDbContext.cs       # 지출 데이터의 EF Core 컨텍스트
+│   ├── AuthDbContext.cs           # Identity 계정 EF Core 컨텍스트
+│   ├── ExpensesSchema.cs          # 기존 SQLite 스키마 보완
+│   ├── ExpenseCategories.cs       # 공통 카테고리 목록·검증·아이콘
+│   ├── ExpenseFilter.cs           # EF Core 조회 조건과 정렬
+│   ├── ExpenseSearchInput.cs      # 화면·CSV 요청의 검색 조건 검증
+│   ├── ExpenseStatistics.cs       # 카테고리별 금액·건수·비율 계산
+│   ├── ExpenseTrends.cs           # 월별 추이와 전월 비교 계산
+│   ├── ExpenseCsvExporter.cs      # CSV 파일 생성
+│   └── ExpenseCsvImporter.cs      # CSV 파싱과 유효성 검사
+├── Services/
+│   ├── ExpenseService.cs          # 지출 조회·CRUD·입력·결제수단 검증
+│   ├── BudgetService.cs           # 월별·카테고리별 예산 저장과 집계
+│   ├── ExpenseTemplateService.cs  # 사용자별 템플릿 조회·저장·삭제
+│   ├── PaymentMethodService.cs    # 결제수단 CRUD·소유자 검증·월별 집계
+│   ├── ExpenseTrendsService.cs    # 사용자별 추이 데이터 조회
+│   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
+│   ├── RecurringExpenseService.cs # 정기 지출 생성과 중복 처리 방지
+│   ├── UserDataProvisioner.cs     # 사용자 공간 초기화와 시작 상태 관리
+│   └── UserDataDeletionService.cs # 현재 사용자 소유 데이터 삭제
+├── wwwroot/                      # 공통 CSS, Bootstrap, favicon 등 정적 파일
 ├── Properties/launchSettings.json # 로컬 실행 프로필과 접속 주소
 ├── tests/
-│   ├── ExpenseSearchChecks/       # 메모리 SQLite 기반 검색·필터 검증
-│   ├── ExpenseTemplateChecks/     # 템플릿 CRUD·사용자 격리·스키마 보완 검증
-│   └── PaymentMethodChecks/       # 결제수단·지출·템플릿·CSV 통합 검증
-├── appsettings.json               # 공통 설정
-├── appsettings.Development.json   # 개발 환경 설정
-├── Dockerfile                     # .NET 빌드와 비루트 실행 이미지
-├── .dockerignore                  # Docker 빌드에서 제외할 파일
-├── .gitignore                     # DB·비밀 설정·빌드 결과 등의 Git 제외 규칙
+│   ├── ExpenseSearchChecks/      # 검색·필터 검증
+│   ├── ExpenseTemplateChecks/    # 템플릿 CRUD·사용자 격리 검증
+│   ├── PaymentMethodChecks/      # 결제수단·지출·템플릿·CSV 통합 검증
+│   ├── ServiceChecks/            # 지출·예산 서비스와 화면 이벤트 회귀 검증
+│   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
+│   └── run-checks.sh             # 전체 빌드와 검증 실행
+├── appsettings.json              # 공통 설정
+├── appsettings.Development.json  # 개발 환경 설정
+├── Dockerfile                    # .NET 빌드와 비루트 실행 이미지
+├── .dockerignore                 # Docker 빌드에서 제외할 파일
+├── .gitignore                    # DB·비밀 설정·빌드 결과 등의 Git 제외 규칙
 └── README.md
 ```
 
-화면과 사용자 입력은 `Components/`에서 처리하고, 데이터 모델·조회 조건·통계 계산·저장 서비스는 `Data/`에 있습니다. `Program.cs`에서 서비스와 인증을 구성하고, `AccountEndpoints.cs`에서 계정 관련 HTTP 요청을 처리합니다. 지출·예산 화면의 일부 저장·조회 로직은 현재 `Home.razor`의 C# 코드에 포함되어 있습니다.
+지출·예산 화면은 `Home`의 partial class로 나눠 상태와 이벤트를 관리하고, 실제 조회·저장·삭제는 `Services/`에 위임합니다. CSV 내보내기도 같은 `ExpenseService`의 조회 로직을 사용합니다. 다른 주요 관리 화면은 같은 이름의 `*.razor.cs`에 상태와 이벤트 코드를 분리합니다.
+
+서비스는 현재 로그인 사용자의 ID를 받아 소유자 조건을 적용하며, 화면·HTTP 엔드포인트는 인증 상태를 확인한 뒤 서비스를 호출합니다. `Data/`에는 모델, EF Core 설정, 입력 검증과 통계·CSV 계산 로직을 두고 카테고리 목록은 `ExpenseCategories` 한 곳에서 관리합니다. 기존 DB 보완은 `ExpensesSchema`에서 수행하며, 폴더·네임스페이스 정리만으로 DB 테이블 이름이나 기존 저장 데이터는 바뀌지 않습니다.
 
 실행 시 생성되는 `Data/myexpenses.db`, `Data/auth.db`, `Data/keys/`와 로컬 비밀 설정인 `.env.docker`는 Git에 포함되지 않습니다. 저장 경로를 별도로 설정하거나 Docker를 사용하면 DB와 키는 설정된 영구 저장 경로에 생성됩니다.
 
@@ -174,11 +188,15 @@ OAuth 앱이 테스트 상태라면 Google Cloud에 등록한 테스트 사용�
 
 ## 검증
 
+macOS/Linux에서는 프로젝트 폴더에서 `bash tests/run-checks.sh`를 실행하면 앱 빌드와 아래의 모든 검증을 순서대로 실행하고 실패 시 중단합니다. Windows에서는 각 `dotnet run --project ...` 명령을 개별 실행할 수 있습니다. 검증 프로젝트는 외부 테스트 프레임워크 없이 실패 시 오류와 0이 아닌 종료 코드를 반환하는 콘솔 프로그램입니다.
+
 검색·필터의 SQLite 검증은 `dotnet run --project tests/ExpenseSearchChecks`로 실행할 수 있습니다. 테스트는 메모리 데이터베이스를 사용하며 실제 사용자 데이터를 변경하지 않습니다.
 
 템플릿의 저장·수정·삭제, 사용자 격리, 기존 DB 스키마 보완과 계정 삭제 검증은 `dotnet run --project tests/ExpenseTemplateChecks`로 실행합니다. 이 테스트도 메모리 데이터베이스만 사용합니다.
 
 결제수단 CRUD, 지출·템플릿 연결, 월별 집계, 사용자 격리, CSV 4열·6열 호환과 기존 DB 업그레이드는 `dotnet run --project tests/PaymentMethodChecks`로 검증합니다. 실제 사용자 데이터는 변경하지 않습니다.
+
+지출·예산 서비스의 조회·저장·삭제, 입력 검증, 전체·카테고리 예산의 독립성, 로그인 계정 변경 시 화면의 저장 차단은 `dotnet run --project tests/ServiceChecks`로 검증합니다. 공통 테스트 도구는 `tests/TestSupport/`에서 공유하고 모든 검증은 메모리 SQLite를 사용합니다.
 
 ## 로컬 Docker 실행
 

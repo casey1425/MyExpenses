@@ -19,7 +19,6 @@ public sealed record ExpenseTrendsReport(DateOnly Month, DateOnly CurrentEnd,
 public static class ExpenseTrends
 {
     public static readonly DateOnly MinimumMonth = new(1, 6, 1);
-    private static readonly string[] Categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
 
     public static DateOnly MonthStart(DateOnly date) => new(date.Year, date.Month, 1);
 
@@ -52,7 +51,7 @@ public static class ExpenseTrends
                 isCurrentMonth && target == month);
         }).ToList();
 
-        var categoryNames = Categories.Concat(current.Select(item => item.Category))
+        var categoryNames = ExpenseCategories.All.Concat(current.Select(item => item.Category))
             .Concat(previous.Select(item => item.Category)).Distinct();
         var comparisons = categoryNames.Select(category => new CategoryMonthComparison(category,
             Compare(current.Where(item => item.Category == category), previous.Where(item => item.Category == category))))

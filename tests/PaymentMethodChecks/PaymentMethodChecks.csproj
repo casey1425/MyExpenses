@@ -5,5 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../MyExpenses.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../MyExpenses.csproj" />
+    <Compile Include="../TestSupport/Fixtures.cs" Link="Fixtures.cs" />
+  </ItemGroup>
 </Project>

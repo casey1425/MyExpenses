@@ -16,7 +16,7 @@ public sealed class ExpenseTemplate
 
 public sealed class ExpenseTemplateInput
 {
-    public static readonly IReadOnlyList<string> Categories = Array.AsReadOnly(new[] { "식비", "카페", "교통", "쇼핑", "생활", "기타" });
+    public static IReadOnlyList<string> Categories => ExpenseCategories.All;
     public string Name { get; set; } = "";
     public string Amount { get; set; } = "";
     public string Category { get; set; } = "식비";

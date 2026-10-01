@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace MyExpenses.Data;
+using MyExpenses.Data;
+
+namespace MyExpenses.Services;
 
 public sealed record ExpenseCsvCandidate(ExpenseCsvRow Row, bool IsDuplicate);
 

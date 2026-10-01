@@ -31,7 +31,7 @@ public sealed class ExpenseSearchInput
             error = "최소 금액은 최대 금액보다 클 수 없습니다.";
         else if (Search.Trim().Length > 100)
             error = "검색어는 100자 이하로 입력해 주세요.";
-        else if (Category != "" && Category is not ("식비" or "카페" or "교통" or "쇼핑" or "생활" or "기타"))
+        else if (Category != "" && !ExpenseCategories.IsSupported(Category))
             error = "카테고리를 다시 선택해 주세요.";
         else if (!Enum.TryParse<ExpenseSort>(Sort, out var sort) || !Enum.IsDefined(sort))
             error = "정렬 방법을 다시 선택해 주세요.";

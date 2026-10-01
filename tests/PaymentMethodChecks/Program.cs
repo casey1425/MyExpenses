@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyExpenses.Components.Pages;
 using MyExpenses.Data;
+using MyExpenses.Services;
+using MyExpenses.Testing;
 
 static void Check(bool condition, string message) { if (!condition) throw new Exception(message); }
 static async Task Reject(Func<Task> action)
@@ -35,8 +37,8 @@ foreach (var legacy in new[] { false, true })
         db.Expenses.Add(new ExpenseRecord { OwnerId = "A", Date = new(2026, 10, 1), Amount = 1000, Category = "교통", Memo = "existing" });
         await db.SaveChangesAsync();
     }
-    await BudgetSchema.EnsureCreatedAsync(db);
-    await BudgetSchema.EnsureCreatedAsync(db);
+    await ExpensesSchema.EnsureCreatedAsync(db);
+    await ExpensesSchema.EnsureCreatedAsync(db);
     Check((await db.Expenses.AsNoTracking().SingleAsync()).PaymentMethodId is null, "Legacy record changed");
     var factory = new TestFactory(options);
     var service = new PaymentMethodService(factory);
@@ -55,18 +57,12 @@ foreach (var legacy in new[] { false, true })
     await Reject(() => service.SaveAsync("A", null, "test", "invalid"));
     await Reject(() => service.ListAsync(""));
 
-    var home = new Home();
+    var home = TestComponents.CreateHome(factory);
     var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
     void SetField(string name, object? value) => typeof(Home).GetField(name, flags)!.SetValue(home, value);
     object? Field(string name) => typeof(Home).GetField(name, flags)!.GetValue(home);
-    void Inject(string name, object value) => typeof(Home).GetProperty(name, flags)!.SetValue(home, value);
     async Task Invoke(string method, params object[] args) => await (Task)typeof(Home).GetMethod(method, flags)!.Invoke(home, args)!;
-    Inject("DbFactory", factory);
-    Inject("AuthenticationStateProvider", new TestAuth());
-    Inject("Logger", NullLogger<Home>.Instance);
-    Inject("MethodService", service);
     var templates = new ExpenseTemplateService(factory);
-    Inject("TemplateService", templates);
     SetField("ownerId", "A"); SetField("expenseDate", new DateTime(2026, 10, 3));
     SetField("amount", 4500L); SetField("category", "카페"); SetField("memo", "커피"); SetField("paymentMethodId", card.Id);
     await Invoke("AddExpenseAsync");
@@ -126,15 +122,4 @@ foreach (var legacy in new[] { false, true })
     }
     catch (SqliteException) { }
     Console.WriteLine($"PASS ({(legacy ? "upgraded" : "new")} DB): CRUD, expense add/edit, templates, ownership, filters, monthly totals, CSV compatibility, unlink and account deletion");
-}
-
-sealed class TestFactory(DbContextOptions<ExpensesDbContext> options) : IDbContextFactory<ExpensesDbContext>
-{
-    public ExpensesDbContext CreateDbContext() => new(options);
-    public Task<ExpensesDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
-}
-sealed class TestAuth : AuthenticationStateProvider
-{
-    public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(
-        new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "A") }, "test"))));
 }

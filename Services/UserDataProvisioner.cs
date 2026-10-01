@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace MyExpenses.Data;
+using MyExpenses.Data;
+
+namespace MyExpenses.Services;
 
 public sealed class UserDataProvisioner(IDbContextFactory<ExpensesDbContext> dbFactory)
 {

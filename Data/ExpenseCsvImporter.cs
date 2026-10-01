@@ -17,7 +17,6 @@ public static class ExpenseCsvImporter
     public const int MaxRows = 1_000;
     private static readonly string[] Header = ["날짜", "금액(원)", "카테고리", "메모"];
     private static readonly string[] PaymentHeader = ["날짜", "금액(원)", "카테고리", "메모", "결제수단", "결제유형"];
-    private static readonly HashSet<string> Categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
 
     public static ExpenseCsvParseResult Parse(TextReader reader)
     {
@@ -87,7 +86,7 @@ public static class ExpenseCsvImporter
                 continue;
             }
 
-            if (!Categories.Contains(fields[2]))
+            if (!ExpenseCategories.IsSupported(fields[2]))
             {
                 issues.Add(new ExpenseCsvIssue(rowNumber, "지원하지 않는 카테고리입니다."));
                 continue;

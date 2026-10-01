@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MyExpenses.Data;
+using MyExpenses.Services;
+using MyExpenses.Testing;
 using MyExpenses.Components.Pages;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -23,8 +25,8 @@ db.MonthlyBudgets.Add(new MonthlyBudget { OwnerId = "A", Month = new(2026, 10, 1
 await db.SaveChangesAsync();
 // 기존 버전처럼 템플릿 테이블이 없는 DB를 재현합니다.
 await db.Database.ExecuteSqlRawAsync("DROP TABLE ExpenseTemplates");
-await BudgetSchema.EnsureCreatedAsync(db);
-await BudgetSchema.EnsureCreatedAsync(db);
+await ExpensesSchema.EnsureCreatedAsync(db);
+await ExpensesSchema.EnsureCreatedAsync(db);
 Check(await db.Expenses.CountAsync() == 1 && await db.MonthlyBudgets.CountAsync() == 1, "Upgrade changed existing data");
 var factory = new TestFactory(options);
 var service = new ExpenseTemplateService(factory);
@@ -39,14 +41,8 @@ Check(!await service.DeleteAsync("B", template.Id), "Owner isolation delete fail
 input.Amount = "5500";
 Check(await service.SaveAsync("A", template.Id, input), "Update failed");
 Check((await service.FindAsync("A", template.Id))?.Amount == 5500, "Updated values missing");
-var home = new Home();
+var home = TestComponents.CreateHome(factory);
 var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-typeof(Home).GetProperty("TemplateService", flags)!.SetValue(home, service);
-typeof(Home).GetProperty("MethodService", flags)!.SetValue(home, new PaymentMethodService(factory));
-typeof(Home).GetProperty("DbFactory", flags)!.SetValue(home, factory);
-typeof(Home).GetProperty("AuthenticationStateProvider", flags)!.SetValue(home, new TestAuth());
-typeof(Home).GetProperty("Logger", flags)!.SetValue(home, NullLogger<Home>.Instance);
-typeof(Home).GetField("ownerId", flags)!.SetValue(home, "A");
 var selectedDate = new DateTime(2026, 9, 15);
 typeof(Home).GetField("expenseDate", flags)!.SetValue(home, selectedDate);
 async Task ApplyTemplate(int id) => await (Task)typeof(Home).GetMethod("ApplyTemplateAsync", flags)!.Invoke(home, new object[] { new ChangeEventArgs { Value = id.ToString() } })!;
@@ -88,15 +84,3 @@ catch (ArgumentException) { }
 Check((await service.ListAsync("B")).Count == 1, "Invalid input persisted");
 Check(new ExpenseTemplateInput { Name = "n", Amount = long.MaxValue.ToString() }.Validate().Amount == long.MaxValue, "Amount boundary failed");
 Console.WriteLine("PASS: schema upgrade, CRUD persistence, owner isolation, stale ID, input validation, account deletion and expense preservation");
-
-sealed class TestFactory(DbContextOptions<ExpensesDbContext> options) : IDbContextFactory<ExpensesDbContext>
-{
-    public ExpensesDbContext CreateDbContext() => new(options);
-    public Task<ExpensesDbContext> CreateDbContextAsync(CancellationToken cancellationToken = default) => Task.FromResult(CreateDbContext());
-}
-
-sealed class TestAuth : AuthenticationStateProvider
-{
-    public override Task<AuthenticationState> GetAuthenticationStateAsync() => Task.FromResult(new AuthenticationState(
-        new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, "A") }, "test"))));
-}

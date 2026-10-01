@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace MyExpenses.Data;
+using MyExpenses.Data;
+
+namespace MyExpenses.Services;
 
 public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext> dbFactory)
 {
-    private static readonly HashSet<string> Categories = ["식비", "카페", "교통", "쇼핑", "생활", "기타"];
-
     public async Task<List<RecurringExpenseRule>> ListAsync(string ownerId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
@@ -147,7 +147,7 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
             throw new ArgumentOutOfRangeException(nameof(dayOfMonth));
         if (amount <= 0)
             throw new ArgumentOutOfRangeException(nameof(amount));
-        if (!Categories.Contains(category))
+        if (!ExpenseCategories.IsSupported(category))
             throw new ArgumentException("지원하지 않는 카테고리입니다.", nameof(category));
         if (memo is null || memo.Trim().Length > 100)
             throw new ArgumentException("메모는 100자 이하여야 합니다.", nameof(memo));

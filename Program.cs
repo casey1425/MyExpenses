@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -9,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using MyExpenses;
 using MyExpenses.Components;
 using MyExpenses.Data;
+using MyExpenses.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +74,8 @@ builder.Services.AddScoped<RecurringExpenseService>();
 builder.Services.AddScoped<ExpenseTrendsService>();
 builder.Services.AddScoped<ExpenseTemplateService>();
 builder.Services.AddScoped<PaymentMethodService>();
+builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<BudgetService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
 builder.Services.AddDbContext<AuthDbContext>(options =>
@@ -105,7 +106,7 @@ await using (var db = await app.Services.GetRequiredService<IDbContextFactory<Ex
     .CreateDbContextAsync())
 {
     await db.Database.EnsureCreatedAsync();
-    await BudgetSchema.EnsureCreatedAsync(db);
+    await ExpensesSchema.EnsureCreatedAsync(db);
 }
 
 await using (var scope = app.Services.CreateAsyncScope())
@@ -143,50 +144,6 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 app.MapAccountEndpoints();
 app.MapGet("/healthz", () => Results.Text("Healthy", "text/plain")).AllowAnonymous();
-app.MapGet("/export/expenses.csv", ExportExpensesAsync).RequireAuthorization();
+app.MapExpenseExportEndpoints();
 
 app.Run();
-
-static async Task<IResult> ExportExpensesAsync(
-    HttpContext context,
-    IDbContextFactory<ExpensesDbContext> dbFactory,
-    CancellationToken cancellationToken)
-{
-    var ownerId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
-    if (string.IsNullOrEmpty(ownerId))
-        return Results.Unauthorized();
-
-    var scope = context.Request.Query["scope"].ToString();
-    if (scope is not ("all" or "filtered"))
-        return Results.BadRequest("내보내기 범위를 다시 선택해 주세요.");
-
-    var filter = new ExpenseFilter();
-    if (scope == "filtered")
-    {
-        var input = new ExpenseSearchInput
-        {
-            Month = context.Request.Query["month"].ToString(),
-            Category = context.Request.Query["category"].ToString(),
-            Search = context.Request.Query["search"].ToString(),
-            StartDate = context.Request.Query["start"].ToString(),
-            EndDate = context.Request.Query["end"].ToString(),
-            MinAmount = context.Request.Query["min"].ToString(),
-            MaxAmount = context.Request.Query["max"].ToString(),
-            Sort = context.Request.Query["sort"].FirstOrDefault() ?? nameof(ExpenseSort.Newest),
-            PaymentMethod = context.Request.Query["payment"].ToString()
-        };
-        if (!input.TryCreate(out filter, out var error))
-            return Results.BadRequest(error);
-    }
-
-    await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
-    try { await PaymentMethodService.VerifyOwnedAsync(db, ownerId, filter.PaymentMethodId, cancellationToken); }
-    catch (ArgumentException ex) { return Results.BadRequest(ex.Message); }
-    var ownedExpenses = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod)
-        .Where(expense => expense.OwnerId == ownerId);
-    var expenses = await filter.Order(filter.ApplyTo(ownedExpenses))
-        .ToListAsync(cancellationToken);
-
-    var fileName = $"MyExpenses-{scope}-{DateTime.Today:yyyy-MM-dd}.csv";
-    return Results.File(ExpenseCsvExporter.Create(expenses), "text/csv; charset=utf-8", fileName);
-}
