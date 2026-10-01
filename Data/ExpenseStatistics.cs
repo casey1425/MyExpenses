@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace MyExpenses.Data;
 
-public sealed record CategoryStatistic(string Category, long Amount, int Count, double Percentage)
+public sealed record CategoryStatistic(string Category, decimal Amount, int Count, double Percentage)
 {
     public string WidthStyle => $"width: {Percentage.ToString("0.##", CultureInfo.InvariantCulture)}%";
 }
@@ -16,7 +16,7 @@ public static class ExpenseStatistics
             .Select(group => new
             {
                 Category = group.Key,
-                Amount = group.Sum(expense => expense.Amount),
+                Amount = group.Sum(expense => (decimal)expense.Amount),
                 Count = group.Count()
             })
             .ToArray();
@@ -28,7 +28,7 @@ public static class ExpenseStatistics
                 group.Category,
                 group.Amount,
                 group.Count,
-                total > 0 ? (double)group.Amount / total * 100 : 0))
+                total > 0 ? (double)(group.Amount / total * 100) : 0))
             .OrderByDescending(statistic => statistic.Amount)
             .ThenBy(statistic => statistic.Category)
             .ToArray();

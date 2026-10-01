@@ -158,32 +158,28 @@ static async Task<IResult> ExportExpensesAsync(
     if (scope is not ("all" or "filtered"))
         return Results.BadRequest("내보내기 범위를 다시 선택해 주세요.");
 
-    DateTime? month = null;
-    string? category = null;
+    var filter = new ExpenseFilter();
     if (scope == "filtered")
     {
-        var monthValue = context.Request.Query["month"].ToString();
-        if (!string.IsNullOrEmpty(monthValue))
+        var input = new ExpenseSearchInput
         {
-            if (!DateTime.TryParseExact(monthValue, "yyyy-MM", CultureInfo.InvariantCulture,
-                    DateTimeStyles.None, out var parsedMonth))
-                return Results.BadRequest("조회할 월을 다시 선택해 주세요.");
-
-            month = new DateTime(parsedMonth.Year, parsedMonth.Month, 1);
-        }
-
-        category = context.Request.Query["category"].ToString();
-        if (string.IsNullOrEmpty(category))
-            category = null;
+            Month = context.Request.Query["month"].ToString(),
+            Category = context.Request.Query["category"].ToString(),
+            Search = context.Request.Query["search"].ToString(),
+            StartDate = context.Request.Query["start"].ToString(),
+            EndDate = context.Request.Query["end"].ToString(),
+            MinAmount = context.Request.Query["min"].ToString(),
+            MaxAmount = context.Request.Query["max"].ToString(),
+            Sort = context.Request.Query["sort"].FirstOrDefault() ?? nameof(ExpenseSort.Newest)
+        };
+        if (!input.TryCreate(out filter, out var error))
+            return Results.BadRequest(error);
     }
 
     await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
     var ownedExpenses = db.Expenses.AsNoTracking()
         .Where(expense => expense.OwnerId == ownerId);
-    var expenses = await new ExpenseFilter(month, category)
-        .ApplyTo(ownedExpenses)
-        .OrderByDescending(expense => expense.Date)
-        .ThenByDescending(expense => expense.Id)
+    var expenses = await filter.Order(filter.ApplyTo(ownedExpenses))
         .ToListAsync(cancellationToken);
 
     var fileName = $"MyExpenses-{scope}-{DateTime.Today:yyyy-MM-dd}.csv";

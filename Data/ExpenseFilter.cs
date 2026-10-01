@@ -1,8 +1,14 @@
 namespace MyExpenses.Data;
 
-public sealed record ExpenseFilter(DateTime? Month = null, string? Category = null)
+public enum ExpenseSort { Newest, Oldest, HighestAmount, LowestAmount }
+
+public sealed record ExpenseFilter(DateTime? Month = null, string? Category = null,
+    string? Search = null, DateTime? StartDate = null, DateTime? EndDate = null,
+    long? MinAmount = null, long? MaxAmount = null, ExpenseSort Sort = ExpenseSort.Newest)
 {
-    public bool IsActive => Month.HasValue || !string.IsNullOrEmpty(Category);
+    public bool IsActive => Month.HasValue || !string.IsNullOrEmpty(Category) ||
+        !string.IsNullOrWhiteSpace(Search) || StartDate.HasValue || EndDate.HasValue ||
+        MinAmount.HasValue || MaxAmount.HasValue;
 
     public IQueryable<ExpenseRecord> ApplyTo(IQueryable<ExpenseRecord> query)
     {
@@ -26,10 +32,36 @@ public sealed record ExpenseFilter(DateTime? Month = null, string? Category = nu
             query = query.Where(expense => expense.Category == category);
         }
 
+        if (!string.IsNullOrWhiteSpace(Search))
+        {
+            var keyword = Search.Trim();
+            query = query.Where(expense => expense.Memo.Contains(keyword));
+        }
+        if (StartDate is DateTime startDate)
+            query = query.Where(expense => expense.Date >= startDate.Date);
+        if (EndDate is DateTime endDate)
+            query = query.Where(expense => expense.Date.Date <= endDate.Date);
+        if (MinAmount is long min)
+            query = query.Where(expense => expense.Amount >= min);
+        if (MaxAmount is long max)
+            query = query.Where(expense => expense.Amount <= max);
         return query;
     }
 
+    public IOrderedQueryable<ExpenseRecord> Order(IQueryable<ExpenseRecord> query) => Sort switch
+    {
+        ExpenseSort.Oldest => query.OrderBy(e => e.Date).ThenBy(e => e.Id),
+        ExpenseSort.HighestAmount => query.OrderByDescending(e => e.Amount).ThenByDescending(e => e.Date).ThenByDescending(e => e.Id),
+        ExpenseSort.LowestAmount => query.OrderBy(e => e.Amount).ThenByDescending(e => e.Date).ThenByDescending(e => e.Id),
+        _ => query.OrderByDescending(e => e.Date).ThenByDescending(e => e.Id)
+    };
+
     public bool Matches(ExpenseRecord expense) =>
         (!Month.HasValue || (expense.Date.Year == Month.Value.Year && expense.Date.Month == Month.Value.Month)) &&
-        (string.IsNullOrEmpty(Category) || expense.Category == Category);
+        (string.IsNullOrEmpty(Category) || expense.Category == Category) &&
+        (string.IsNullOrWhiteSpace(Search) || expense.Memo.Contains(Search.Trim(), StringComparison.Ordinal)) &&
+        (!StartDate.HasValue || expense.Date >= StartDate.Value.Date) &&
+        (!EndDate.HasValue || expense.Date.Date <= EndDate.Value.Date) &&
+        (!MinAmount.HasValue || expense.Amount >= MinAmount) &&
+        (!MaxAmount.HasValue || expense.Amount <= MaxAmount);
 }

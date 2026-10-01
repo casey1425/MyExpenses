@@ -384,7 +384,7 @@ h1 {
 
 .filter-form {
     display: grid;
-    grid-template-columns: minmax(130px, 1fr) minmax(145px, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: .65rem;
     align-items: end;
     margin-bottom: 1.1rem;
@@ -400,6 +400,10 @@ h1 {
     gap: .35rem;
     min-width: 0;
 }
+
+.filter-help, .filter-buttons { grid-column: 1 / -1; }
+.filter-help { margin: 0; color: #64748b; font-size: .8rem; }
+.filter-result { color: #40516a; overflow-wrap: anywhere; font-size: .85rem; }
 
 .filter-field label {
     color: #40516a;

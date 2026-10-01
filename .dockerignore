@@ -4,6 +4,9 @@
 .vscode
 bin
 obj
+**/bin
+**/obj
+tests
 .DS_Store
 .env
 .env.*
