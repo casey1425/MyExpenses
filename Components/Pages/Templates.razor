@@ -1,0 +1,185 @@
+@page "/templates"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ExpenseTemplateService TemplateService
+@inject ILogger<Templates> Logger
+
+<PageTitle>즐겨찾기 지출 | MyExpenses</PageTitle>
+
+<main class="templates-page">
+    <header>
+        <p class="kicker">FAVORITE EXPENSES</p>
+        <h1>즐겨찾기 지출 템플릿</h1>
+        <p>커피·점심처럼 자주 입력하는 지출을 저장해 두세요. 자동으로 지출을 생성하지는 않습니다.</p>
+        <a href="/">← 지출 기록에서 템플릿 사용하기</a>
+    </header>
+
+    @if (error is not null) { <p class="error" role="alert">@error</p> }
+    @if (notice is not null) { <p class="notice" role="status">@notice</p> }
+
+    <section class="template-card" aria-labelledby="template-form-title">
+        <h2 id="template-form-title">@(editingId is null ? "새 템플릿" : "템플릿 수정")</h2>
+        <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@busy">
+                <div class="template-fields">
+                    <label>이름 <input type="text" maxlength="50" placeholder="예: 아메리카노" @bind="input.Name" required /></label>
+                    <label>금액 (원) <input type="number" min="1" step="1" @bind="input.Amount" required /></label>
+                    <label>카테고리
+                        <select @bind="input.Category">
+                            @foreach (var category in ExpenseTemplateInput.Categories) { <option value="@category">@category</option> }
+                        </select>
+                    </label>
+                    <label>메모 (선택) <input type="text" maxlength="100" @bind="input.Memo" /></label>
+                </div>
+                <div class="actions">
+                    <button type="submit">@(busy ? "처리 중..." : editingId is null ? "템플릿 저장" : "수정 저장")</button>
+                    @if (editingId is not null) { <button type="button" class="secondary" @onclick="CancelEdit">취소</button> }
+                </div>
+            </fieldset>
+        </form>
+    </section>
+
+    <section class="template-card" aria-labelledby="template-list-title">
+        <div class="list-heading">
+            <h2 id="template-list-title">내 템플릿 (@templates.Count)</h2>
+            <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>
+        </div>
+        @if (loading) { <p>불러오는 중...</p> }
+        else if (templates.Count == 0) { <p class="help">아직 저장한 템플릿이 없어요. 위에서 첫 템플릿을 만들어 보세요.</p> }
+        else
+        {
+            @foreach (var template in templates)
+            {
+                <article class="template-item" @key="template.Id">
+                    <div class="template-summary">
+                        <div>
+                            <h3>@template.Name</h3>
+                            <p>@template.Amount.ToString("N0")원 · @template.Category</p>
+                            @if (template.Memo != "") { <p class="help">@template.Memo</p> }
+                        </div>
+                        <div class="actions">
+                            <button type="button" class="secondary" disabled="@busy" @onclick="() => Edit(template)">수정</button>
+                            <button type="button" class="danger" disabled="@busy" @onclick="() => ConfirmDelete(template.Id)">삭제</button>
+                        </div>
+                    </div>
+                    @if (deletingId == template.Id)
+                    {
+                        <div class="delete-confirm" role="alert">
+                            <p>이 템플릿을 삭제할까요? 이미 기록한 지출은 유지됩니다.</p>
+                            <div class="actions">
+                                <button type="button" class="danger" disabled="@busy" @onclick="() => DeleteAsync(template.Id)">템플릿 삭제</button>
+                                <button type="button" class="secondary" disabled="@busy" @onclick="() => deletingId = null">취소</button>
+                            </div>
+                        </div>
+                    }
+                </article>
+            }
+        }
+    </section>
+</main>
+
+@code {
+    private string ownerId = "";
+    private ExpenseTemplateInput input = new();
+    private List<ExpenseTemplate> templates = [];
+    private int? editingId;
+    private int? deletingId;
+    private bool busy;
+    private bool loading = true;
+    private string? error;
+    private string? notice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        ownerId = state.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+        await RefreshAsync();
+    }
+
+    private async Task CheckOwnerAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (ownerId == "" || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
+            throw new InvalidOperationException("로그인 계정이 바뀌었습니다. 페이지를 새로고침해 주세요.");
+    }
+
+    private async Task ReloadAsync()
+    {
+        await CheckOwnerAsync();
+        var loaded = await TemplateService.ListAsync(ownerId);
+        await CheckOwnerAsync();
+        templates = loaded;
+    }
+
+    private async Task RefreshAsync()
+    {
+        if (busy) return;
+        busy = true;
+        loading = true;
+        try { await ReloadAsync(); error = null; }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; loading = false; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        notice = null;
+        try
+        {
+            input.Validate();
+            await CheckOwnerAsync();
+            if (!await TemplateService.SaveAsync(ownerId, editingId, input))
+                throw new InvalidOperationException("수정할 템플릿이 없습니다. 목록을 새로고침해 주세요.");
+            CancelEdit();
+            await ReloadAsync();
+            error = null;
+            notice = "템플릿을 저장했습니다. 지출 기록 화면에서 선택할 수 있어요.";
+        }
+        catch (ArgumentException ex) { error = ex.Message; }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; }
+    }
+
+    private void Edit(ExpenseTemplate template)
+    {
+        if (busy) return;
+        editingId = template.Id;
+        deletingId = null;
+        input = new() { Name = template.Name, Amount = template.Amount.ToString(CultureInfo.InvariantCulture), Category = template.Category, Memo = template.Memo };
+        error = notice = null;
+    }
+
+    private void CancelEdit() { editingId = null; input = new(); }
+    private void ConfirmDelete(int id) { if (!busy) { deletingId = id; notice = null; } }
+
+    private async Task DeleteAsync(int id)
+    {
+        if (busy || deletingId != id) return;
+        busy = true;
+        notice = null;
+        try
+        {
+            await CheckOwnerAsync();
+            await TemplateService.DeleteAsync(ownerId, id);
+            if (editingId == id) CancelEdit();
+            deletingId = null;
+            await ReloadAsync();
+            error = null;
+            notice = "템플릿을 삭제했습니다. 기존 지출은 유지됩니다.";
+        }
+        catch (Exception ex) { HandleError(ex); }
+        finally { busy = false; }
+    }
+
+    private void HandleError(Exception ex)
+    {
+        Logger.LogError(ex, "즐겨찾기 템플릿 처리에 실패했습니다.");
+        error = "처리 결과를 확인하지 못했습니다. 페이지를 새로고침해 다시 확인해 주세요.";
+    }
+}

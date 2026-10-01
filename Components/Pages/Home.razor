@@ -9,6 +9,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserDataProvisioner UserDataProvisioner
 @inject RecurringExpenseService RecurringExpenseService
+@inject ExpenseTemplateService TemplateService
 @inject NavigationManager Navigation
 @inject ILogger<Home> Logger
 
@@ -214,6 +215,25 @@
             </div>
 
             <form @onsubmit="AddExpenseAsync" @onsubmit:preventDefault>
+                <div class="template-picker">
+                    <div class="field">
+                        <label for="expense-template">즐겨찾기 템플릿</label>
+                        <select id="expense-template" value="@selectedTemplateId" @onchange="ApplyTemplateAsync" disabled="@templateBusy">
+                            <option value="">템플릿 선택 (선택 사항)</option>
+                            @foreach (var template in templates)
+                            {
+                                <option value="@template.Id">@template.Name · @template.Amount.ToString("N0")원</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="template-picker-actions">
+                        <a href="/templates">템플릿 관리</a>
+                        <button type="button" class="filter-reset" disabled="@templateBusy" @onclick="RefreshTemplatesAsync">목록 새로고침</button>
+                    </div>
+                    <p class="template-help">금액·카테고리·메모를 채웁니다. 날짜는 유지되며 기록 버튼을 눌러야 저장됩니다.</p>
+                    @if (templateError is not null) { <p class="form-error" role="alert">@templateError</p> }
+                    @if (templateNotice is not null) { <p class="save-notice" role="status">@templateNotice</p> }
+                </div>
                 <div class="field-grid">
                     <div class="field">
                         <label for="expense-date">날짜</label>
@@ -253,7 +273,7 @@
                     <p class="save-notice" role="status">@saveNotice</p>
                 }
 
-                <button class="add-button" type="submit">+ 지출 기록하기</button>
+                <button class="add-button" type="submit" disabled="@templateBusy">+ 지출 기록하기</button>
             </form>
         </section>
 
@@ -453,6 +473,11 @@
     private long amount;
     private string category = "식비";
     private string memo = string.Empty;
+    private List<ExpenseTemplate> templates = [];
+    private string selectedTemplateId = "";
+    private bool templateBusy;
+    private string? templateError;
+    private string? templateNotice;
     private string? errorMessage;
     private string? saveNotice;
     private string? deleteError;
@@ -571,6 +596,68 @@
         }
 
         await RefreshBudgetAsync();
+        await RefreshTemplatesAsync();
+    }
+
+    private async Task CheckTemplateOwnerAsync()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (ownerId == "" || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
+            throw new InvalidOperationException("로그인 계정이 바뀌었습니다.");
+    }
+
+    private async Task RefreshTemplatesAsync()
+    {
+        if (templateBusy) return;
+        templateBusy = true;
+        try
+        {
+            await CheckTemplateOwnerAsync();
+            var loaded = await TemplateService.ListAsync(ownerId);
+            await CheckTemplateOwnerAsync();
+            templates = loaded;
+            selectedTemplateId = "";
+            templateError = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "즐겨찾기 템플릿 목록을 불러오지 못했습니다.");
+            templateError = "템플릿을 불러오지 못했습니다. 페이지를 새로고침해 주세요.";
+        }
+        finally { templateBusy = false; }
+    }
+
+    private async Task ApplyTemplateAsync(ChangeEventArgs args)
+    {
+        if (templateBusy) return;
+        selectedTemplateId = args.Value?.ToString() ?? "";
+        templateNotice = null;
+        templateError = null;
+        if (selectedTemplateId == "") return;
+        if (!int.TryParse(selectedTemplateId, out var id)) return;
+        templateBusy = true;
+        try
+        {
+            await CheckTemplateOwnerAsync();
+            var template = await TemplateService.FindAsync(ownerId, id);
+            await CheckTemplateOwnerAsync();
+            if (template is null)
+            {
+                selectedTemplateId = "";
+                templateError = "템플릿이 삭제되었거나 사용할 수 없습니다. 목록을 새로고침해 주세요.";
+                return;
+            }
+            amount = template.Amount;
+            category = template.Category;
+            memo = template.Memo;
+            templateNotice = $"‘{template.Name}’을 입력했습니다. 내용을 확인한 뒤 지출 기록하기를 눌러 주세요.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "즐겨찾기 템플릿 적용에 실패했습니다.");
+            templateError = "템플릿을 적용하지 못했습니다. 페이지를 새로고침해 주세요.";
+        }
+        finally { templateBusy = false; }
     }
 
     private async Task LoadExpensesAsync()
@@ -846,6 +933,7 @@
 
     private async Task AddExpenseAsync()
     {
+        if (templateBusy) return;
         if (amount <= 0)
         {
             errorMessage = "금액은 1원 이상의 정수로 입력해 주세요.";
@@ -876,6 +964,8 @@
 
             amount = 0;
             memo = string.Empty;
+            selectedTemplateId = "";
+            templateNotice = null;
             errorMessage = null;
             saveNotice = activeFilter.IsActive && !activeFilter.Matches(newExpense)
                 ? "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."

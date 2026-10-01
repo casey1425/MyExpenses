@@ -29,6 +29,8 @@ public sealed class UserDataDeletionService(IDbContextFactory<ExpensesDbContext>
         await db.UserProfiles
             .Where(profile => profile.OwnerId == ownerId)
             .ExecuteDeleteAsync(cancellationToken);
+        await db.ExpenseTemplates.Where(template => template.OwnerId == ownerId)
+            .ExecuteDeleteAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
     }

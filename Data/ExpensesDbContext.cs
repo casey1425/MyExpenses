@@ -5,6 +5,7 @@ namespace MyExpenses.Data;
 public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> options) : DbContext(options)
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
+    public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
     public DbSet<MonthlyBudget> MonthlyBudgets => Set<MonthlyBudget>();
     public DbSet<CategoryBudget> CategoryBudgets => Set<CategoryBudget>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -13,6 +14,15 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ExpenseTemplate>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.OwnerId).IsRequired();
+            entity.Property(t => t.Name).IsRequired().HasMaxLength(50);
+            entity.Property(t => t.Category).IsRequired().HasMaxLength(30);
+            entity.Property(t => t.Memo).IsRequired().HasMaxLength(100);
+            entity.HasIndex(t => t.OwnerId);
+        });
         modelBuilder.Entity<ExpenseRecord>(entity =>
         {
             entity.HasKey(expense => expense.Id);

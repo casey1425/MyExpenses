@@ -85,6 +85,15 @@ public static class BudgetSchema
                     "Amount" INTEGER NOT NULL,
                     CONSTRAINT "PK_CategoryBudgets" PRIMARY KEY ("OwnerId", "Month", "Category")
                 );
+                CREATE TABLE IF NOT EXISTS "ExpenseTemplates" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_ExpenseTemplates" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "Name" TEXT NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    "Category" TEXT NOT NULL,
+                    "Memo" TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_ExpenseTemplates_OwnerId" ON "ExpenseTemplates" ("OwnerId");
                 """, cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);

@@ -404,6 +404,9 @@ h1 {
 .filter-help, .filter-buttons { grid-column: 1 / -1; }
 .filter-help { margin: 0; color: #64748b; font-size: .8rem; }
 .filter-result { color: #40516a; overflow-wrap: anywhere; font-size: .85rem; }
+.template-picker { background: #f8fafc; border: 1px solid #e4eaf2; border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem; }
+.template-picker-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem; }
+.template-help { color: #64748b; font-size: .8rem; margin: .75rem 0 0; }
 
 .filter-field label {
     color: #40516a;
