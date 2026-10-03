@@ -155,6 +155,24 @@ public static class ExpensesSchema
                     "Memo" TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS "IX_Incomes_OwnerId_Date" ON "Incomes" ("OwnerId", "Date");
+                CREATE TABLE IF NOT EXISTS "RecurringIncomeRules" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_RecurringIncomeRules" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "StartMonth" TEXT NOT NULL,
+                    "DayOfMonth" INTEGER NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    "Source" TEXT NOT NULL,
+                    "Memo" TEXT NOT NULL,
+                    "IsActive" INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_RecurringIncomeRules_OwnerId" ON "RecurringIncomeRules" ("OwnerId");
+                CREATE TABLE IF NOT EXISTS "RecurringIncomeOccurrences" (
+                    "RuleId" INTEGER NOT NULL,
+                    "Month" TEXT NOT NULL,
+                    "OwnerId" TEXT NOT NULL,
+                    CONSTRAINT "PK_RecurringIncomeOccurrences" PRIMARY KEY ("RuleId", "Month")
+                );
+                CREATE INDEX IF NOT EXISTS "IX_RecurringIncomeOccurrences_OwnerId" ON "RecurringIncomeOccurrences" ("OwnerId");
                 """, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }

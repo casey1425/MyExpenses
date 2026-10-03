@@ -51,9 +51,25 @@ public partial class Income
     {
         if (busy) return;
         busy = true;
-        try { await ReloadAsync(); error = null; }
+        try
+        {
+            await GenerateRecurringAsync();
+            await ReloadAsync();
+            error = null;
+        }
         catch (Exception ex) { HandleError(ex); }
         finally { busy = false; loading = false; }
+    }
+
+    // 도래한 정기 수입을 채웁니다. 실패해도 수입 목록 조회는 계속합니다.
+    private async Task GenerateRecurringAsync()
+    {
+        await CheckOwnerAsync();
+        try
+        {
+            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanToday);
+        }
+        catch (Exception ex) { Logger.LogWarning(ex, "정기 수입을 생성하지 못했습니다."); }
     }
 
     private async Task MonthChangedAsync(ChangeEventArgs args)

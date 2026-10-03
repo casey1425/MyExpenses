@@ -140,6 +140,7 @@ public partial class Home
         {
             await LoadCategoriesAsync();
             await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await GenerateRecurringIncomeAsync();
             await LoadExpensesAsync();
         }
         catch (Exception ex)
@@ -169,5 +170,18 @@ public partial class Home
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (ownerId == "" || state.User.FindFirstValue(ClaimTypes.NameIdentifier) != ownerId)
             throw new InvalidOperationException("로그인 계정이 바뀌었습니다.");
+    }
+
+    // 정기 수입 생성이 실패해도 지출 화면은 계속 사용할 수 있게 별도로 처리합니다.
+    private async Task GenerateRecurringIncomeAsync()
+    {
+        try
+        {
+            await RecurringIncomeService.GenerateDueAsync(ownerId, RecurringIncomeService.KoreanToday);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "정기 수입을 생성하지 못했습니다.");
+        }
     }
 }

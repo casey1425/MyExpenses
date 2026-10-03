@@ -34,6 +34,7 @@ public static class TestComponents
         Inject("Logger", NullLogger<Home>.Instance);
         Inject("TemplateService", new ExpenseTemplateService(factory));
         Inject("MethodService", new PaymentMethodService(factory));
+        Inject("RecurringIncomeService", new RecurringIncomeService(factory));
         Inject("ExpenseService", new ExpenseService(factory));
         Inject("BudgetService", new BudgetService(factory));
         Inject("CategoryService", new CategoryService(factory));

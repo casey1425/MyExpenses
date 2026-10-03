@@ -6,6 +6,7 @@
 @using MyExpenses.Data
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IncomeService IncomeService
+@inject RecurringIncomeService RecurringIncomeService
 @inject ILogger<Income> Logger
 
 <PageTitle>수입 기록 | MyExpenses</PageTitle>
@@ -50,6 +51,7 @@
             <a href="/export/income.csv?month=@monthInput">선택한 달 CSV</a>
             <a href="/export/income.csv">전체 수입 CSV</a>
             <a href="/income/import">CSV 가져오기</a>
+            <a href="/recurring-income">정기 수입 관리</a>
         </div>
         @if (loading) { <p>불러오는 중...</p> }
         else

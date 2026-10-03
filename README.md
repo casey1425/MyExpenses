@@ -18,7 +18,7 @@ C#과 Blazor로 구현했으며, 사용자별 데이터는 SQLite에 저장됩�
 | 수입·순수지 | 수입 등록·수정·삭제(급여·부수입·용돈·이자·투자·기타), 월별 수입·지출·순수지·저축률, 6개월 수입·지출 추이, 수입 CSV 내보내기·가져오기 |
 | 통계 | 조회 결과의 합계·건수·카테고리 비율, 6개월 지출 추이, 전월 비교, 결제수단별 월 합계 |
 | 카테고리 | 사용자별 추가·이름 변경·표시 순서 변경·보관·복원, 기존 데이터 유지 |
-| 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출 자동 생성 |
+| 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출·정기 수입 자동 생성 |
 | CSV | 조회 결과·전체 기록 내보내기, 검증·미리보기 후 가져오기, 중복 건너뛰기 |
 | 실행·운영 | SQLite 영구 저장, Docker 지원, 공개 소개·개인정보 처리방침·이용약관, 상태 확인 엔드포인트 |
 
@@ -204,6 +204,15 @@ curl http://localhost:10000/healthz
 </details>
 
 <details>
+<summary>정기 수입</summary>
+
+로그인 후 **정기 수입** (`/recurring-income`)에서 매월 지정일·금액·분류·메모를 등록하면 월급처럼 반복되는 수입을 자동으로 기록합니다. 동작 방식은 정기 지출과 같습니다. 등록한 달부터 적용되고 지정일이 이미 지났다면 즉시 기록하며, 지출 기록·월별 추이·수입 기록 화면에 접속할 때 지난 접속 이후 도래한 수입을 채웁니다. 같은 규칙·같은 달은 한 번만 처리하고 29~31일이 없는 달은 말일에 기록합니다. 날짜는 한국 시간 기준입니다.
+
+규칙을 중지했다가 다시 시작하면 중지 기간은 소급하지 않습니다. 규칙을 수정하거나 삭제해도 이미 생성된 수입은 바뀌지 않으며, 생성된 수입을 삭제해도 해당 달에 다시 생성되지는 않습니다. 생성된 수입은 일반 수입처럼 수입 기록·월별 추이·수입 CSV에 포함됩니다. 정기 수입 규칙 자체는 CSV에 포함되지 않으며 계정 삭제 시 함께 삭제됩니다. 기존 DB는 시작 시 정기 수입 테이블만 추가합니다.
+
+</details>
+
+<details>
 <summary>정기 지출</summary>
 
 로그인 후 **정기 지출** (`/recurring`)에서 매월 지정일·금액·카테고리·메모를 등록합니다. 등록한 달부터 적용되며 지정일이 이미 지났다면 즉시 기록합니다. 지출 기록 또는 정기 지출 페이지에 접속하면 누락된 달의 지출을 채우고, 같은 규칙·같은 달은 한 번만 처리합니다. 29~31일이 없는 달에는 말일에 기록합니다. 규칙을 중지했다가 다시 시작하면 중지 기간은 소급하지 않습니다. 규칙을 수정하거나 삭제해도 이미 생성된 지출은 바뀌지 않으며, 생성된 지출을 삭제해도 해당 달에 다시 생성되지는 않습니다. CSV에는 지출 기록만 포함되고 정기 지출 규칙은 포함되지 않습니다.
@@ -286,6 +295,7 @@ MyExpenses/
 │       ├── Import.razor           # CSV 가져오기와 미리보기
 │       ├── ImportIncome.razor     # 수입 CSV 가져오기와 미리보기
 │       ├── Recurring.razor        # 정기 지출 규칙 관리
+│       ├── RecurringIncome.razor  # 정기 수입 규칙 관리
 │       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
 │       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
 │       ├── Income.razor           # 수입 기록과 월별 순수지
@@ -306,6 +316,7 @@ MyExpenses/
 │   ├── MonthlyBudget.cs           # 전체 월 예산 모델
 │   ├── CategoryBudget.cs          # 카테고리별 월 예산 모델
 │   ├── RecurringExpenseRule.cs    # 정기 지출 규칙과 월별 처리 이력
+│   ├── RecurringIncomeRule.cs     # 정기 수입 규칙과 월별 처리 이력
 │   ├── UserProfile.cs             # 사용자별 첫 시작 완료 상태
 │   ├── ExpensesDbContext.cs       # 지출 데이터의 EF Core 컨텍스트
 │   ├── AuthDbContext.cs           # Identity 계정 EF Core 컨텍스트
@@ -329,6 +340,7 @@ MyExpenses/
 │   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
 │   ├── IncomeCsvImportService.cs  # 수입 CSV 중복 확인과 저장
 │   ├── RecurringExpenseService.cs # 정기 지출 생성과 중복 처리 방지
+│   ├── RecurringIncomeService.cs  # 정기 수입 규칙 관리와 생성·중복 처리 방지
 │   ├── UserDataProvisioner.cs     # 사용자 공간 초기화와 시작 상태 관리
 │   └── UserDataDeletionService.cs # 현재 사용자 소유 데이터 삭제
 ├── wwwroot/                      # 공통 CSS, Bootstrap, favicon 등 정적 파일
@@ -340,6 +352,7 @@ MyExpenses/
 │   ├── ServiceChecks/            # 지출·예산 서비스와 화면 이벤트 회귀 검증
 │   ├── CategoryChecks/           # 카테고리·기존 DB·통합·사용자 격리 검증
 │   ├── IncomeChecks/             # 수입 CRUD·순수지·월별 추이·CSV·사용자 격리 검증
+│   ├── RecurringIncomeChecks/    # 정기 수입 생성·소급 방지·말일 보정·사용자 격리 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
 ├── appsettings.json              # 공통 설정
@@ -370,6 +383,7 @@ dotnet run --project tests/PaymentMethodChecks
 dotnet run --project tests/ServiceChecks
 dotnet run --project tests/CategoryChecks
 dotnet run --project tests/IncomeChecks
+dotnet run --project tests/RecurringIncomeChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -380,6 +394,7 @@ dotnet run --project tests/IncomeChecks
 | ServiceChecks | 지출·예산 CRUD·입력 검증, 예산 간 독립성, 로그인 계정 변경 시 화면 저장 차단 |
 | CategoryChecks | 기존 DB 보완, 사용자 격리, 이름 일괄 변경, 순서·보관·복원, 지출·예산·템플릿·정기 지출·통계·CSV 연동, 계정 삭제 |
 | IncomeChecks | 수입 CRUD·입력 검증, 월 경계, 순수지·저축률, 월별 추이(오늘까지·소유자 격리), 차트 렌더링, 수입 CSV 내보내기·가져오기(중복·원자성), 기존 DB 업그레이드, 계정 삭제 |
+| RecurringIncomeChecks | 정기 수입 규칙 CRUD, 지정일 생성·누락 월 보충·중복 방지, 말일 보정, 중지·재시작 소급 방지, 사용자 격리, 입력 검증, 기존 DB 업그레이드, 계정 삭제 |
 
 검증은 외부 테스트 프레임워크 없이 실행하는 콘솔 프로그램입니다. **메모리 SQLite만 사용하므로 실제 사용자 데이터를 변경하지 않습니다.** 실패 시 오류와 0이 아닌 종료 코드를 반환하며, 공통 도구는 `tests/TestSupport/`에서 관리합니다.
 

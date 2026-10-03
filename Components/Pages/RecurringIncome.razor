@@ -1,0 +1,127 @@
+@page "/recurring-income"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject RecurringIncomeService RecurringIncomeService
+@inject ILogger<RecurringIncome> Logger
+
+<PageTitle>정기 수입 | MyExpenses</PageTitle>
+
+<main class="recurring-page">
+    <header>
+        <p class="kicker">RECURRING INCOME</p>
+        <h1>정기 수입</h1>
+        <p>월급처럼 매월 같은 날 들어오는 수입을 자동으로 기록합니다. 29~31일은 해당 월의 마지막 날에 기록돼요.</p>
+        <p>앱에 접속할 때 지난 접속 이후 도래한 수입을 채웁니다. 규칙을 중지한 기간은 소급하지 않습니다.</p>
+    </header>
+
+    <section class="rule-card" aria-labelledby="new-rule-title">
+        <h2 id="new-rule-title">새 정기 수입</h2>
+        <form @onsubmit="CreateAsync" @onsubmit:preventDefault>
+            <div class="rule-fields">
+                <label>매월 며칠
+                    <input type="number" min="1" max="31" step="1" @bind="dayOfMonth" required />
+                </label>
+                <label>금액 (원)
+                    <input type="number" min="1" step="1" @bind="amount" required />
+                </label>
+                <label>분류
+                    <select @bind="source">
+                        @foreach (var option in IncomeRecord.Sources)
+                        {
+                            <option value="@option">@option</option>
+                        }
+                    </select>
+                </label>
+                <label>메모
+                    <input type="text" maxlength="100" @bind="memo" placeholder="예: 월급" />
+                </label>
+            </div>
+            <button type="submit" disabled="@isBusy">등록하기</button>
+        </form>
+        <p class="help">등록한 달부터 적용됩니다. 이번 달 지정일이 이미 지났다면 즉시 기록됩니다.</p>
+    </section>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="error" role="alert">@errorMessage</p>
+    }
+    @if (!string.IsNullOrEmpty(notice))
+    {
+        <p class="notice" role="status">@notice</p>
+    }
+
+    <section class="rule-card" aria-labelledby="rules-title">
+        <h2 id="rules-title">등록한 규칙</h2>
+        @if (rules.Count == 0)
+        {
+            <p class="help">아직 등록한 정기 수입이 없습니다.</p>
+        }
+        else
+        {
+            <div class="rules-list">
+                @foreach (var rule in rules)
+                {
+                    <div class="rule-item" @key="rule.Id">
+                        @if (editingId == rule.Id)
+                        {
+                            <form @onsubmit="SaveEditAsync" @onsubmit:preventDefault>
+                                <div class="rule-fields">
+                                    <label>매월 며칠
+                                        <input type="number" min="1" max="31" step="1" @bind="editDay" required />
+                                    </label>
+                                    <label>금액 (원)
+                                        <input type="number" min="1" step="1" @bind="editAmount" required />
+                                    </label>
+                                    <label>분류
+                                        <select @bind="editSource">
+                                            @foreach (var option in IncomeRecord.Sources)
+                                            {
+                                                <option value="@option">@option</option>
+                                            }
+                                        </select>
+                                    </label>
+                                    <label>메모
+                                        <input type="text" maxlength="100" @bind="editMemo" />
+                                    </label>
+                                </div>
+                                <div class="rule-actions">
+                                    <button type="submit" disabled="@isBusy">저장</button>
+                                    <button type="button" class="secondary" @onclick="CancelEdit" disabled="@isBusy">취소</button>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="rule-summary">
+                                <div>
+                                    <strong>@(string.IsNullOrWhiteSpace(rule.Memo) ? rule.Source : rule.Memo)</strong>
+                                    <p>매월 @(rule.DayOfMonth)일 · @rule.Amount.ToString("N0")원 · @rule.Source</p>
+                                    <small>@(rule.IsActive ? "사용 중" : "중지됨") · @rule.StartMonth.ToString("yyyy년 M월")부터</small>
+                                </div>
+                                <div class="rule-actions">
+                                    <button type="button" class="secondary" @onclick="() => StartEdit(rule)" disabled="@isBusy">수정</button>
+                                    <button type="button" class="secondary" @onclick="() => ToggleAsync(rule)" disabled="@isBusy">@(rule.IsActive ? "중지" : "다시 시작")</button>
+                                    <button type="button" class="danger" @onclick="() => ShowDelete(rule.Id)" disabled="@isBusy">삭제</button>
+                                </div>
+                            </div>
+                            @if (deletingId == rule.Id)
+                            {
+                                <div class="delete-confirm" role="alert">
+                                    <p>이 규칙을 삭제할까요? 이미 생성된 수입은 그대로 유지됩니다.</p>
+                                    <div class="rule-actions">
+                                        <button type="button" class="danger" @onclick="() => DeleteAsync(rule.Id)" disabled="@isBusy">규칙 삭제</button>
+                                        <button type="button" class="secondary" @onclick="CancelDelete" disabled="@isBusy">취소</button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </section>
+    <a href="/income">← 수입 기록으로 돌아가기</a>
+</main>

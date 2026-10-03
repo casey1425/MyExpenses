@@ -59,6 +59,15 @@ public partial class Trends
             }
             today = KoreanToday();
             await RecurringExpenseService.GenerateDueAsync(ownerId, today.ToDateTime(TimeOnly.MinValue));
+            try
+            {
+                await RecurringIncomeService.GenerateDueAsync(ownerId, today.ToDateTime(TimeOnly.MinValue));
+            }
+            catch (Exception ex)
+            {
+                // 수입 생성 실패가 지출 추이 조회를 막지 않게 합니다.
+                Logger.LogWarning(ex, "정기 수입을 생성하지 못했습니다.");
+            }
             report = await TrendsService.LoadAsync(ownerId, selectedMonth, today);
         }
         catch (Exception ex)
