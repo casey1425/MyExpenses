@@ -196,3 +196,34 @@
         width: 100%;
     }
 }
+
+.about-install {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+}
+
+.about-install h2 {
+    margin: 0 0 .6rem;
+    color: #162039;
+    font-size: 1.25rem;
+}
+
+.about-install p, .about-install li {
+    color: #52607a;
+    line-height: 1.75;
+    word-break: keep-all;
+}
+
+.about-install ul {
+    margin: .75rem 0;
+    padding-left: 1.2rem;
+}
+
+.about-install .about-install-note {
+    margin: 0;
+    font-size: .85rem;
+    color: #7a8497;
+}

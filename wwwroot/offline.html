@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#052767" />
+    <title>오프라인 | MyExpenses</title>
+    <!-- 인터넷이 없을 때 서비스 워커가 보여 주는 화면입니다. 외부 파일 없이 이 파일만으로 표시되어야 합니다. -->
+    <style>
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; box-sizing: border-box; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; background: #f6f8fc; }
+        main { max-width: 26rem; text-align: center; }
+        svg { width: 84px; height: 84px; margin-bottom: 1rem; }
+        h1 { margin: 0 0 .75rem; font-size: 1.35rem; }
+        p { margin: 0 0 1.5rem; color: #64748b; line-height: 1.7; word-break: keep-all; }
+        button { min-height: 44px; padding: .6rem 1.4rem; border: 0; border-radius: 10px; background: #052767; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <main>
+        <svg viewBox="0 0 512 512" aria-hidden="true">
+            <rect width="512" height="512" rx="112" fill="#052767"/>
+            <rect x="120" y="290" width="68" height="102" rx="14" fill="#fff" opacity=".88"/>
+            <rect x="222" y="226" width="68" height="166" rx="14" fill="#fff"/>
+            <rect x="324" y="170" width="68" height="222" rx="14" fill="#fff"/>
+            <rect x="96" y="410" width="320" height="14" rx="7" fill="#9bb8e8"/>
+        </svg>
+        <h1>인터넷에 연결되어 있지 않아요</h1>
+        <p>MyExpenses는 서버와 연결된 상태에서만 사용할 수 있어요. 지출 기록은 안전하게 서버에 저장되어 있으니, 연결을 확인한 뒤 다시 시도해 주세요.</p>
+        <button type="button" id="retry">다시 시도</button>
+    </main>
+    <script>
+        // 서비스 워커는 원래 주소 그대로 이 화면을 보여 주므로, 새로고침하면 원래 페이지를 다시 요청합니다.
+        document.getElementById('retry').addEventListener('click', function () { location.reload(); });
+        window.addEventListener('online', function () { location.reload(); });
+    </script>
+</body>
+</html>

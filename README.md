@@ -21,6 +21,7 @@ C#과 Blazor로 구현했으며, 사용자별 데이터는 SQLite에 저장됩�
 | 카테고리 | 사용자별 추가·이름 변경·표시 순서 변경·보관·복원, 기존 데이터 유지 |
 | 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출·정기 수입 자동 생성 |
 | CSV | 조회 결과·전체 기록 내보내기, 검증·미리보기 후 가져오기, 중복 건너뛰기 |
+| 모바일 | 홈 화면에 앱처럼 설치(PWA), 전체 화면 실행, 바로가기(지출·수입·목표 저축), 인터넷이 끊기면 안내 화면 |
 | 실행·운영 | SQLite 영구 저장, Docker 지원, 공개 소개·개인정보 처리방침·이용약관, 상태 확인 엔드포인트 |
 
 처음에는 **식비 · 카페 · 교통 · 쇼핑 · 생활 · 기타** 카테고리가 제공되며, 사용자별로 추가·변경할 수 있습니다. 금액은 원 단위입니다.
@@ -205,6 +206,21 @@ curl http://localhost:10000/healthz
 </details>
 
 <details>
+<summary>모바일 홈 화면에 설치(PWA)</summary>
+
+별도 앱을 설치하지 않고 브라우저에서 **홈 화면에 추가**하면 아이콘으로 바로 열 수 있고, 주소창 없이 전체 화면으로 실행됩니다. 설치 방법은 [서비스 소개](/about) 화면에도 안내되어 있습니다.
+
+- **Android(Chrome):** 메뉴(⋮) → 앱 설치 또는 홈 화면에 추가
+- **iPhone·iPad(Safari):** 공유 버튼 → 홈 화면에 추가
+- 아이콘을 길게 누르면 **지출 기록·수입 기록·목표 저축** 바로가기를 쓸 수 있습니다(Android).
+
+설치는 HTTPS 주소(또는 `localhost`)에서만 가능합니다. 이 앱은 서버와 실시간으로 연결되어 동작하므로 **인터넷이 없으면 사용할 수 없고**, 연결이 끊긴 상태에서 열면 안내 화면과 *다시 시도* 버튼이 표시됩니다. 연결이 돌아오면 자동으로 원래 화면으로 돌아옵니다. 로그인 정보와 가계부 데이터를 보호하기 위해 서비스 워커는 **페이지나 데이터를 기기에 저장(캐시)하지 않고** 오프라인 안내 화면만 저장합니다. 푸시 알림과 오프라인 입력은 지원하지 않습니다.
+
+아이콘 원본은 `design/`의 SVG이며, 바꾸려면 PNG(`wwwroot/icons/`의 192·512·maskable 512·apple-touch 180)를 같은 크기로 다시 만들어 교체하면 됩니다. 앱 이름·색상·바로가기는 `wwwroot/manifest.webmanifest`에서 바꿉니다(`App.razor`의 `theme-color`와 같은 값을 유지하세요).
+
+</details>
+
+<details>
 <summary>목표 저축</summary>
 
 로그인 후 **목표 저축** (`/savings`)에서 ‘유럽 여행’, ‘비상금’처럼 이름(1~50자)·목표 금액·목표일(선택)을 정해 목표를 만듭니다. 목표는 사용자당 최대 20개이며 같은 이름은 쓸 수 없습니다. 목표일은 만들 때 오늘 이후여야 하고, 이미 기한이 지난 목표는 목표일을 바꾸지 않는 한 이름·금액을 수정할 수 있습니다.
@@ -368,6 +384,11 @@ MyExpenses/
 │   ├── UserDataProvisioner.cs     # 사용자 공간 초기화와 시작 상태 관리
 │   └── UserDataDeletionService.cs # 현재 사용자 소유 데이터 삭제
 ├── wwwroot/                      # 공통 CSS, Bootstrap, favicon 등 정적 파일
+│   ├── manifest.webmanifest      # 홈 화면 설치(PWA) 정보와 바로가기
+│   ├── service-worker.js         # 설치 지원과 오프라인 안내(페이지는 캐시하지 않음)
+│   ├── offline.html              # 인터넷이 없을 때 보여 주는 안내 화면
+│   ├── pwa.js                    # 서비스 워커 등록
+│   └── icons/                    # 앱 아이콘 PNG
 ├── Properties/launchSettings.json # 로컬 실행 프로필과 접속 주소
 ├── tests/
 │   ├── ExpenseSearchChecks/      # 검색·필터 검증
@@ -379,10 +400,12 @@ MyExpenses/
 │   ├── RecurringIncomeChecks/    # 정기 수입 생성·소급 방지·말일 보정·사용자 격리 검증
 │   ├── SavingsGoalChecks/        # 목표 저축 계산·CRUD·사용자 격리·화면 로직 검증
 │   ├── MigrationChecks/          # 마이그레이션·기존 DB 기준선·모델 일치 검증
+│   ├── PwaChecks/                # 매니페스트·아이콘·서비스 워커·오프라인 화면 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
 ├── .github/workflows/ci.yml      # GitHub Actions — 빌드·검증·Docker 빌드
 ├── .config/dotnet-tools.json     # 로컬 도구(dotnet-ef) 버전 고정
+├── design/                       # 앱 아이콘 원본(SVG)
 ├── appsettings.json              # 공통 설정
 ├── appsettings.Development.json  # 개발 환경 설정
 ├── Dockerfile                    # .NET 빌드와 비루트 실행 이미지
@@ -414,6 +437,7 @@ dotnet run --project tests/IncomeChecks
 dotnet run --project tests/RecurringIncomeChecks
 dotnet run --project tests/SavingsGoalChecks
 dotnet run --project tests/MigrationChecks
+dotnet run --project tests/PwaChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -427,6 +451,7 @@ dotnet run --project tests/MigrationChecks
 | RecurringIncomeChecks | 정기 수입 규칙 CRUD, 지정일 생성·누락 월 보충·중복 방지, 말일 보정, 중지·재시작 소급 방지, 사용자 격리, 입력 검증, 기존 DB 업그레이드, 계정 삭제 |
 | SavingsGoalChecks | 진행률(내림)·필요 월 저축액(올림)·기한 지남·예상 달성 시점 계산, 목표·저축 CRUD와 입력 검증, 사용자 격리, 목표 삭제 연쇄, 평균 순수지, 화면 로직, 기존 DB 업그레이드, 계정 삭제 |
 | MigrationChecks | 새·기존·아주 오래된 DB의 마이그레이션, 데이터 손실 없는 기준선 기록, 반복 시작 멱등성, 마이그레이션 결과와 모델 스키마 일치(외래 키 포함), 모델 변경 시 마이그레이션 누락 감지, 로그인 DB |
+| PwaChecks | 매니페스트 필수 항목, 아이콘 파일·크기·투명 채널, 바로가기가 실제 화면 경로인지, `App.razor` 연결, 서비스 워커의 개인정보 보호 규칙(페이지 미캐시)과 동작(Node로 시뮬레이션: 온라인/오프라인 이동, 비이동 요청·POST 미가로채기, 캐시 정리), 자체 완결형 오프라인 화면 |
 
 검증은 외부 테스트 프레임워크 없이 실행하는 콘솔 프로그램입니다. **메모리 SQLite만 사용하므로 실제 사용자 데이터를 변경하지 않습니다.** 실패 시 오류와 0이 아닌 종료 코드를 반환하며, 공통 도구는 `tests/TestSupport/`에서 관리합니다.
 

@@ -27,6 +27,9 @@ jobs:
       # 모델을 바꾸고 마이그레이션을 추가하지 않았다면 MigrationChecks에서 실패합니다.
       - name: Run checks
         run: bash tests/run-checks.sh
+        env:
+          # 서비스 워커 동작 검증(Node)을 건너뛰지 않고 반드시 실행합니다.
+          PWA_REQUIRE_NODE: "1"
 
   docker:
     name: Docker image builds
