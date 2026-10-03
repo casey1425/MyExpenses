@@ -110,14 +110,13 @@ var app = builder.Build();
 await using (var db = await app.Services.GetRequiredService<IDbContextFactory<ExpensesDbContext>>()
     .CreateDbContextAsync())
 {
-    await db.Database.EnsureCreatedAsync();
-    await ExpensesSchema.EnsureCreatedAsync(db);
+    await DatabaseMigrator.MigrateExpensesAsync(db);
 }
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var authDb = scope.ServiceProvider.GetRequiredService<AuthDbContext>();
-    await authDb.Database.EnsureCreatedAsync();
+    await DatabaseMigrator.MigrateAuthAsync(authDb);
 
     var existingUserIds = await authDb.Users.AsNoTracking()
         .OrderBy(user => user.Id)

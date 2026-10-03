@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MyExpenses.Data;
 
+// 마이그레이션 도입 이전에 만들어진 DB를 최신 상태로 올리는 용도로만 남겨 둔 코드입니다(DatabaseMigrator가 호출).
+// 새 테이블·열은 여기에 추가하지 말고 `dotnet ef migrations add`로 마이그레이션을 만드세요.
 public static class ExpensesSchema
 {
     public static async Task EnsureCreatedAsync(ExpensesDbContext db, CancellationToken cancellationToken = default)

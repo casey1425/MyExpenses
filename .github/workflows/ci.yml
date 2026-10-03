@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 같은 브랜치에서 새 푸시가 오면 이전 실행을 취소합니다.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Build and checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      # 앱 빌드와 tests/ 아래 모든 검증(마이그레이션·사용자 격리 포함)을 실행합니다.
+      # 모델을 바꾸고 마이그레이션을 추가하지 않았다면 MigrationChecks에서 실패합니다.
+      - name: Run checks
+        run: bash tests/run-checks.sh
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --tag myexpenses:ci .

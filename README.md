@@ -256,9 +256,10 @@ curl http://localhost:10000/healthz
 | 언어·런타임 | C# / .NET 10 |
 | 웹 UI | ASP.NET Core Blazor Web App — Interactive Server |
 | 인증 | ASP.NET Core Identity / Google OAuth 2.0 / 쿠키 인증 |
-| 데이터 | Entity Framework Core 10 / SQLite |
+| 데이터 | Entity Framework Core 10 / SQLite / EF Core Migrations |
 | 스타일 | HTML / CSS / Bootstrap |
 | 컨테이너 | Docker — Release 빌드, 비루트 사용자 실행 |
+| CI | GitHub Actions — 빌드·전체 검증·Docker 이미지 빌드 |
 
 ## 프로젝트 구조
 
@@ -336,7 +337,12 @@ MyExpenses/
 │   ├── UserProfile.cs             # 사용자별 첫 시작 완료 상태
 │   ├── ExpensesDbContext.cs       # 지출 데이터의 EF Core 컨텍스트
 │   ├── AuthDbContext.cs           # Identity 계정 EF Core 컨텍스트
-│   ├── ExpensesSchema.cs          # 기존 SQLite 스키마 보완
+│   ├── ExpensesSchema.cs          # 마이그레이션 도입 이전 DB를 최신 상태로 올리는 용도(더 이상 확장하지 않음)
+│   ├── DatabaseMigrator.cs        # 시작 시 마이그레이션 적용과 기존 DB 기준선 기록
+│   ├── DesignTimeDbContextFactories.cs # dotnet ef 전용 DbContext 팩토리
+│   ├── Migrations/
+│   │   ├── Expenses/              # 지출 DB(myexpenses.db) 마이그레이션
+│   │   └── Auth/                  # 로그인 DB(auth.db) 마이그레이션
 │   ├── ExpenseCategories.cs       # 최초 기본 카테고리와 아이콘
 │   ├── ExpenseFilter.cs           # EF Core 조회 조건과 정렬
 │   ├── ExpenseSearchInput.cs      # 화면·CSV 요청의 검색 조건 검증
@@ -372,8 +378,11 @@ MyExpenses/
 │   ├── IncomeChecks/             # 수입 CRUD·순수지·월별 추이·CSV·사용자 격리 검증
 │   ├── RecurringIncomeChecks/    # 정기 수입 생성·소급 방지·말일 보정·사용자 격리 검증
 │   ├── SavingsGoalChecks/        # 목표 저축 계산·CRUD·사용자 격리·화면 로직 검증
+│   ├── MigrationChecks/          # 마이그레이션·기존 DB 기준선·모델 일치 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
+├── .github/workflows/ci.yml      # GitHub Actions — 빌드·검증·Docker 빌드
+├── .config/dotnet-tools.json     # 로컬 도구(dotnet-ef) 버전 고정
 ├── appsettings.json              # 공통 설정
 ├── appsettings.Development.json  # 개발 환경 설정
 ├── Dockerfile                    # .NET 빌드와 비루트 실행 이미지
@@ -404,6 +413,7 @@ dotnet run --project tests/CategoryChecks
 dotnet run --project tests/IncomeChecks
 dotnet run --project tests/RecurringIncomeChecks
 dotnet run --project tests/SavingsGoalChecks
+dotnet run --project tests/MigrationChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -416,8 +426,39 @@ dotnet run --project tests/SavingsGoalChecks
 | IncomeChecks | 수입 CRUD·입력 검증, 월 경계, 순수지·저축률, 월별 추이(오늘까지·소유자 격리), 차트 렌더링, 수입 CSV 내보내기·가져오기(중복·원자성), 기존 DB 업그레이드, 계정 삭제 |
 | RecurringIncomeChecks | 정기 수입 규칙 CRUD, 지정일 생성·누락 월 보충·중복 방지, 말일 보정, 중지·재시작 소급 방지, 사용자 격리, 입력 검증, 기존 DB 업그레이드, 계정 삭제 |
 | SavingsGoalChecks | 진행률(내림)·필요 월 저축액(올림)·기한 지남·예상 달성 시점 계산, 목표·저축 CRUD와 입력 검증, 사용자 격리, 목표 삭제 연쇄, 평균 순수지, 화면 로직, 기존 DB 업그레이드, 계정 삭제 |
+| MigrationChecks | 새·기존·아주 오래된 DB의 마이그레이션, 데이터 손실 없는 기준선 기록, 반복 시작 멱등성, 마이그레이션 결과와 모델 스키마 일치(외래 키 포함), 모델 변경 시 마이그레이션 누락 감지, 로그인 DB |
 
 검증은 외부 테스트 프레임워크 없이 실행하는 콘솔 프로그램입니다. **메모리 SQLite만 사용하므로 실제 사용자 데이터를 변경하지 않습니다.** 실패 시 오류와 0이 아닌 종료 코드를 반환하며, 공통 도구는 `tests/TestSupport/`에서 관리합니다.
+
+### 자동 검증(CI)
+
+`main` 푸시와 풀 리퀘스트마다 [GitHub Actions](.github/workflows/ci.yml)가 **앱 빌드 → `tests/run-checks.sh`(전체 검증) → Docker 이미지 빌드**를 실행합니다. 모델을 바꾸고 마이그레이션을 추가하지 않으면 `MigrationChecks`가 실패해 배포 전에 알 수 있습니다.
+
+## DB 마이그레이션
+
+스키마는 [EF Core Migrations](https://learn.microsoft.com/ef/core/managing-schemas/migrations/)로 관리합니다. 지출 DB(`ExpensesDbContext`, `myexpenses.db`)와 로그인 DB(`AuthDbContext`, `auth.db`)가 각각 독립된 마이그레이션을 가지며, 앱은 시작할 때 아직 적용하지 않은 마이그레이션만 적용합니다.
+
+- **새 DB:** 마이그레이션을 처음부터 적용합니다.
+- **마이그레이션 도입 이전에 만든 DB:** 기존 방식(`ExpensesSchema`)으로 최신 상태까지 맞춘 뒤 `InitialCreate`를 **적용된 것으로 기록만** 합니다. 테이블을 다시 만들거나 데이터를 변경하지 않으며, 이후부터는 새 마이그레이션만 적용합니다. 이 DB는 외래 키 대신 소유자 검사 트리거를 쓰는 등 새 DB와 세부 구조가 조금 다를 수 있지만, 이전부터 동일한 구조입니다.
+- **모델과 마이그레이션이 어긋난 경우:** 앱이 시작을 거부하고 오류를 냅니다(`PendingModelChangesWarning`). 마이그레이션을 빠뜨린 채 배포하는 일을 막기 위한 동작입니다.
+
+### 스키마를 바꾸는 방법
+
+로컬 도구(`dotnet-ef`)는 버전을 고정해 두었습니다.
+
+```bash
+dotnet tool restore
+
+# 지출 DB: 모델(Data/*.cs, ExpensesDbContext)을 수정한 뒤
+dotnet ef migrations add 변경내용 --context ExpensesDbContext --output-dir Data/Migrations/Expenses
+
+# 로그인 DB를 바꾸는 경우(드물게 필요)
+dotnet ef migrations add 변경내용 --context AuthDbContext --output-dir Data/Migrations/Auth
+
+bash tests/run-checks.sh   # MigrationChecks가 모델과 마이그레이션의 일치를 확인합니다
+```
+
+`ExpensesSchema.cs`에는 더 이상 테이블·열을 추가하지 마세요. 생성된 마이그레이션 파일은 반드시 함께 커밋합니다. 마이그레이션을 만드는 명령은 DB에 연결하지 않으므로 로컬 데이터가 바뀌지 않습니다.
 
 ## 운영 배포
 
@@ -437,6 +478,7 @@ Support__Email=...
 
 - **영구 저장:** `/app/Data`를 호스팅 제공자의 암호화된 영구 디스크에 마운트하세요. 임시 파일 시스템을 사용하면 재배포 시 계정·지출 데이터가 사라질 수 있습니다.
 - **인스턴스 수:** SQLite를 사용하는 동안은 앱 인스턴스를 하나로 유지하세요.
+- **백업과 업그레이드:** 앱을 새 버전으로 배포하면 시작 시 DB 마이그레이션이 자동으로 적용되며 **되돌리는(다운그레이드) 마이그레이션은 제공하지 않습니다.** 영구 디스크의 `/app/Data`(특히 `myexpenses.db`, `auth.db`)를 배포 전에 따로 복사해 두세요. 백업에는 사용자 데이터가 포함되므로 계정 삭제·개인정보 처리 정책에 맞게 보관 기간을 관리하세요.
 - **프록시:** `ReverseProxy__UseForwardedHeaders=true`는 신뢰할 수 있는 HTTPS 종료 역방향 프록시 환경에서만 사용합니다. 앱을 인터넷에 직접 노출할 때는 활성화하지 마세요.
 - **운영 문서:** 실제 운영·백업·법적 요구사항에 맞게 개인정보 처리방침과 이용약관을 검토하고, `Support:Email`을 설정하세요.
 
