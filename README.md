@@ -15,6 +15,7 @@ C#과 Blazor로 구현했으며, 사용자별 데이터는 SQLite에 저장됩�
 | 지출 기록 | 날짜·금액·카테고리·메모·결제수단 관리, 추가·수정·삭제, 확인 후 전체 삭제 |
 | 검색·필터 | 메모 검색, 월·카테고리·결제수단·날짜 범위·금액 범위 필터, 날짜·금액순 정렬 |
 | 예산 | 전체 월 예산과 카테고리별 월 예산, 사용률·남은 금액·초과 금액 |
+| 수입·순수지 | 수입 등록·수정·삭제(급여·부수입·용돈·이자·투자·기타), 월별 수입·지출·순수지·저축률 |
 | 통계 | 조회 결과의 합계·건수·카테고리 비율, 6개월 지출 추이, 전월 비교, 결제수단별 월 합계 |
 | 카테고리 | 사용자별 추가·이름 변경·표시 순서 변경·보관·복원, 기존 데이터 유지 |
 | 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출 자동 생성 |
@@ -154,6 +155,15 @@ curl http://localhost:10000/healthz
 </details>
 
 <details>
+<summary>수입 기록과 순수지</summary>
+
+로그인 후 **수입 기록** (`/income`)에서 날짜·원 단위 금액·분류(급여·부수입·용돈·이자·투자·기타)·메모(선택·최대 100자)를 등록하고 수정·삭제할 수 있습니다. 조회 월을 선택하면 해당 월의 수입 목록과 함께 **수입 − 지출 = 순수지**, **저축률(순수지 ÷ 수입)** 을 같은 시점의 데이터로 계산해 보여 줍니다. 수입이 없는 달은 저축률을 표시하지 않고, 지출이 수입보다 많으면 순수지가 음수로 표시됩니다.
+
+수입은 지출과 별도 테이블에 저장되므로 지출 통계·예산·CSV 내보내기에는 영향을 주지 않습니다. 현재 사용자만 조회·수정·삭제할 수 있고 계정 삭제 시 함께 삭제됩니다. 지출 전체 삭제는 수입을 지우지 않습니다. 기존 DB는 시작 시 수입 테이블만 추가하며 기존 데이터를 변경하지 않습니다.
+
+</details>
+
+<details>
 <summary>결제수단별 지출 관리</summary>
 
 로그인 후 **결제수단** (`/payment-methods`)에서 ‘국민 체크카드’, ‘현금 지갑’처럼 알아보기 쉬운 이름(1~50자)과 유형을 등록합니다. 계정 안에서 결제수단 이름은 중복할 수 없습니다. 금융기관·카드사와 연동하지 않으며 카드번호·계좌번호·인증정보는 입력하지 마세요.
@@ -264,6 +274,7 @@ MyExpenses/
 │       ├── Recurring.razor        # 정기 지출 규칙 관리
 │       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
 │       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
+│       ├── Income.razor           # 수입 기록과 월별 순수지
 │       ├── Categories.razor       # 사용자별 카테고리 관리
 │       ├── Trends.razor           # 월별 추이와 전월 비교
 │       ├── Login.razor            # Google 로그인 화면
@@ -277,6 +288,7 @@ MyExpenses/
 │   ├── UserCategory.cs            # 사용자별 카테고리·순서·보관 상태
 │   ├── ExpenseTemplate.cs         # 템플릿 모델과 입력 검증
 │   ├── PaymentMethod.cs           # 결제수단 모델과 월별 합계 결과
+│   ├── IncomeRecord.cs            # 수입 모델과 월별 현금흐름 결과
 │   ├── MonthlyBudget.cs           # 전체 월 예산 모델
 │   ├── CategoryBudget.cs          # 카테고리별 월 예산 모델
 │   ├── RecurringExpenseRule.cs    # 정기 지출 규칙과 월별 처리 이력
@@ -297,6 +309,7 @@ MyExpenses/
 │   ├── BudgetService.cs           # 월별·카테고리별 예산 저장과 집계
 │   ├── ExpenseTemplateService.cs  # 사용자별 템플릿 조회·저장·삭제
 │   ├── PaymentMethodService.cs    # 결제수단 CRUD·소유자 검증·월별 집계
+│   ├── IncomeService.cs           # 수입 CRUD·소유자 검증·월별 순수지 집계
 │   ├── ExpenseTrendsService.cs    # 사용자별 추이 데이터 조회
 │   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
 │   ├── RecurringExpenseService.cs # 정기 지출 생성과 중복 처리 방지
@@ -310,6 +323,7 @@ MyExpenses/
 │   ├── PaymentMethodChecks/      # 결제수단·지출·템플릿·CSV 통합 검증
 │   ├── ServiceChecks/            # 지출·예산 서비스와 화면 이벤트 회귀 검증
 │   ├── CategoryChecks/           # 카테고리·기존 DB·통합·사용자 격리 검증
+│   ├── IncomeChecks/             # 수입 CRUD·월 경계·순수지·사용자 격리 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
 ├── appsettings.json              # 공통 설정
@@ -339,6 +353,7 @@ dotnet run --project tests/ExpenseTemplateChecks
 dotnet run --project tests/PaymentMethodChecks
 dotnet run --project tests/ServiceChecks
 dotnet run --project tests/CategoryChecks
+dotnet run --project tests/IncomeChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |

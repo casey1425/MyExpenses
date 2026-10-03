@@ -75,6 +75,7 @@ builder.Services.AddScoped<ExpenseTrendsService>();
 builder.Services.AddScoped<ExpenseTemplateService>();
 builder.Services.AddScoped<PaymentMethodService>();
 builder.Services.AddScoped<ExpenseService>();
+builder.Services.AddScoped<IncomeService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<CategoryService>();
 

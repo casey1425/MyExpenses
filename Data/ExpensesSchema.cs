@@ -144,6 +144,18 @@ public static class ExpensesSchema
                   OR EXISTS (SELECT 1 FROM "ExpenseTemplates" WHERE "OwnerId" = OLD."OwnerId" AND "PaymentMethodId" = OLD."Id")
                 BEGIN SELECT RAISE(ABORT, 'Payment method still referenced'); END;
                 """, cancellationToken);
+            await ExecuteAsync(connection, transaction,
+                """
+                CREATE TABLE IF NOT EXISTS "Incomes" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_Incomes" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "Date" TEXT NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    "Source" TEXT NOT NULL,
+                    "Memo" TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS "IX_Incomes_OwnerId_Date" ON "Incomes" ("OwnerId", "Date");
+                """, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
         }
         finally

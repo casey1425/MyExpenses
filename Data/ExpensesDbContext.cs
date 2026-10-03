@@ -5,6 +5,7 @@ namespace MyExpenses.Data;
 public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> options) : DbContext(options)
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
+    public DbSet<IncomeRecord> Incomes => Set<IncomeRecord>();
     public DbSet<UserCategory> UserCategories => Set<UserCategory>();
     public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -52,6 +53,15 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.HasIndex(expense => new { expense.OwnerId, expense.Date });
             entity.HasOne(e => e.PaymentMethod).WithMany().HasForeignKey(e => new { e.OwnerId, e.PaymentMethodId })
                 .HasPrincipalKey(m => new { m.OwnerId, m.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<IncomeRecord>(entity =>
+        {
+            entity.HasKey(income => income.Id);
+            entity.Property(income => income.OwnerId).IsRequired();
+            entity.Property(income => income.Source).IsRequired().HasMaxLength(20);
+            entity.Property(income => income.Memo).IsRequired().HasMaxLength(100);
+            entity.HasIndex(income => new { income.OwnerId, income.Date });
         });
 
         modelBuilder.Entity<MonthlyBudget>(entity =>
