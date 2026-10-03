@@ -155,6 +155,25 @@ public static class ExpensesSchema
                     "Memo" TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS "IX_Incomes_OwnerId_Date" ON "Incomes" ("OwnerId", "Date");
+                CREATE TABLE IF NOT EXISTS "SavingsGoals" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_SavingsGoals" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "Name" TEXT NOT NULL,
+                    "TargetAmount" INTEGER NOT NULL,
+                    "TargetDate" TEXT NULL,
+                    "CreatedDate" TEXT NOT NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS "IX_SavingsGoals_OwnerId_Name" ON "SavingsGoals" ("OwnerId", "Name");
+                CREATE TABLE IF NOT EXISTS "SavingsDeposits" (
+                    "Id" INTEGER NOT NULL CONSTRAINT "PK_SavingsDeposits" PRIMARY KEY AUTOINCREMENT,
+                    "OwnerId" TEXT NOT NULL,
+                    "GoalId" INTEGER NOT NULL,
+                    "Date" TEXT NOT NULL,
+                    "Amount" INTEGER NOT NULL,
+                    "Memo" TEXT NOT NULL,
+                    CONSTRAINT "FK_SavingsDeposits_SavingsGoals_GoalId" FOREIGN KEY ("GoalId") REFERENCES "SavingsGoals" ("Id") ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS "IX_SavingsDeposits_OwnerId_GoalId" ON "SavingsDeposits" ("OwnerId", "GoalId");
                 CREATE TABLE IF NOT EXISTS "RecurringIncomeRules" (
                     "Id" INTEGER NOT NULL CONSTRAINT "PK_RecurringIncomeRules" PRIMARY KEY AUTOINCREMENT,
                     "OwnerId" TEXT NOT NULL,

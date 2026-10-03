@@ -6,8 +6,7 @@ namespace MyExpenses.Services;
 
 public sealed class RecurringIncomeService(IDbContextFactory<ExpensesDbContext> dbFactory)
 {
-    public static DateTime KoreanToday =>
-        TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Asia/Seoul").Date;
+    public static DateTime KoreanToday => KoreanClock.Today;
 
     public async Task<List<RecurringIncomeRule>> ListAsync(string ownerId, CancellationToken cancellationToken = default)
     {

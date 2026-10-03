@@ -1,0 +1,164 @@
+@page "/savings"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SavingsGoalService SavingsGoalService
+@inject ILogger<Savings> Logger
+
+<PageTitle>목표 저축 | MyExpenses</PageTitle>
+<main class="income-page">
+    <header>
+        <p class="kicker">SAVINGS GOALS</p>
+        <h1>목표 저축</h1>
+        <p>여행 자금, 비상금처럼 모으고 싶은 금액을 목표로 정하고 저축할 때마다 기록합니다. 저축은 수입·지출과 자동으로 연결되지 않으며, 직접 기록한 금액만 진행률에 반영됩니다.</p>
+        <a href="/income">← 수입 기록으로 돌아가기</a>
+    </header>
+    @if (error is not null) { <p class="error" role="alert">@error</p> }
+    @if (notice is not null) { <p class="notice" role="status">@notice</p> }
+
+    <section class="income-card" aria-labelledby="goal-form-title">
+        <h2 id="goal-form-title">@(editingId is null ? "새 목표 만들기" : "목표 수정")</h2>
+        <form @onsubmit="SaveGoalAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@busy">
+                <div class="goal-fields">
+                    <label>이름 <input type="text" maxlength="50" placeholder="예: 유럽 여행" @bind="goalName" required /></label>
+                    <label>목표 금액(원) <input type="number" min="1" step="1" @bind="goalTarget" required /></label>
+                    <label>목표일(선택) <input type="date" @bind="goalDate" /></label>
+                </div>
+                <div class="actions">
+                    <button type="submit">@(busy ? "처리 중..." : editingId is null ? "목표 만들기" : "변경 저장")</button>
+                    @if (editingId is not null) { <button type="button" class="secondary" @onclick="CancelEdit">취소</button> }
+                    @if (editingId is null && goalDate is not null) { <button type="button" class="secondary" @onclick="() => goalDate = null">목표일 지우기</button> }
+                </div>
+            </fieldset>
+        </form>
+        <p class="help">목표는 최대 @(SavingsGoalService.MaxGoals)개까지 만들 수 있습니다. 목표일을 정하면 월별 필요 저축액을 계산해 드려요.</p>
+    </section>
+
+    @if (loading) { <p>불러오는 중...</p> }
+    else
+    {
+        @if (goals.Count > 0)
+        {
+            <section class="income-card" aria-labelledby="overview-title">
+                <h2 id="overview-title">한눈에 보기</h2>
+                <div class="summary" role="status">
+                    <div><span>저축 합계</span><strong class="plus">@totalSaved.ToString("N0")원</strong></div>
+                    <div><span>목표 합계</span><strong>@totalTarget.ToString("N0")원</strong></div>
+                    <div><span>필요 월 저축액 합계</span><strong>@requiredTotal.ToString("N0")원</strong></div>
+                    <div><span>최근 3개월 월평균 순수지</span><strong class="@(averageNet < 0 ? "minus" : "plus")">@(averageNet is long net ? $"{(net < 0 ? "-" : "")}{Math.Abs(net):N0}원" : "-")</strong></div>
+                </div>
+                <p class="help">@OverviewMessage</p>
+            </section>
+        }
+
+        @if (goals.Count == 0)
+        {
+            <section class="income-card"><p class="help">아직 만든 목표가 없어요. 위에서 첫 목표를 만들어 보세요.</p></section>
+        }
+
+        @foreach (var item in goals)
+        {
+            var goal = item.Goal;
+            var progress = item.Progress;
+            <section class="income-card goal" @key="goal.Id" aria-label="@goal.Name">
+                <div class="income-row">
+                    <div>
+                        <h3>@goal.Name <span class="badge @StatusClass(progress)">@StatusText(progress)</span></h3>
+                        <p>저축 @progress.Saved.ToString("N0")원 / 목표 @goal.TargetAmount.ToString("N0")원 · <strong>@progress.Percent.ToString("0.#", CultureInfo.InvariantCulture)%</strong></p>
+                    </div>
+                    <div class="actions">
+                        <button type="button" class="secondary" @onclick="() => StartDeposit(goal.Id)" disabled="@busy">저축하기</button>
+                        <button type="button" class="secondary" @onclick="() => ToggleHistoryAsync(goal.Id)" disabled="@busy">내역</button>
+                        <button type="button" class="secondary" @onclick="() => StartEdit(goal)" disabled="@busy">수정</button>
+                        <button type="button" class="danger" @onclick="() => deletingGoalId = goal.Id" disabled="@busy">삭제</button>
+                    </div>
+                </div>
+                <div class="bar" role="progressbar" aria-label="@goal.Name 진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@progress.Percent.ToString("0.#", CultureInfo.InvariantCulture)">
+                    <div class="bar-fill @(progress.IsAchieved ? "done" : "")" style="width: @progress.Percent.ToString("0.#", CultureInfo.InvariantCulture)%"></div>
+                </div>
+                <ul class="facts">
+                    @if (!progress.IsAchieved)
+                    {
+                        <li>남은 금액 @progress.Remaining.ToString("N0")원</li>
+                    }
+                    @if (goal.TargetDate is DateTime due)
+                    {
+                        <li>목표일 @due.ToString("yyyy-MM-dd") · @DaysText(progress)</li>
+                        @if (progress.RequiredPerMonth is long required)
+                        {
+                            <li>@(progress.IsOverdue ? "기한이 지나 남은 금액 전체가 필요해요" : $"필요 월 저축액 {required:N0}원 (이번 달 포함 {progress.RemainingMonths}개월)")</li>
+                        }
+                    }
+                    @if (!progress.IsAchieved && progress.AverageMonthlyDeposit > 0)
+                    {
+                        @if (progress.ProjectedMonth is DateOnly projected)
+                        {
+                            <li>월평균 저축 @progress.AverageMonthlyDeposit.ToString("N0")원 · 이 속도면 @projected.ToString("yyyy년 M월") 달성 예상@(progress.ProjectedAfterTarget ? " (목표일보다 늦어요)" : "")</li>
+                        }
+                        else
+                        {
+                            <li>월평균 저축 @progress.AverageMonthlyDeposit.ToString("N0")원 · 현재 속도로는 달성 시점을 예상하기 어려워요</li>
+                        }
+                    }
+                </ul>
+
+                @if (depositGoalId == goal.Id)
+                {
+                    <form class="inline-form" @onsubmit="SaveDepositAsync" @onsubmit:preventDefault>
+                        <fieldset disabled="@busy">
+                            <div class="goal-fields">
+                                <label>저축한 날짜 <input type="date" @bind="depositDate" required /></label>
+                                <label>금액(원) <input type="number" min="1" step="1" @bind="depositAmount" required /></label>
+                                <label>메모(선택) <input type="text" maxlength="100" placeholder="예: 10월 저축" @bind="depositMemo" /></label>
+                            </div>
+                            <div class="actions">
+                                <button type="submit">저축 기록</button>
+                                <button type="button" class="secondary" @onclick="() => depositGoalId = null">취소</button>
+                            </div>
+                        </fieldset>
+                    </form>
+                }
+
+                @if (deletingGoalId == goal.Id)
+                {
+                    <div class="delete-confirm" role="alert">
+                        <p>‘@goal.Name’ 목표를 삭제할까요? 저축 내역도 함께 삭제되며 되돌릴 수 없습니다.</p>
+                        <div class="actions">
+                            <button type="button" class="danger" @onclick="() => DeleteGoalAsync(goal.Id)" disabled="@busy">목표 삭제</button>
+                            <button type="button" class="secondary" @onclick="() => deletingGoalId = null" disabled="@busy">취소</button>
+                        </div>
+                    </div>
+                }
+
+                @if (historyGoalId == goal.Id)
+                {
+                    <div class="history">
+                        <h4>저축 내역</h4>
+                        @if (deposits.Count == 0) { <p class="help">아직 저축 내역이 없어요.</p> }
+                        @foreach (var deposit in deposits)
+                        {
+                            <div class="history-row" @key="deposit.Id">
+                                <span>@deposit.Date.ToString("yyyy-MM-dd") · @deposit.Amount.ToString("N0")원@(deposit.Memo == "" ? "" : $" · {deposit.Memo}")</span>
+                                @if (deletingDepositId == deposit.Id)
+                                {
+                                    <span class="actions">
+                                        <button type="button" class="danger" @onclick="() => DeleteDepositAsync(deposit.Id)" disabled="@busy">삭제 확인</button>
+                                        <button type="button" class="secondary" @onclick="() => deletingDepositId = null" disabled="@busy">취소</button>
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="danger" @onclick="() => deletingDepositId = deposit.Id" disabled="@busy">삭제</button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    }
+</main>

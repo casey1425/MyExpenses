@@ -16,6 +16,7 @@ C#과 Blazor로 구현했으며, 사용자별 데이터는 SQLite에 저장됩�
 | 검색·필터 | 메모 검색, 월·카테고리·결제수단·날짜 범위·금액 범위 필터, 날짜·금액순 정렬 |
 | 예산 | 전체 월 예산과 카테고리별 월 예산, 사용률·남은 금액·초과 금액 |
 | 수입·순수지 | 수입 등록·수정·삭제(급여·부수입·용돈·이자·투자·기타), 월별 수입·지출·순수지·저축률, 6개월 수입·지출 추이, 수입 CSV 내보내기·가져오기 |
+| 목표 저축 | 목표 금액·목표일 설정, 직접 기록하는 저축 내역, 진행률·남은 금액·필요 월 저축액·예상 달성 시점, 최근 3개월 평균 순수지와 비교 |
 | 통계 | 조회 결과의 합계·건수·카테고리 비율, 6개월 지출 추이, 전월 비교, 결제수단별 월 합계 |
 | 카테고리 | 사용자별 추가·이름 변경·표시 순서 변경·보관·복원, 기존 데이터 유지 |
 | 입력 편의 | 즐겨찾기 지출 템플릿, 접속 시 도래한 월별 정기 지출·정기 수입 자동 생성 |
@@ -204,6 +205,19 @@ curl http://localhost:10000/healthz
 </details>
 
 <details>
+<summary>목표 저축</summary>
+
+로그인 후 **목표 저축** (`/savings`)에서 ‘유럽 여행’, ‘비상금’처럼 이름(1~50자)·목표 금액·목표일(선택)을 정해 목표를 만듭니다. 목표는 사용자당 최대 20개이며 같은 이름은 쓸 수 없습니다. 목표일은 만들 때 오늘 이후여야 하고, 이미 기한이 지난 목표는 목표일을 바꾸지 않는 한 이름·금액을 수정할 수 있습니다.
+
+저축은 **저축하기**로 날짜(오늘 이전)·금액·메모(선택)를 직접 기록합니다. 수입·지출과 자동으로 연결하지 않으므로 기록한 금액만 진행률에 반영되며, **내역**에서 잘못 기록한 저축을 삭제할 수 있습니다. 목표를 삭제하면 저축 내역도 함께 삭제됩니다.
+
+각 목표에는 저축 합계·진행률(달성 전에는 100%로 보이지 않도록 소수 첫째 자리에서 내림)·남은 금액이 표시됩니다. 목표일이 있으면 **필요 월 저축액**(남은 금액 ÷ 이번 달 포함 목표일이 속한 달까지의 개월 수, 올림)과 D-day를 보여 주고, 기한이 지나면 남은 금액 전체가 필요하다고 표시합니다. 첫 저축이 있는 달부터 이번 달까지의 월평균 저축액으로 **예상 달성 시점**을 계산하며 목표일보다 늦으면 알려 줍니다.
+
+‘한눈에 보기’는 모든 목표의 저축·목표 합계와 필요 월 저축액 합계를 **최근 3개월(이번 달 제외) 월평균 순수지**와 비교합니다. 순수지는 수입 기록과 지출 기록으로 계산하며, 기록이 없으면 비교하지 않습니다. 날짜는 한국 시간 기준이고 목표·저축은 CSV에 포함되지 않으며 계정 삭제 시 함께 삭제됩니다. 기존 DB는 시작 시 목표 저축 테이블만 추가합니다.
+
+</details>
+
+<details>
 <summary>정기 수입</summary>
 
 로그인 후 **정기 수입** (`/recurring-income`)에서 매월 지정일·금액·분류·메모를 등록하면 월급처럼 반복되는 수입을 자동으로 기록합니다. 동작 방식은 정기 지출과 같습니다. 등록한 달부터 적용되고 지정일이 이미 지났다면 즉시 기록하며, 지출 기록·월별 추이·수입 기록 화면에 접속할 때 지난 접속 이후 도래한 수입을 채웁니다. 같은 규칙·같은 달은 한 번만 처리하고 29~31일이 없는 달은 말일에 기록합니다. 날짜는 한국 시간 기준입니다.
@@ -299,6 +313,7 @@ MyExpenses/
 │       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
 │       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
 │       ├── Income.razor           # 수입 기록과 월별 순수지
+│       ├── Savings.razor          # 목표 저축과 저축 내역
 │       ├── Categories.razor       # 사용자별 카테고리 관리
 │       ├── Trends.razor           # 월별 수입·지출 추이와 전월 비교
 │       ├── Login.razor            # Google 로그인 화면
@@ -313,6 +328,7 @@ MyExpenses/
 │   ├── ExpenseTemplate.cs         # 템플릿 모델과 입력 검증
 │   ├── PaymentMethod.cs           # 결제수단 모델과 월별 합계 결과
 │   ├── IncomeRecord.cs            # 수입 모델과 월별 현금흐름 결과
+│   ├── SavingsGoal.cs             # 목표·저축 모델과 진행률 계산
 │   ├── MonthlyBudget.cs           # 전체 월 예산 모델
 │   ├── CategoryBudget.cs          # 카테고리별 월 예산 모델
 │   ├── RecurringExpenseRule.cs    # 정기 지출 규칙과 월별 처리 이력
@@ -336,6 +352,8 @@ MyExpenses/
 │   ├── ExpenseTemplateService.cs  # 사용자별 템플릿 조회·저장·삭제
 │   ├── PaymentMethodService.cs    # 결제수단 CRUD·소유자 검증·월별 집계
 │   ├── IncomeService.cs           # 수입 CRUD·소유자 검증·월별 순수지 집계
+│   ├── SavingsGoalService.cs      # 목표·저축 CRUD·소유자 검증·평균 순수지
+│   ├── KoreanClock.cs             # 한국 시간 기준 오늘 날짜
 │   ├── ExpenseTrendsService.cs    # 사용자별 추이 데이터 조회
 │   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
 │   ├── IncomeCsvImportService.cs  # 수입 CSV 중복 확인과 저장
@@ -353,6 +371,7 @@ MyExpenses/
 │   ├── CategoryChecks/           # 카테고리·기존 DB·통합·사용자 격리 검증
 │   ├── IncomeChecks/             # 수입 CRUD·순수지·월별 추이·CSV·사용자 격리 검증
 │   ├── RecurringIncomeChecks/    # 정기 수입 생성·소급 방지·말일 보정·사용자 격리 검증
+│   ├── SavingsGoalChecks/        # 목표 저축 계산·CRUD·사용자 격리·화면 로직 검증
 │   ├── TestSupport/              # 공통 DB·인증·컴포넌트 테스트 도구
 │   └── run-checks.sh             # 전체 빌드와 검증 실행
 ├── appsettings.json              # 공통 설정
@@ -384,6 +403,7 @@ dotnet run --project tests/ServiceChecks
 dotnet run --project tests/CategoryChecks
 dotnet run --project tests/IncomeChecks
 dotnet run --project tests/RecurringIncomeChecks
+dotnet run --project tests/SavingsGoalChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -395,6 +415,7 @@ dotnet run --project tests/RecurringIncomeChecks
 | CategoryChecks | 기존 DB 보완, 사용자 격리, 이름 일괄 변경, 순서·보관·복원, 지출·예산·템플릿·정기 지출·통계·CSV 연동, 계정 삭제 |
 | IncomeChecks | 수입 CRUD·입력 검증, 월 경계, 순수지·저축률, 월별 추이(오늘까지·소유자 격리), 차트 렌더링, 수입 CSV 내보내기·가져오기(중복·원자성), 기존 DB 업그레이드, 계정 삭제 |
 | RecurringIncomeChecks | 정기 수입 규칙 CRUD, 지정일 생성·누락 월 보충·중복 방지, 말일 보정, 중지·재시작 소급 방지, 사용자 격리, 입력 검증, 기존 DB 업그레이드, 계정 삭제 |
+| SavingsGoalChecks | 진행률(내림)·필요 월 저축액(올림)·기한 지남·예상 달성 시점 계산, 목표·저축 CRUD와 입력 검증, 사용자 격리, 목표 삭제 연쇄, 평균 순수지, 화면 로직, 기존 DB 업그레이드, 계정 삭제 |
 
 검증은 외부 테스트 프레임워크 없이 실행하는 콘솔 프로그램입니다. **메모리 SQLite만 사용하므로 실제 사용자 데이터를 변경하지 않습니다.** 실패 시 오류와 0이 아닌 종료 코드를 반환하며, 공통 도구는 `tests/TestSupport/`에서 관리합니다.
 

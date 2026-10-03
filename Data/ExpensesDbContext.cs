@@ -6,6 +6,8 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
     public DbSet<IncomeRecord> Incomes => Set<IncomeRecord>();
+    public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
+    public DbSet<SavingsDeposit> SavingsDeposits => Set<SavingsDeposit>();
     public DbSet<UserCategory> UserCategories => Set<UserCategory>();
     public DbSet<ExpenseTemplate> ExpenseTemplates => Set<ExpenseTemplate>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
@@ -64,6 +66,23 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.Property(income => income.Source).IsRequired().HasMaxLength(20);
             entity.Property(income => income.Memo).IsRequired().HasMaxLength(100);
             entity.HasIndex(income => new { income.OwnerId, income.Date });
+        });
+
+        modelBuilder.Entity<SavingsGoal>(entity =>
+        {
+            entity.HasKey(goal => goal.Id);
+            entity.Property(goal => goal.OwnerId).IsRequired();
+            entity.Property(goal => goal.Name).IsRequired().HasMaxLength(50);
+            entity.HasIndex(goal => new { goal.OwnerId, goal.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<SavingsDeposit>(entity =>
+        {
+            entity.HasKey(deposit => deposit.Id);
+            entity.Property(deposit => deposit.OwnerId).IsRequired();
+            entity.Property(deposit => deposit.Memo).IsRequired().HasMaxLength(100);
+            entity.HasIndex(deposit => new { deposit.OwnerId, deposit.GoalId });
+            entity.HasOne<SavingsGoal>().WithMany().HasForeignKey(deposit => deposit.GoalId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<MonthlyBudget>(entity =>
