@@ -10,13 +10,13 @@
 @inject RecurringExpenseService RecurringExpenseService
 @inject ILogger<Trends> Logger
 
-<PageTitle>월별 지출 추이 | MyExpenses</PageTitle>
+<PageTitle>월별 수입·지출 추이 | MyExpenses</PageTitle>
 
 <main class="trends-page">
     <header class="trends-heading">
         <p class="kicker">SPENDING TRENDS</p>
-        <h1>월별 지출 추이</h1>
-        <p>월별 흐름과 전월 대비 변화를 확인해 보세요.</p>
+        <h1>월별 수입·지출 추이</h1>
+        <p>월별 수입·지출 흐름과 전월 대비 변화를 확인해 보세요.</p>
     </header>
 
     <div class="month-controls">
@@ -69,6 +69,36 @@
             <p class="period-note">@report.Months[0].Month.ToString("yyyy년 M월") ~ @report.Month.ToString("yyyy년 M월") · @(report.IsCurrentMonth ? "이번 달은 오늘까지의 합계" : "각 월 전체 합계")</p>
             <ExpenseTrendChart Months="report.Months" />
         </section>
+
+        @if (report.CashflowMonths is { Count: > 0 } cashflow)
+        {
+            var selected = cashflow[^1];
+            <section class="trend-panel" aria-labelledby="cashflow-title">
+                <h2 id="cashflow-title">수입·지출·순수지</h2>
+                <p class="period-note">@Period(report.Month, report.CurrentEnd)의 수입과 지출을 비교합니다. 순수지는 수입에서 지출을 뺀 금액이고, 저축률은 순수지를 수입으로 나눈 값입니다.</p>
+                <div class="cashflow-cards">
+                    <div class="comparison-card">
+                        <span>수입 · @(selected.IncomeCount)건</span>
+                        <strong class="income-text">@selected.Income.ToString("N0")<small>원</small></strong>
+                    </div>
+                    <div class="comparison-card">
+                        <span>지출</span>
+                        <strong>@selected.Expense.ToString("N0")<small>원</small></strong>
+                    </div>
+                    <div class="comparison-card @(selected.Net < 0 ? "increase" : "decrease")">
+                        <span>순수지</span>
+                        <strong>@(selected.Net < 0 ? "-" : "")@Math.Abs(selected.Net).ToString("N0")<small>원</small></strong>
+                    </div>
+                    <div class="comparison-card">
+                        <span>저축률</span>
+                        <strong>@(selected.SavingsRate is double rate ? $"{rate.ToString("0.#", CultureInfo.InvariantCulture)}%" : "-")</strong>
+                    </div>
+                </div>
+                <h3 class="cashflow-chart-title">6개월 수입·지출 추이</h3>
+                <CashflowChart Months="cashflow" />
+                <p class="comparison-help">수입은 <a href="/income">수입 기록</a>에서 등록합니다. 수입이 없는 달은 저축률을 표시하지 않습니다.</p>
+            </section>
+        }
 
         <section class="trend-panel" aria-labelledby="category-comparison-title">
             <h2 id="category-comparison-title">카테고리별 전월 비교</h2>

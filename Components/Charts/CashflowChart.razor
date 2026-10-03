@@ -1,0 +1,87 @@
+@using System.Globalization
+@using MyExpenses.Data
+
+@if (Months.All(month => month.Income == 0 && month.Expense == 0))
+{
+    <p class="chart-empty">이 기간에 기록된 수입과 지출이 없습니다. <a href="/income">수입을 기록</a>하면 월별 순수지를 볼 수 있어요.</p>
+}
+else
+{
+    <div class="chart-viewport" tabindex="0" aria-label="6개월 수입과 지출 그래프. 좁은 화면에서는 좌우로 스크롤할 수 있습니다.">
+    <svg class="trend-chart" viewBox="0 0 840 320" role="img" aria-labelledby="@titleId @descriptionId">
+        <title id="@titleId">6개월 월별 수입과 지출 합계</title>
+        <desc id="@descriptionId">@ChartDescription</desc>
+        <rect class="income-bar" x="560" y="8" width="14" height="14" rx="3" />
+        <text class="chart-month" x="580" y="20">수입</text>
+        <rect class="expense-bar" x="640" y="8" width="14" height="14" rx="3" />
+        <text class="chart-month" x="660" y="20">지출</text>
+        <line class="chart-grid" x1="45" y1="60" x2="820" y2="60" />
+        <line class="chart-grid" x1="45" y1="150" x2="820" y2="150" />
+        <line class="chart-baseline" x1="45" y1="240" x2="820" y2="240" />
+        @for (var index = 0; index < Months.Count; index++)
+        {
+            var point = Months[index];
+            var slot = 55 + index * 125;
+            var incomeHeight = Maximum > 0 ? point.Income / Maximum * 180 : 0;
+            var expenseHeight = Maximum > 0 ? point.Expense / Maximum * 180 : 0;
+            <g>
+                <rect class="income-bar" x="@Number(slot)" y="@Number(240 - incomeHeight)" width="40" height="@Number(incomeHeight)" rx="4">
+                    <title>@point.Month.ToString("yyyy년 M월") 수입: @point.Income.ToString("N0")원 · @(point.IncomeCount)건</title>
+                </rect>
+                <rect class="expense-bar" x="@Number(slot + 44)" y="@Number(240 - expenseHeight)" width="40" height="@Number(expenseHeight)" rx="4">
+                    <title>@point.Month.ToString("yyyy년 M월") 지출: @point.Expense.ToString("N0")원</title>
+                </rect>
+                <text class="chart-month" x="@Number(slot + 42)" y="262" text-anchor="middle">@point.Month.ToString("yy.MM")</text>
+                <text class="@(point.Net < 0 ? "net-negative" : "net-positive")" x="@Number(slot + 42)" y="284" text-anchor="middle">순 @SignedShort(point.Net)</text>
+                @if (point.IsPartial)
+                {
+                    <g><text class="chart-partial" x="@Number(slot + 42)" y="304" text-anchor="middle">오늘까지</text></g>
+                }
+            </g>
+        }
+    </svg>
+    </div>
+}
+
+<details class="chart-details">
+    <summary>월별 수입·지출·순수지 보기</summary>
+    <div class="chart-table-wrap">
+        <table>
+            <caption class="visually-hidden">그래프에 표시된 월별 수입, 지출, 순수지</caption>
+            <thead><tr><th scope="col">월</th><th scope="col">수입</th><th scope="col">지출</th><th scope="col">순수지</th><th scope="col">저축률</th></tr></thead>
+            <tbody>
+                @foreach (var point in Months)
+                {
+                    <tr>
+                        <th scope="row">@point.Month.ToString("yyyy.MM")@(point.IsPartial ? " (오늘까지)" : "")</th>
+                        <td>@point.Income.ToString("N0")원</td>
+                        <td>@point.Expense.ToString("N0")원</td>
+                        <td class="@(point.Net < 0 ? "net-negative" : "net-positive")">@(point.Net < 0 ? "-" : "")@Math.Abs(point.Net).ToString("N0")원</td>
+                        <td>@(point.SavingsRate is double rate ? $"{rate.ToString("0.#", CultureInfo.InvariantCulture)}%" : "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<MonthlyCashflowPoint> Months { get; set; } = [];
+    private readonly string titleId = $"cashflow-title-{Guid.NewGuid():N}";
+    private readonly string descriptionId = $"cashflow-description-{Guid.NewGuid():N}";
+    private decimal Maximum => Months.Count > 0 ? Months.Max(month => Math.Max(month.Income, month.Expense)) : 0;
+    private string ChartDescription => string.Join("; ", Months.Select(month =>
+        $"{month.Month:yyyy년 M월} 수입 {month.Income:N0}원, 지출 {month.Expense:N0}원, 순수지 {month.Net:N0}원{(month.IsPartial ? " (오늘까지)" : "")}"));
+    private static string Number(decimal value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+    private static string SignedShort(decimal amount)
+    {
+        var sign = amount < 0 ? "-" : amount > 0 ? "+" : "";
+        var abs = Math.Abs(amount);
+        return sign + abs switch
+        {
+            >= 100_000_000 => $"{abs / 100_000_000:0.#}억",
+            >= 10_000 => $"{abs / 10_000:0.#}만",
+            _ => $"{abs:N0}원"
+        };
+    }
+}

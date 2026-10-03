@@ -1,0 +1,119 @@
+@page "/income/import"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using System.Text
+@using Microsoft.AspNetCore.Components.Forms
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IncomeCsvImportService ImportService
+@inject ILogger<ImportIncome> Logger
+
+<PageTitle>수입 CSV 가져오기 | MyExpenses</PageTitle>
+
+<main class="import-page">
+    <header class="import-heading">
+        <p class="import-kicker">IMPORT INCOME</p>
+        <h1>수입 CSV 가져오기</h1>
+        <p>MyExpenses에서 내보낸 수입 CSV 파일을 현재 로그인한 계정에 가져옵니다.</p>
+    </header>
+
+    <section class="import-card" aria-labelledby="upload-title">
+        <h2 id="upload-title">파일 선택</h2>
+        <p>최대 1MB, 수입 1,000건까지 지원합니다. 파일을 선택해도 바로 저장되지는 않습니다.</p>
+        <InputFile @key="fileInputVersion" OnChange="ReadFileAsync" accept=".csv,text/csv"
+                   disabled="@(isReading || isSaving)" aria-label="수입 CSV 파일 선택" />
+        <p class="format-hint">첫 줄: <code>@IncomeCsvExporter.HeaderLine</code></p>
+        <p class="format-hint">분류는 @string.Join(" · ", IncomeRecord.Sources) 중 하나여야 합니다.</p>
+        <p class="format-hint">지출 CSV는 <a href="/import">CSV 가져오기</a>에서 가져오세요. <a href="/income">← 수입 기록으로 돌아가기</a></p>
+    </section>
+
+    @if (isReading)
+    {
+        <p class="import-status" role="status">파일을 확인하고 있습니다...</p>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="import-error" role="alert">@errorMessage</p>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="import-success" role="status">
+            <p>@successMessage</p>
+            <a href="/income">수입 기록 보기</a>
+        </div>
+    }
+
+    @if (parseResult is not null)
+    {
+        <section class="import-card" aria-labelledby="preview-title">
+            <h2 id="preview-title">가져오기 미리보기</h2>
+            <p class="import-counts">
+                유효한 수입 @(candidates.Count)건 · 중복 후보 @(DuplicateCount)건 · 오류 @(parseResult.Issues.Count)건
+            </p>
+
+            @if (parseResult.Issues.Count > 0)
+            {
+                <div class="import-issues" role="alert">
+                    <strong>오류를 수정한 뒤 파일을 다시 선택해 주세요. 오류가 있으면 저장할 수 없습니다.</strong>
+                    <ul>
+                        @foreach (var issue in parseResult.Issues.Take(10))
+                        {
+                            <li>@(issue.RowNumber)번째 행: @issue.Message</li>
+                        }
+                    </ul>
+                    @if (parseResult.Issues.Count > 10)
+                    {
+                        <p>그 밖에 @(parseResult.Issues.Count - 10)건의 오류가 있습니다.</p>
+                    }
+                </div>
+            }
+
+            @if (candidates.Count > 0)
+            {
+                <div class="import-table-wrap">
+                    <table class="import-table">
+                        <thead>
+                            <tr><th>행</th><th>날짜</th><th>금액</th><th>분류</th><th>메모</th><th>상태</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var candidate in candidates.Take(20))
+                            {
+                                <tr>
+                                    <td>@candidate.Row.RowNumber</td>
+                                    <td>@candidate.Row.Date.ToString("yyyy-MM-dd")</td>
+                                    <td>@candidate.Row.Amount.ToString("N0")원</td>
+                                    <td>@candidate.Row.Source</td>
+                                    <td class="import-memo">@candidate.Row.Memo</td>
+                                    <td>@(candidate.IsDuplicate ? "중복 후보" : "새 기록")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (candidates.Count > 20)
+                {
+                    <p class="format-hint">처음 20건만 표시합니다. 나머지 @(candidates.Count - 20)건도 저장 대상에 포함됩니다.</p>
+                }
+
+                @if (DuplicateCount > 0)
+                {
+                    <label class="duplicate-option">
+                        <input type="checkbox" @bind="includeDuplicates" />
+                        중복 후보도 가져오기
+                    </label>
+                    <p class="format-hint">날짜·금액·분류·메모가 모두 같으면 중복 후보입니다. 실제로 별개인 수입도 해당될 수 있습니다.</p>
+                }
+
+                <div class="import-actions">
+                    <button type="button" @onclick="SaveAsync"
+                            disabled="@(isSaving || isReading || parseResult.Issues.Count > 0 || (!includeDuplicates && candidates.Count == DuplicateCount))">
+                        @(isSaving ? "저장 중..." : includeDuplicates ? $"{candidates.Count:N0}건 가져오기" : $"{candidates.Count - DuplicateCount:N0}건 가져오기")
+                    </button>
+                </div>
+            }
+        </section>
+    }
+</main>

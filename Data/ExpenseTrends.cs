@@ -9,12 +9,21 @@ public sealed record ExpenseMonthComparison(decimal CurrentAmount, decimal Previ
     public decimal? PercentageChange => PreviousAmount > 0 ? Difference / PreviousAmount * 100 : null;
 }
 
+public sealed record MonthlyCashflowPoint(DateOnly Month, decimal Income, decimal Expense, int IncomeCount, bool IsPartial)
+{
+    public decimal Net => Income - Expense;
+
+    // 수입이 없으면 저축률을 계산할 수 없으므로 null입니다.
+    public double? SavingsRate => Income > 0 ? Math.Round((double)(Net * 100 / Income), 1) : null;
+}
+
 public sealed record CategoryMonthComparison(string Category, ExpenseMonthComparison Comparison);
 
 public sealed record ExpenseTrendsReport(DateOnly Month, DateOnly CurrentEnd,
     DateOnly PreviousMonth, DateOnly PreviousEnd, bool IsCurrentMonth,
     IReadOnlyList<MonthlyExpenseTotal> Months, ExpenseMonthComparison Comparison,
-    IReadOnlyList<CategoryMonthComparison> Categories);
+    IReadOnlyList<CategoryMonthComparison> Categories,
+    IReadOnlyList<MonthlyCashflowPoint>? CashflowMonths = null);
 
 public static class ExpenseTrends
 {
@@ -22,7 +31,8 @@ public static class ExpenseTrends
 
     public static DateOnly MonthStart(DateOnly date) => new(date.Year, date.Month, 1);
 
-    public static ExpenseTrendsReport Calculate(IEnumerable<ExpenseRecord> expenses, DateOnly month, DateOnly today, IReadOnlyList<string>? categories = null)
+    public static ExpenseTrendsReport Calculate(IEnumerable<ExpenseRecord> expenses, DateOnly month, DateOnly today, IReadOnlyList<string>? categories = null,
+        IEnumerable<IncomeRecord>? incomes = null)
     {
         month = MonthStart(month);
         if (month < MinimumMonth || month > MonthStart(today))
@@ -57,8 +67,24 @@ public static class ExpenseTrends
             Compare(current.Where(item => item.Category == category), previous.Where(item => item.Category == category))))
             .ToList();
 
+        // 수입 목록이 주어졌을 때만 같은 6개월 구간의 수입·순수지를 계산합니다.
+        IReadOnlyList<MonthlyCashflowPoint>? cashflow = null;
+        if (incomes is not null)
+        {
+            var incomeByMonth = incomes
+                .Where(item => DateOnly.FromDateTime(item.Date) >= firstMonth &&
+                               DateOnly.FromDateTime(item.Date) <= currentEnd)
+                .GroupBy(item => MonthStart(DateOnly.FromDateTime(item.Date)))
+                .ToDictionary(group => group.Key, group => (Amount: group.Sum(item => (decimal)item.Amount), Count: group.Count()));
+            cashflow = months.Select(point =>
+            {
+                var income = incomeByMonth.GetValueOrDefault(point.Month);
+                return new MonthlyCashflowPoint(point.Month, income.Amount, point.Amount, income.Count, point.IsPartial);
+            }).ToList();
+        }
+
         return new ExpenseTrendsReport(month, currentEnd, previousMonth, previousEnd,
-            isCurrentMonth, months, Compare(current, previous), comparisons);
+            isCurrentMonth, months, Compare(current, previous), comparisons, cashflow);
     }
 
     private static DateOnly MonthEnd(DateOnly month) =>

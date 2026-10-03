@@ -22,6 +22,9 @@ h2 { margin: 0; font-size: 1.2rem; font-weight: 750; }
 .increase, .increase strong { color: #b34850; }
 .decrease, .decrease strong { color: #287452; }
 .unchanged { color: #63758d; }
+.cashflow-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .85rem; margin-bottom: 1.25rem; }
+.cashflow-chart-title { margin: 0 0 .6rem; font-size: 1rem; font-weight: 700; }
+.income-text { color: #287452; }
 .comparison-table-wrap { overflow-x: auto; }
 .comparison-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 .comparison-table th, .comparison-table td { padding: .85rem .7rem; text-align: right; border-bottom: 1px solid #e4eaf2; white-space: nowrap; }
@@ -29,4 +32,4 @@ h2 { margin: 0; font-size: 1.2rem; font-weight: 750; }
 .comparison-table thead { background: #f8fafc; color: #40516a; }
 .error { padding: .8rem 1rem; border-radius: 8px; background: #fff2f2; color: #a34242; }
 .loading { color: #64748b; }
-@media (max-width: 800px) { .comparison-cards { grid-template-columns: 1fr; } .trend-panel { padding: 1rem; } }
+@media (max-width: 800px) { .comparison-cards, .cashflow-cards { grid-template-columns: 1fr; } .trend-panel { padding: 1rem; } }

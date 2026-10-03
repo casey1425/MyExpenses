@@ -139,3 +139,7 @@
         grid-template-columns: 1fr;
     }
 }
+
+.account-export-link + .account-export-link {
+    margin-left: .5rem;
+}

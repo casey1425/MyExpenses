@@ -14,6 +14,7 @@ button.danger { background: #fff3f3; color: #a34242; border-color: #efcccc; }
 button:disabled { opacity: .55; cursor: wait; }
 .actions, .month-selector { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
 .month-selector { margin-bottom: .75rem; }
+.csv-links { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .75rem; font-size: .88rem; }
 .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin: .5rem 0; }
 .summary div { background: #f6f8fc; border-radius: 12px; padding: .85rem; display: flex; flex-direction: column; gap: .25rem; }
 .summary span { color: #64748b; font-size: .8rem; }

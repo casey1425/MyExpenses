@@ -1,0 +1,68 @@
+.import-page {
+    width: min(100%, 950px);
+    margin: 0 auto;
+    padding: 2rem 0 3rem;
+}
+
+.import-heading { margin-bottom: 1.5rem; }
+.import-kicker {
+    margin: 0 0 .45rem;
+    color: #537cbb;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .15em;
+}
+.import-heading h1 { margin: 0; color: #172033; font-size: clamp(2rem, 5vw, 2.65rem); }
+.import-heading > p:last-child { margin: .7rem 0 0; color: #68758c; }
+.import-card {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #e3e8f0;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(31, 52, 82, .06);
+}
+.import-card h2 { margin: 0 0 .65rem; color: #263247; font-size: 1.2rem; }
+.import-card > p { color: #68758c; line-height: 1.5; }
+.import-card input[type="file"] { display: block; max-width: 100%; margin: 1.1rem 0; }
+.format-hint { margin: .45rem 0; color: #788397; font-size: .82rem; }
+.format-hint code { overflow-wrap: anywhere; }
+.import-status, .import-error, .import-success {
+    margin: 1rem 0;
+    padding: .85rem 1rem;
+    border-radius: 10px;
+}
+.import-status { background: #edf4fb; color: #285889; }
+.import-error, .import-issues { background: #fff0ef; color: #a3241b; }
+.import-success { background: #ecf8f0; color: #1c6840; }
+.import-success p { margin: 0 0 .4rem; }
+.import-success a { color: inherit; font-weight: 700; }
+.import-counts { font-weight: 700; }
+.import-issues { padding: 1rem; border-radius: 10px; font-size: .88rem; }
+.import-issues ul { margin: .6rem 0 0; padding-left: 1.5rem; }
+.import-issues p { margin-bottom: 0; }
+.import-table-wrap { overflow-x: auto; margin: 1rem 0; }
+.import-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+.import-table th, .import-table td { padding: .6rem .5rem; border-bottom: 1px solid #e5eaf1; text-align: left; }
+.import-table th { color: #57677d; white-space: nowrap; }
+.import-table td { white-space: nowrap; }
+.import-table .import-memo { min-width: 180px; max-width: 260px; overflow-wrap: anywhere; white-space: normal; }
+.duplicate-option { display: flex; align-items: center; gap: .55rem; margin: 1rem 0 .35rem; font-weight: 700; }
+.import-actions { display: flex; justify-content: flex-end; margin-top: 1.3rem; }
+.import-actions button {
+    min-height: 42px;
+    padding: .55rem 1rem;
+    border: 0;
+    border-radius: 9px;
+    background: #285889;
+    color: #fff;
+    font-weight: 700;
+}
+.import-actions button:hover:not(:disabled) { background: #1b426e; }
+.import-actions button:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+    .import-page { padding-top: 1rem; }
+    .import-card { padding: 1.1rem; }
+    .import-actions button { width: 100%; }
+}

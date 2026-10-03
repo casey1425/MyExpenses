@@ -46,6 +46,11 @@
             <input id="income-month" type="month" value="@monthInput" @onchange="MonthChangedAsync" disabled="@busy" />
             <button type="button" class="secondary" @onclick="RefreshAsync" disabled="@busy">새로고침</button>
         </div>
+        <div class="csv-links" aria-label="수입 CSV">
+            <a href="/export/income.csv?month=@monthInput">선택한 달 CSV</a>
+            <a href="/export/income.csv">전체 수입 CSV</a>
+            <a href="/income/import">CSV 가져오기</a>
+        </div>
         @if (loading) { <p>불러오는 중...</p> }
         else
         {

@@ -23,8 +23,13 @@ public static class ExpenseCsvExporter
                 .Append("\r\n");
         }
 
-        // The BOM helps spreadsheet apps recognize Korean text as UTF-8.
-        var contents = Encoding.UTF8.GetBytes(csv.ToString());
+        return Utf8WithBom(csv.ToString());
+    }
+
+    // The BOM helps spreadsheet apps recognize Korean text as UTF-8.
+    internal static byte[] Utf8WithBom(string text)
+    {
+        var contents = Encoding.UTF8.GetBytes(text);
         var preamble = Encoding.UTF8.GetPreamble();
         var result = new byte[preamble.Length + contents.Length];
         preamble.CopyTo(result, 0);
@@ -32,7 +37,7 @@ public static class ExpenseCsvExporter
         return result;
     }
 
-    private static string EscapeText(string? value)
+    internal static string EscapeText(string? value)
     {
         value ??= string.Empty;
 

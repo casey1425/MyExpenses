@@ -19,6 +19,15 @@ public sealed class IncomeService(IDbContextFactory<ExpensesDbContext> dbFactory
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<IncomeRecord>> ListAllAsync(string ownerId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        return await db.Incomes.AsNoTracking().Where(i => i.OwnerId == ownerId)
+            .OrderByDescending(i => i.Date).ThenByDescending(i => i.Id)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IncomeRecord> AddAsync(string ownerId, IncomeInput input, CancellationToken cancellationToken = default)
     {
         Validate(ownerId, input);

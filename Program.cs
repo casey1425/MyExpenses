@@ -76,6 +76,7 @@ builder.Services.AddScoped<ExpenseTemplateService>();
 builder.Services.AddScoped<PaymentMethodService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<IncomeService>();
+builder.Services.AddScoped<IncomeCsvImportService>();
 builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<CategoryService>();
 
@@ -147,5 +148,6 @@ app.MapRazorComponents<App>()
 app.MapAccountEndpoints();
 app.MapGet("/healthz", () => Results.Text("Healthy", "text/plain")).AllowAnonymous();
 app.MapExpenseExportEndpoints();
+app.MapIncomeExportEndpoints();
 
 app.Run();

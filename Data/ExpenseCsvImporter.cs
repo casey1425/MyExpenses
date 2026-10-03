@@ -115,7 +115,7 @@ public static class ExpenseCsvImporter
         return new ExpenseCsvParseResult(rows, issues);
     }
 
-    private static string RemoveExportProtection(string value)
+    internal static string RemoveExportProtection(string value)
     {
         if (value.Length > 1 && value[0] == '\t' &&
             value[1..].TrimStart().FirstOrDefault() is '=' or '+' or '-' or '@')
