@@ -1,0 +1,71 @@
+@using MyExpenses.Data
+
+<form class="filter-form" @onsubmit="() => OnApply.InvokeAsync()" @onsubmit:preventDefault>
+    <div class="filter-field">
+        <label for="filter-month">월</label>
+        <input id="filter-month" type="month" value="@Input.Month" @onchange="e => Input.Month = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-category">카테고리</label>
+        <select id="filter-category" @bind="Input.Category">
+            <option value="">전체 카테고리</option>
+            @foreach (var option in Categories)
+            {
+                <option value="@option">@CategoryLabel(option)</option>
+            }
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="filter-search">메모 검색</label>
+        <input id="filter-search" type="search" maxlength="100" placeholder="예: 커피, 택시" @bind="Input.Search" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-start">시작일</label>
+        <input id="filter-start" type="date" value="@Input.StartDate" @onchange="e => Input.StartDate = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-end">종료일</label>
+        <input id="filter-end" type="date" value="@Input.EndDate" @onchange="e => Input.EndDate = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-min">최소 금액 (원)</label>
+        <input id="filter-min" type="number" min="0" step="1" placeholder="제한 없음" @bind="Input.MinAmount" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-max">최대 금액 (원)</label>
+        <input id="filter-max" type="number" min="0" step="1" placeholder="제한 없음" @bind="Input.MaxAmount" />
+    </div>
+    <div class="filter-field">
+        <label for="filter-sort">정렬</label>
+        <select id="filter-sort" @bind="Input.Sort">
+            <option value="Newest">최신순</option>
+            <option value="Oldest">오래된순</option>
+            <option value="HighestAmount">금액 높은순</option>
+            <option value="LowestAmount">금액 낮은순</option>
+        </select>
+    </div>
+    <div class="filter-field">
+        <label for="filter-payment">결제수단</label>
+        <select id="filter-payment" @bind="Input.PaymentMethod">
+            <option value="">전체 결제수단</option>
+            <option value="none">미지정</option>
+            @foreach (var method in PaymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+        </select>
+    </div>
+    <p class="filter-help">입력한 조건을 모두 만족하는 기록을 조회합니다. 종료일과 금액 경계값도 포함합니다.</p>
+    <div class="filter-buttons">
+        <button type="submit" class="filter-apply" disabled="@IsSearching">@(IsSearching ? "조회 중..." : "조회")</button>
+        <button type="button" class="filter-reset" @onclick="() => OnReset.InvokeAsync()" disabled="@IsSearching">초기화</button>
+    </div>
+</form>
+
+@code {
+    // 입력 중인 조건은 부모와 같은 객체를 직접 수정합니다.
+    [Parameter, EditorRequired] public ExpenseSearchInput Input { get; set; } = new();
+    [Parameter] public IReadOnlyList<string> Categories { get; set; } = [];
+    [Parameter] public Func<string, string> CategoryLabel { get; set; } = value => value;
+    [Parameter] public List<PaymentMethod> PaymentMethods { get; set; } = [];
+    [Parameter] public bool IsSearching { get; set; }
+    [Parameter] public EventCallback OnApply { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+}

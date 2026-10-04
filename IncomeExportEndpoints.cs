@@ -41,7 +41,7 @@ public static class IncomeExportEndpoints
             return Results.BadRequest("내보낼 월을 yyyy-MM 형식으로 입력해 주세요.");
         }
 
-        var fileName = $"MyExpenses-income-{scope}-{DateTime.Today:yyyy-MM-dd}.csv";
+        var fileName = $"MyExpenses-income-{scope}-{KoreanClock.Today:yyyy-MM-dd}.csv";
         return Results.File(IncomeCsvExporter.Create(incomes), "text/csv; charset=utf-8", fileName);
     }
 }

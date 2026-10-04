@@ -16,7 +16,7 @@ public partial class Home
     private string ownerId = string.Empty;
     private List<ExpenseRecord> expenses = [];
     private IReadOnlyList<CategoryStatistic> categoryStatistics = [];
-    private DateTime expenseDate = DateTime.Today;
+    private DateTime expenseDate = KoreanClock.Today;
     private long amount;
     private string category = "식비";
     private string memo = string.Empty;
@@ -38,8 +38,8 @@ public partial class Home
     private ExpenseSearchInput searchInput = new();
     private bool isSearching;
     private ExpenseFilter activeFilter = new();
-    private DateTime budgetMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
-    private string budgetMonthInput = DateTime.Today.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private DateTime budgetMonth = new(KoreanClock.Today.Year, KoreanClock.Today.Month, 1);
+    private string budgetMonthInput = KoreanClock.Today.ToString("yyyy-MM", CultureInfo.InvariantCulture);
     private long budgetInput;
     private long? budgetAmount;
     private long budgetSpent;
@@ -55,7 +55,7 @@ public partial class Home
     private bool showDeleteAllConfirmation;
     private bool isDeletingAll;
     private int? editingId;
-    private DateTime editDate = DateTime.Today;
+    private DateTime editDate = KoreanClock.Today;
     private long editAmount;
     private string editCategory = "식비";
     private string editMemo = string.Empty;
@@ -63,24 +63,14 @@ public partial class Home
     private bool isSavingEdit;
     private decimal FilteredTotal => expenses.Sum(item => (decimal)item.Amount);
     private decimal MonthlyTotal => expenses
-        .Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month)
+        .Where(item => item.Date.Year == KoreanClock.Today.Year && item.Date.Month == KoreanClock.Today.Month)
         .Sum(item => (decimal)item.Amount);
     private decimal StatisticsTotal => categoryStatistics.Sum(statistic => statistic.Amount);
-    private decimal BudgetPercentage => budgetAmount is > 0 ? (decimal)budgetSpent / budgetAmount.Value * 100 : 0;
-    private string BudgetBarWidth => Math.Min(BudgetPercentage, 100).ToString("0.#", CultureInfo.InvariantCulture);
-    private long CategoryBudgetSpent(string selectedCategory) => categoryBudgetSpent.GetValueOrDefault(selectedCategory);
     private long? CategoryBudgetAmount(string selectedCategory) =>
         categoryBudgetAmounts.TryGetValue(selectedCategory, out var value) ? value : null;
-    private decimal CategoryBudgetPercentage(string selectedCategory)
-    {
-        var limit = CategoryBudgetAmount(selectedCategory);
-        return limit is > 0 ? (decimal)CategoryBudgetSpent(selectedCategory) / limit.Value * 100 : 0;
-    }
-    private string CategoryBudgetBarWidth(string selectedCategory) =>
-        Math.Min(CategoryBudgetPercentage(selectedCategory), 100).ToString("0.#", CultureInfo.InvariantCulture);
     private string StatisticsPeriodLabel => activeFilter.IsActive
         ? FilterDescription
-        : $"{DateTime.Today:yyyy년 M월} 기준";
+        : $"{KoreanClock.Today:yyyy년 M월} 기준";
     private string FilterDescription
     {
         get
@@ -139,7 +129,7 @@ public partial class Home
         try
         {
             await LoadCategoriesAsync();
-            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await RecurringExpenseService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await GenerateRecurringIncomeAsync();
             await LoadExpensesAsync();
         }
@@ -177,7 +167,7 @@ public partial class Home
     {
         try
         {
-            await RecurringIncomeService.GenerateDueAsync(ownerId, RecurringIncomeService.KoreanToday);
+            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanClock.Today);
         }
         catch (Exception ex)
         {

@@ -9,7 +9,7 @@ public partial class Recurring
     private IReadOnlyList<string> categories = [];
     private string ownerId = string.Empty;
     private List<RecurringExpenseRule> rules = [];
-    private int dayOfMonth = DateTime.Today.Day;
+    private int dayOfMonth = KoreanClock.Today.Day;
     private long amount;
     private string category = "생활";
     private string memo = string.Empty;
@@ -32,7 +32,7 @@ public partial class Recurring
 
         try
         {
-            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await RecurringExpenseService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
         }
         catch (Exception ex)
@@ -77,7 +77,7 @@ public partial class Recurring
         try
         {
             await RecurringExpenseService.CreateAsync(ownerId, dayOfMonth, amount, category, memo);
-            var generated = await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            var generated = await RecurringExpenseService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
             amount = 0;
             memo = string.Empty;
@@ -116,7 +116,7 @@ public partial class Recurring
         {
             if (!await RecurringExpenseService.UpdateAsync(ownerId, id, editDay, editAmount, editCategory, editMemo))
                 throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
-            await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+            await RecurringExpenseService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
             editingId = null;
             errorMessage = null;
@@ -139,7 +139,7 @@ public partial class Recurring
             if (!await RecurringExpenseService.SetActiveAsync(ownerId, rule.Id, !rule.IsActive))
                 throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
             if (!rule.IsActive)
-                await RecurringExpenseService.GenerateDueAsync(ownerId, DateTime.Today);
+                await RecurringExpenseService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
             errorMessage = null;
             notice = rule.IsActive ? "규칙을 중지했습니다." : "규칙을 다시 시작했습니다. 중지 기간의 지출은 생성하지 않습니다.";

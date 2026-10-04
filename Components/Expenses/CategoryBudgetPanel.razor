@@ -1,0 +1,82 @@
+@using System.Globalization
+@using MyExpenses.Data
+
+<section class="panel category-budget-panel" aria-labelledby="category-budget-title">
+    <div class="panel-heading">
+        <div>
+            <p class="section-kicker">CATEGORY BUDGETS</p>
+            <h2 id="category-budget-title">카테고리별 월 예산</h2>
+            <p class="budget-description">위에서 선택한 @Month.ToString("yyyy년 M월")의 지출을 각 카테고리 예산과 비교합니다. 전체 월 예산과는 별도로 설정합니다.</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p class="form-error" role="alert">@Error</p>
+    }
+    @if (!string.IsNullOrEmpty(Notice))
+    {
+        <p class="budget-notice" role="status">@Notice</p>
+    }
+
+    <div class="category-budget-list">
+        @foreach (var option in Categories)
+        {
+            var spent = Spent.GetValueOrDefault(option);
+            long? categoryLimit = Amounts.TryGetValue(option, out var found) ? found : null;
+            var percentage = categoryLimit is > 0 ? (decimal)spent / categoryLimit.Value * 100 : 0;
+            var barWidth = Math.Min(percentage, 100).ToString("0.#", CultureInfo.InvariantCulture);
+            <div class="category-budget-item" @key="option">
+                <div class="category-budget-heading">
+                    <strong><span aria-hidden="true">@ExpenseCategories.Icon(option)</span> @Label(option)</strong>
+                    <span>@spent.ToString("N0")원 사용@(categoryLimit is long configured ? $" / {configured:N0}원" : "")</span>
+                </div>
+                @if (categoryLimit is long configuredLimit)
+                {
+                    <div class="budget-track" role="progressbar" aria-label="@option 예산 사용률"
+                         aria-valuenow="@Math.Min(percentage, 100).ToString("0.#", CultureInfo.InvariantCulture)"
+                         aria-valuemin="0" aria-valuemax="100">
+                        <div class="budget-fill @(spent > configuredLimit ? "over-budget" : "")"
+                             style="width: @barWidth%"></div>
+                    </div>
+                    <p class="category-budget-balance @(spent > configuredLimit ? "over-budget" : "")">
+                        @(spent > configuredLimit ? $"{spent - configuredLimit:N0}원 초과 · {percentage:0.#}% 사용" : $"{configuredLimit - spent:N0}원 남음 · {percentage:0.#}% 사용")
+                    </p>
+                }
+                else
+                {
+                    <p class="category-budget-balance">예산 미설정</p>
+                }
+                <form class="category-budget-form" @onsubmit="() => OnSave.InvokeAsync(option)" @onsubmit:preventDefault>
+                    <label class="visually-hidden" for="category-budget-@option">@option 예산 금액</label>
+                    <div class="amount-input">
+                        <input id="category-budget-@option" type="number" min="1" step="1" required
+                               @bind="Inputs[option]" />
+                        <span>원</span>
+                    </div>
+                    <button type="submit" class="budget-save" disabled="@(Saving is not null)">@(categoryLimit is null ? "설정" : "변경")</button>
+                    @if (categoryLimit is not null)
+                    {
+                        <button type="button" class="budget-delete" @onclick="() => OnDelete.InvokeAsync(option)"
+                                disabled="@(Saving is not null)">삭제</button>
+                    }
+                </form>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public DateTime Month { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public string? Notice { get; set; }
+    [Parameter] public IReadOnlyList<string> Categories { get; set; } = [];
+    [Parameter] public Func<string, string> Label { get; set; } = value => value;
+    [Parameter] public Dictionary<string, long> Spent { get; set; } = [];
+    [Parameter] public Dictionary<string, long> Amounts { get; set; } = [];
+    // 입력 중인 금액은 화면 상태이므로 부모와 같은 사전을 직접 수정합니다.
+    [Parameter] public Dictionary<string, long> Inputs { get; set; } = [];
+    [Parameter] public string? Saving { get; set; }
+    [Parameter] public EventCallback<string> OnSave { get; set; }
+    [Parameter] public EventCallback<string> OnDelete { get; set; }
+}

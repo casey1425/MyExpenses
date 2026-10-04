@@ -66,4 +66,19 @@ Check((await budgets.LoadAsync("A", month)).Amount == 200000 && await db.Expense
 await budgets.DeleteAsync("A", month);
 Check((await budgets.LoadAsync("A", month)).Amount is null, "Monthly budget deletion failed");
 Check(ExpenseCategories.All.SequenceEqual(ExpenseTemplateInput.Categories) && ExpenseCategories.All.All(ExpenseCategories.IsSupported), "Shared categories inconsistent");
+// 한국 시간: 서버 시간대와 무관하게 "오늘"은 KoreanClock으로만 계산해야 합니다.
+var koreaNow = DateTimeOffset.UtcNow.AddHours(9);
+Check(Math.Abs((KoreanClock.Now.DateTime - koreaNow.DateTime).TotalMinutes) < 5 && KoreanClock.Now.Offset == TimeSpan.FromHours(9), "KoreanClock is not Korean time");
+Check(KoreanClock.Today == KoreanClock.Now.Date || KoreanClock.Today == KoreanClock.Now.Date.AddDays(-1), "KoreanClock.Today inconsistent");
+var repoRoot = new DirectoryInfo(AppContext.BaseDirectory);
+while (repoRoot is not null && !File.Exists(Path.Combine(repoRoot.FullName, "MyExpenses.csproj"))) repoRoot = repoRoot.Parent;
+Check(repoRoot is not null, "Repository root not found");
+var serverTimeUsers = Directory.EnumerateFiles(repoRoot!.FullName, "*.*", SearchOption.AllDirectories)
+    .Where(path => path.EndsWith(".cs") || path.EndsWith(".razor"))
+    .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
+                   !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}"))
+    .Where(path => Path.GetFileName(path) is not ("Weather.razor" or "KoreanClock.cs"))
+    .Where(path => File.ReadAllText(path).Contains("DateTime.Today") || File.ReadAllText(path).Contains("DateTime.Now") || File.ReadAllText(path).Contains("DateTimeOffset.Now"))
+    .Select(Path.GetFileName).ToList();
+Check(serverTimeUsers.Count == 0, "Server local time used instead of KoreanClock: " + string.Join(", ", serverTimeUsers));
 Console.WriteLine("PASS: expense and budget services, query/write isolation, validation, independent budget deletion, UI callback and identity change protection");

@@ -6,8 +6,6 @@ namespace MyExpenses.Services;
 
 public sealed class RecurringIncomeService(IDbContextFactory<ExpensesDbContext> dbFactory)
 {
-    public static DateTime KoreanToday => KoreanClock.Today;
-
     public async Task<List<RecurringIncomeRule>> ListAsync(string ownerId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);

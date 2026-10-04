@@ -1,0 +1,47 @@
+@using MyExpenses.Data
+
+<section class="panel statistics-panel" aria-labelledby="statistics-title">
+    <div class="panel-heading statistics-heading">
+        <div>
+            <p class="section-kicker">SPENDING BREAKDOWN</p>
+            <h2 id="statistics-title">카테고리별 지출</h2>
+            <p class="statistics-period">@PeriodLabel</p>
+        </div>
+        <strong class="statistics-total">@Total.ToString("N0")원</strong>
+    </div>
+
+    @if (Statistics.Count == 0)
+    {
+        <p class="statistics-empty">@(FilterActive ? "조회 조건에 맞는 지출이 없어요." : "이번 달에 기록된 지출이 없어요.")</p>
+    }
+    else
+    {
+        <div class="statistics-list">
+            @foreach (var statistic in Statistics)
+            {
+                <div class="statistic-row">
+                    <div class="statistic-header">
+                        <div class="statistic-name">
+                            <span class="statistic-icon" aria-hidden="true">@ExpenseCategories.Icon(statistic.Category)</span>
+                            <strong>@statistic.Category <small>@(statistic.Count)건</small></strong>
+                        </div>
+                        <div class="statistic-values">
+                            <strong>@statistic.Amount.ToString("N0")원</strong>
+                            <span>@statistic.Percentage.ToString("0.#")%</span>
+                        </div>
+                    </div>
+                    <div class="statistic-track" aria-hidden="true">
+                        <div class="statistic-fill" style="@statistic.WidthStyle"></div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<CategoryStatistic> Statistics { get; set; } = [];
+    [Parameter] public string PeriodLabel { get; set; } = string.Empty;
+    [Parameter] public decimal Total { get; set; }
+    [Parameter] public bool FilterActive { get; set; }
+}

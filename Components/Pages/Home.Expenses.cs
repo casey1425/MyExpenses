@@ -16,7 +16,7 @@ public partial class Home
         await CheckOwnerAsync();
         var statisticsExpenses = activeFilter.IsActive
             ? loaded
-            : loaded.Where(item => item.Date.Year == DateTime.Today.Year && item.Date.Month == DateTime.Today.Month);
+            : loaded.Where(item => item.Date.Year == KoreanClock.Today.Year && item.Date.Month == KoreanClock.Today.Month);
         var statistics = ExpenseStatistics.ByCategory(statisticsExpenses);
         expenses = loaded;
         categoryStatistics = statistics;
@@ -259,5 +259,4 @@ public partial class Home
         }
     }
 
-    private static string CategoryIcon(string value) => ExpenseCategories.Icon(value);
 }

@@ -1,0 +1,114 @@
+@using MyExpenses.Data
+
+@if (Expenses.Count == 0)
+{
+    <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">↗</div>
+        <h3>@(FilterActive ? "조건에 맞는 기록이 없어요" : "아직 기록이 없어요")</h3>
+        <p>@(FilterActive ? "검색어 또는 기간·금액 조건을 바꾸거나 필터를 초기화해 보세요." : "첫 지출을 입력하면 이곳에 내역이 표시됩니다.")</p>
+    </div>
+}
+else
+{
+    <div class="expense-list">
+        @foreach (var expense in Expenses)
+        {
+            <div class="expense-item" @key="expense.Id">
+                <div class="expense-row">
+                    <div class="category-icon" aria-hidden="true">@ExpenseCategories.Icon(expense.Category)</div>
+                    <div class="expense-details">
+                        <strong>@expense.Category</strong>
+                        <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
+                        <span>결제수단: @(expense.PaymentMethod?.Name ?? "미지정")</span>
+                    </div>
+                    <div class="expense-actions">
+                        <strong>-@expense.Amount.ToString("N0")원</strong>
+                        <div class="row-actions">
+                            <button type="button" class="edit-button" @onclick="() => OnStartEdit.InvokeAsync(expense)" disabled="@IsSavingEdit" aria-label="@expense.Category 지출 수정">수정</button>
+                            <button type="button" class="delete-button" @onclick="() => OnDelete.InvokeAsync(expense.Id)" disabled="@IsSavingEdit" aria-label="@expense.Category 지출 삭제">삭제</button>
+                        </div>
+                    </div>
+                </div>
+
+                @if (EditingId == expense.Id)
+                {
+                    <form class="edit-form" @onsubmit="() => OnSaveEdit.InvokeAsync()" @onsubmit:preventDefault>
+                        <h3>지출 수정</h3>
+                        <div class="field-grid">
+                            <div class="field">
+                                <label for="edit-date">날짜</label>
+                                <input id="edit-date" type="date" @bind="EditDate" @bind:after="() => EditDateChanged.InvokeAsync(EditDate)" required />
+                            </div>
+                            <div class="field">
+                                <label for="edit-amount">금액</label>
+                                <div class="amount-input">
+                                    <input id="edit-amount" type="number" min="1" step="1" @bind="EditAmount" @bind:after="() => EditAmountChanged.InvokeAsync(EditAmount)" required />
+                                    <span>원</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field-grid">
+                            <div class="field">
+                                <label for="edit-category">카테고리</label>
+                                <select id="edit-category" @bind="EditCategory" @bind:after="() => EditCategoryChanged.InvokeAsync(EditCategory)">
+                                    @foreach (var option in EditCategories)
+                                    {
+                                        <option value="@option">@CategoryLabel(option)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="edit-memo">메모 <span class="optional">선택</span></label>
+                                <input id="edit-memo" type="text" maxlength="100" @bind="EditMemo" @bind:after="() => EditMemoChanged.InvokeAsync(EditMemo)" />
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(EditError))
+                        {
+                            <p class="form-error" role="alert">@EditError</p>
+                        }
+                        <div class="field">
+                            <label for="edit-payment">결제수단</label>
+                            <select id="edit-payment" @bind="EditPaymentMethodId" @bind:after="() => EditPaymentMethodIdChanged.InvokeAsync(EditPaymentMethodId)">
+                                <option value="">미지정</option>
+                                @foreach (var method in PaymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+                            </select>
+                        </div>
+
+                        <div class="edit-form-actions">
+                            <button type="button" class="edit-cancel" @onclick="() => OnCancelEdit.InvokeAsync()" disabled="@IsSavingEdit">취소</button>
+                            <button type="submit" class="edit-save" disabled="@IsSavingEdit">@(IsSavingEdit ? "저장 중..." : "변경 저장")</button>
+                        </div>
+                    </form>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public List<ExpenseRecord> Expenses { get; set; } = [];
+    [Parameter] public bool FilterActive { get; set; }
+    [Parameter] public int? EditingId { get; set; }
+    [Parameter] public bool IsSavingEdit { get; set; }
+    [Parameter] public string? EditError { get; set; }
+    [Parameter] public IEnumerable<string> EditCategories { get; set; } = [];
+    [Parameter] public Func<string, string> CategoryLabel { get; set; } = value => value;
+    [Parameter] public List<PaymentMethod> PaymentMethods { get; set; } = [];
+
+    [Parameter] public DateTime EditDate { get; set; }
+    [Parameter] public EventCallback<DateTime> EditDateChanged { get; set; }
+    [Parameter] public long EditAmount { get; set; }
+    [Parameter] public EventCallback<long> EditAmountChanged { get; set; }
+    [Parameter] public string EditCategory { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> EditCategoryChanged { get; set; }
+    [Parameter] public string EditMemo { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> EditMemoChanged { get; set; }
+    [Parameter] public int? EditPaymentMethodId { get; set; }
+    [Parameter] public EventCallback<int?> EditPaymentMethodIdChanged { get; set; }
+
+    [Parameter] public EventCallback<ExpenseRecord> OnStartEdit { get; set; }
+    [Parameter] public EventCallback<int> OnDelete { get; set; }
+    [Parameter] public EventCallback OnSaveEdit { get; set; }
+    [Parameter] public EventCallback OnCancelEdit { get; set; }
+}

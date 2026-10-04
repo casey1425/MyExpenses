@@ -1,0 +1,139 @@
+.section-kicker {
+    margin: 0 0 .45rem;
+    color: #537cbb;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+}
+
+.panel {
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
+}
+
+.budget-description {
+    margin: .35rem 0 0;
+    color: #8a9aad;
+    font-size: .82rem;
+}
+
+.budget-save, .budget-delete {
+    min-height: 40px;
+    padding: .45rem .8rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.budget-save {
+    border: 1px solid #285889;
+    background: #285889;
+    color: #fff;
+}
+
+.budget-delete {
+    border: 1px solid #d8dfe7;
+    background: #fff;
+    color: #8b4b52;
+}
+
+.budget-save:disabled, .budget-delete:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.budget-track {
+    height: 11px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eaf0f7;
+}
+
+.budget-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2d598b, #79a8d6);
+}
+
+.budget-fill.over-budget {
+    background: #d36a6a;
+}
+
+.budget-notice {
+    margin: .7rem 0 0;
+    color: #63758d;
+    font-size: .85rem;
+}
+
+.budget-notice {
+    color: #285889;
+}
+
+.category-budget-panel { margin-bottom: 1.25rem; }
+
+.category-budget-panel .panel-heading { margin-bottom: 1rem; }
+
+.category-budget-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; }
+
+.category-budget-item { min-width: 0; padding: 1rem; border: 1px solid #e4eaf2; border-radius: 12px; background: #fbfcfe; }
+
+.category-budget-heading { display: flex; justify-content: space-between; gap: .75rem; margin-bottom: .7rem; font-size: .85rem; }
+
+.category-budget-heading span { color: #63758d; }
+
+.category-budget-heading strong span { margin-right: .2rem; }
+
+.category-budget-balance { min-height: 1.2rem; margin: .55rem 0 .9rem; color: #63758d; font-size: .8rem; }
+
+.category-budget-balance.over-budget { color: #b34850; font-weight: 700; }
+
+.category-budget-form { display: flex; gap: .45rem; }
+
+.category-budget-form .amount-input { flex: 1; min-width: 0; }
+
+.category-budget-form input { width: 100%; min-height: 40px; padding: .5rem 2rem .5rem .65rem; border: 1px solid #dbe4ee; border-radius: 8px; background: #fff; color: #1e293b; }
+
+.panel {
+    padding: 1.6rem;
+}
+
+.panel-heading {
+    margin-bottom: 1.4rem;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 750;
+    letter-spacing: -.03em;
+}
+
+.amount-input {
+    position: relative;
+}
+
+.amount-input input {
+    padding-right: 2.2rem;
+}
+
+.amount-input span {
+    position: absolute;
+    right: .85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8da0b5;
+}
+
+.form-error {
+    margin: 0 0 .75rem;
+    color: #be3f47;
+    font-size: .86rem;
+}
+
+@media (max-width: 600px) {
+    .panel {padding: 1.2rem;}
+    .category-budget-list {grid-template-columns: 1fr;}
+}

@@ -1,0 +1,116 @@
+@using MyExpenses.Data
+
+<section class="panel entry-panel" aria-labelledby="entry-title">
+    <div class="panel-heading">
+        <div>
+            <p class="section-kicker">NEW ENTRY</p>
+            <h2 id="entry-title">새 지출 추가</h2>
+        </div>
+    </div>
+
+    <form @onsubmit="() => OnSubmit.InvokeAsync()" @onsubmit:preventDefault>
+        <div class="template-picker">
+            <div class="field">
+                <label for="expense-template">즐겨찾기 템플릿</label>
+                <select id="expense-template" value="@SelectedTemplateId" @onchange="OnTemplateSelected" disabled="@TemplateBusy">
+                    <option value="">템플릿 선택 (선택 사항)</option>
+                    @foreach (var template in Templates)
+                    {
+                        <option value="@template.Id">@template.Name · @template.Amount.ToString("N0")원</option>
+                    }
+                </select>
+            </div>
+            <div class="template-picker-actions">
+                <a href="/templates">템플릿 관리</a>
+                <button type="button" class="filter-reset" disabled="@TemplateBusy" @onclick="() => OnRefreshTemplates.InvokeAsync()">목록 새로고침</button>
+            </div>
+            <p class="template-help">금액·카테고리·메모를 채웁니다. 날짜는 유지되며 기록 버튼을 눌러야 저장됩니다.</p>
+            @if (TemplateError is not null) { <p class="form-error" role="alert">@TemplateError</p> }
+            @if (TemplateNotice is not null) { <p class="save-notice" role="status">@TemplateNotice</p> }
+        </div>
+        <div class="field-grid">
+            <div class="field">
+                <label for="expense-date">날짜</label>
+                <input id="expense-date" type="date" @bind="Date" @bind:after="() => DateChanged.InvokeAsync(Date)" required />
+            </div>
+            <div class="field">
+                <label for="expense-amount">금액</label>
+                <div class="amount-input">
+                    <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @bind="Amount" @bind:after="() => AmountChanged.InvokeAsync(Amount)" required />
+                    <span>원</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="expense-category">카테고리</label>
+            <select id="expense-category" @bind="Category" @bind:after="() => CategoryChanged.InvokeAsync(Category)">
+                @foreach (var option in Categories)
+                {
+                    <option value="@option">@CategoryLabel(option)</option>
+                }
+            </select>
+        </div>
+
+        <div class="field">
+            <label for="expense-memo">메모 <span class="optional">선택</span></label>
+            <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" @bind="Memo" @bind:after="() => MemoChanged.InvokeAsync(Memo)" />
+        </div>
+        <div class="field">
+            <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
+            <select id="expense-payment" @bind="PaymentMethodId" @bind:after="() => PaymentMethodIdChanged.InvokeAsync(PaymentMethodId)">
+                <option value="">미지정</option>
+                @foreach (var method in PaymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
+            </select>
+            <div class="template-picker-actions">
+                <a href="/payment-methods">결제수단 관리·월별 합계</a>
+                <button type="button" class="filter-reset" @onclick="() => OnRefreshPaymentMethods.InvokeAsync()" disabled="@PaymentBusy">목록 새로고침</button>
+            </div>
+            @if (PaymentError is not null) { <p class="form-error" role="alert">@PaymentError</p> }
+        </div>
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="form-error" role="alert">@ErrorMessage</p>
+        }
+
+        @if (!string.IsNullOrEmpty(SaveNotice))
+        {
+            <p class="save-notice" role="status">@SaveNotice</p>
+        }
+
+        <button class="add-button" type="submit" disabled="@TemplateBusy">+ 지출 기록하기</button>
+    </form>
+</section>
+
+@code {
+    [Parameter] public List<ExpenseTemplate> Templates { get; set; } = [];
+    [Parameter] public string SelectedTemplateId { get; set; } = string.Empty;
+    [Parameter] public bool TemplateBusy { get; set; }
+    [Parameter] public string? TemplateError { get; set; }
+    [Parameter] public string? TemplateNotice { get; set; }
+    [Parameter] public EventCallback<ChangeEventArgs> OnTemplateSelected { get; set; }
+    [Parameter] public EventCallback OnRefreshTemplates { get; set; }
+
+    [Parameter] public DateTime Date { get; set; }
+    [Parameter] public EventCallback<DateTime> DateChanged { get; set; }
+    [Parameter] public long Amount { get; set; }
+    [Parameter] public EventCallback<long> AmountChanged { get; set; }
+    [Parameter] public string Category { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> CategoryChanged { get; set; }
+    [Parameter] public string Memo { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> MemoChanged { get; set; }
+    [Parameter] public int? PaymentMethodId { get; set; }
+    [Parameter] public EventCallback<int?> PaymentMethodIdChanged { get; set; }
+
+    [Parameter] public IReadOnlyList<string> Categories { get; set; } = [];
+    [Parameter] public Func<string, string> CategoryLabel { get; set; } = value => value;
+    [Parameter] public List<PaymentMethod> PaymentMethods { get; set; } = [];
+    [Parameter] public bool PaymentBusy { get; set; }
+    [Parameter] public string? PaymentError { get; set; }
+    [Parameter] public EventCallback OnRefreshPaymentMethods { get; set; }
+
+    [Parameter] public string? ErrorMessage { get; set; }
+    [Parameter] public string? SaveNotice { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+}

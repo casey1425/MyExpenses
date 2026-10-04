@@ -4,6 +4,7 @@
 @using System.Globalization
 @using System.Security.Claims
 @using MyExpenses.Data
+@using MyExpenses.Components.Expenses
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserDataProvisioner UserDataProvisioner
 @inject RecurringExpenseService RecurringExpenseService
@@ -28,14 +29,14 @@
             <span aria-hidden="true"> · </span>
             <a href="/trends">월별 수입·지출 추이 →</a>
         </div>
-        <div class="today-chip">@DateTime.Today.ToString("yyyy년 M월 d일")</div>
+        <div class="today-chip">@KoreanClock.Today.ToString("yyyy년 M월 d일")</div>
     </header>
 
     <section class="summary-grid" aria-label="지출 요약">
         <div class="summary-card primary-summary">
             <span class="summary-label">@(activeFilter.IsActive ? "필터 결과 합계" : "이번 달 지출")</span>
             <strong>@((activeFilter.IsActive ? FilteredTotal : MonthlyTotal).ToString("N0"))<small>원</small></strong>
-            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : $"{DateTime.Today:yyyy년 M월} 기준")</span>
+            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : $"{KoreanClock.Today:yyyy년 M월} 기준")</span>
         </div>
         <div class="summary-card">
             <span class="summary-label">@(activeFilter.IsActive ? "조회된 지출" : "기록한 지출")</span>
@@ -44,253 +45,28 @@
         </div>
     </section>
 
-    <section class="panel budget-panel" aria-labelledby="budget-title">
-        <div class="panel-heading budget-heading">
-            <div>
-                <p class="section-kicker">MONTHLY BUDGET</p>
-                <h2 id="budget-title">월별 예산</h2>
-                <p class="budget-description">선택한 달의 전체 지출과 예산을 비교합니다.</p>
-            </div>
-        </div>
+    <BudgetPanel Month="budgetMonth" MonthInput="@budgetMonthInput" OnMonthChanged="OnBudgetMonthChangedAsync"
+                 Disabled="@(savingCategoryBudget is not null || isSavingBudget)"
+                 @bind-Input="budgetInput" IsSaving="isSavingBudget" Amount="budgetAmount" Spent="budgetSpent"
+                 Error="@budgetError" Notice="@budgetNotice" OnSave="SaveBudgetAsync" OnDelete="DeleteBudgetAsync" />
 
-        <form class="budget-form" @onsubmit="SaveBudgetAsync" @onsubmit:preventDefault>
-            <div class="budget-field">
-                <label for="budget-month">월</label>
-                <input id="budget-month" type="month" value="@budgetMonthInput" @onchange="OnBudgetMonthChangedAsync"
-                       disabled="@(savingCategoryBudget is not null || isSavingBudget)" required />
-            </div>
-            <div class="budget-field">
-                <label for="budget-amount">예산 금액</label>
-                <div class="amount-input">
-                    <input id="budget-amount" type="number" min="1" step="1" @bind="budgetInput" required />
-                    <span>원</span>
-                </div>
-            </div>
-            <div class="budget-buttons">
-                <button type="submit" class="budget-save" disabled="@isSavingBudget">@(isSavingBudget ? "저장 중..." : budgetAmount is null ? "예산 설정" : "예산 변경")</button>
-                @if (budgetAmount is not null)
-                {
-                    <button type="button" class="budget-delete" @onclick="DeleteBudgetAsync" disabled="@isSavingBudget">예산 삭제</button>
-                }
-            </div>
-        </form>
+    <CategoryBudgetPanel Month="budgetMonth" Error="@categoryBudgetError" Notice="@categoryBudgetNotice"
+                         Categories="allCategories" Label="CategoryLabel" Spent="categoryBudgetSpent"
+                         Amounts="categoryBudgetAmounts" Inputs="categoryBudgetInputs" Saving="@savingCategoryBudget"
+                         OnSave="SaveCategoryBudgetAsync" OnDelete="DeleteCategoryBudgetAsync" />
 
-        @if (!string.IsNullOrEmpty(budgetError))
-        {
-            <p class="form-error" role="alert">@budgetError</p>
-        }
-        @if (!string.IsNullOrEmpty(budgetNotice))
-        {
-            <p class="budget-notice" role="status">@budgetNotice</p>
-        }
-
-        @if (budgetAmount is long limit)
-        {
-            <div class="budget-progress">
-                <div class="budget-progress-labels">
-                    <strong>@budgetSpent.ToString("N0")원 사용</strong>
-                    <span>예산 @limit.ToString("N0")원 · @BudgetPercentage.ToString("0.#")%</span>
-                </div>
-                <div class="budget-track" role="progressbar" aria-label="예산 사용률" aria-valuenow="@Math.Min(BudgetPercentage, 100).ToString("0.#", CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100">
-                    <div class="budget-fill @(budgetSpent > limit ? "over-budget" : "")" style="width: @BudgetBarWidth%"></div>
-                </div>
-                <p class="budget-balance @(budgetSpent > limit ? "over-budget" : "")">
-                    @(budgetSpent > limit ? $"예산을 {(budgetSpent - limit):N0}원 초과했어요." : $"예산이 {(limit - budgetSpent):N0}원 남았어요.")
-                </p>
-            </div>
-        }
-        else
-        {
-            <p class="budget-empty">@budgetMonth.ToString("yyyy년 M월") 지출은 @budgetSpent.ToString("N0")원입니다. 예산을 설정하면 사용률과 남은 금액을 볼 수 있어요.</p>
-        }
-    </section>
-
-    <section class="panel category-budget-panel" aria-labelledby="category-budget-title">
-        <div class="panel-heading">
-            <div>
-                <p class="section-kicker">CATEGORY BUDGETS</p>
-                <h2 id="category-budget-title">카테고리별 월 예산</h2>
-                <p class="budget-description">위에서 선택한 @budgetMonth.ToString("yyyy년 M월")의 지출을 각 카테고리 예산과 비교합니다. 전체 월 예산과는 별도로 설정합니다.</p>
-            </div>
-        </div>
-
-        @if (!string.IsNullOrEmpty(categoryBudgetError))
-        {
-            <p class="form-error" role="alert">@categoryBudgetError</p>
-        }
-        @if (!string.IsNullOrEmpty(categoryBudgetNotice))
-        {
-            <p class="budget-notice" role="status">@categoryBudgetNotice</p>
-        }
-
-        <div class="category-budget-list">
-            @foreach (var option in allCategories)
-            {
-                var spent = CategoryBudgetSpent(option);
-                var categoryLimit = CategoryBudgetAmount(option);
-                var percentage = CategoryBudgetPercentage(option);
-                <div class="category-budget-item" @key="option">
-                    <div class="category-budget-heading">
-                        <strong><span aria-hidden="true">@CategoryIcon(option)</span> @CategoryLabel(option)</strong>
-                        <span>@spent.ToString("N0")원 사용@(categoryLimit is long configured ? $" / {configured:N0}원" : "")</span>
-                    </div>
-                    @if (categoryLimit is long configuredLimit)
-                    {
-                        <div class="budget-track" role="progressbar" aria-label="@option 예산 사용률"
-                             aria-valuenow="@Math.Min(percentage, 100).ToString("0.#", CultureInfo.InvariantCulture)"
-                             aria-valuemin="0" aria-valuemax="100">
-                            <div class="budget-fill @(spent > configuredLimit ? "over-budget" : "")"
-                                 style="width: @CategoryBudgetBarWidth(option)%"></div>
-                        </div>
-                        <p class="category-budget-balance @(spent > configuredLimit ? "over-budget" : "")">
-                            @(spent > configuredLimit ? $"{spent - configuredLimit:N0}원 초과 · {percentage:0.#}% 사용" : $"{configuredLimit - spent:N0}원 남음 · {percentage:0.#}% 사용")
-                        </p>
-                    }
-                    else
-                    {
-                        <p class="category-budget-balance">예산 미설정</p>
-                    }
-                    <form class="category-budget-form" @onsubmit="() => SaveCategoryBudgetAsync(option)" @onsubmit:preventDefault>
-                        <label class="visually-hidden" for="category-budget-@option">@option 예산 금액</label>
-                        <div class="amount-input">
-                            <input id="category-budget-@option" type="number" min="1" step="1" required
-                                   @bind="categoryBudgetInputs[option]" />
-                            <span>원</span>
-                        </div>
-                        <button type="submit" class="budget-save" disabled="@(savingCategoryBudget is not null)">@(categoryLimit is null ? "설정" : "변경")</button>
-                        @if (categoryLimit is not null)
-                        {
-                            <button type="button" class="budget-delete" @onclick="() => DeleteCategoryBudgetAsync(option)"
-                                    disabled="@(savingCategoryBudget is not null)">삭제</button>
-                        }
-                    </form>
-                </div>
-            }
-        </div>
-    </section>
-
-    <section class="panel statistics-panel" aria-labelledby="statistics-title">
-        <div class="panel-heading statistics-heading">
-            <div>
-                <p class="section-kicker">SPENDING BREAKDOWN</p>
-                <h2 id="statistics-title">카테고리별 지출</h2>
-                <p class="statistics-period">@StatisticsPeriodLabel</p>
-            </div>
-            <strong class="statistics-total">@StatisticsTotal.ToString("N0")원</strong>
-        </div>
-
-        @if (categoryStatistics.Count == 0)
-        {
-            <p class="statistics-empty">@(activeFilter.IsActive ? "조회 조건에 맞는 지출이 없어요." : "이번 달에 기록된 지출이 없어요.")</p>
-        }
-        else
-        {
-            <div class="statistics-list">
-                @foreach (var statistic in categoryStatistics)
-                {
-                    <div class="statistic-row">
-                        <div class="statistic-header">
-                            <div class="statistic-name">
-                                <span class="statistic-icon" aria-hidden="true">@CategoryIcon(statistic.Category)</span>
-                                <strong>@statistic.Category <small>@(statistic.Count)건</small></strong>
-                            </div>
-                            <div class="statistic-values">
-                                <strong>@statistic.Amount.ToString("N0")원</strong>
-                                <span>@statistic.Percentage.ToString("0.#")%</span>
-                            </div>
-                        </div>
-                        <div class="statistic-track" aria-hidden="true">
-                            <div class="statistic-fill" style="@statistic.WidthStyle"></div>
-                        </div>
-                    </div>
-                }
-            </div>
-        }
-    </section>
+    <CategoryStatsPanel Statistics="categoryStatistics" PeriodLabel="@StatisticsPeriodLabel" Total="StatisticsTotal"
+                        FilterActive="activeFilter.IsActive" />
 
     <div class="content-grid">
-        <section class="panel entry-panel" aria-labelledby="entry-title">
-            <div class="panel-heading">
-                <div>
-                    <p class="section-kicker">NEW ENTRY</p>
-                    <h2 id="entry-title">새 지출 추가</h2>
-                </div>
-            </div>
-
-            <form @onsubmit="AddExpenseAsync" @onsubmit:preventDefault>
-                <div class="template-picker">
-                    <div class="field">
-                        <label for="expense-template">즐겨찾기 템플릿</label>
-                        <select id="expense-template" value="@selectedTemplateId" @onchange="ApplyTemplateAsync" disabled="@templateBusy">
-                            <option value="">템플릿 선택 (선택 사항)</option>
-                            @foreach (var template in templates)
-                            {
-                                <option value="@template.Id">@template.Name · @template.Amount.ToString("N0")원</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="template-picker-actions">
-                        <a href="/templates">템플릿 관리</a>
-                        <button type="button" class="filter-reset" disabled="@templateBusy" @onclick="RefreshTemplatesAsync">목록 새로고침</button>
-                    </div>
-                    <p class="template-help">금액·카테고리·메모를 채웁니다. 날짜는 유지되며 기록 버튼을 눌러야 저장됩니다.</p>
-                    @if (templateError is not null) { <p class="form-error" role="alert">@templateError</p> }
-                    @if (templateNotice is not null) { <p class="save-notice" role="status">@templateNotice</p> }
-                </div>
-                <div class="field-grid">
-                    <div class="field">
-                        <label for="expense-date">날짜</label>
-                        <input id="expense-date" type="date" @bind="expenseDate" required />
-                    </div>
-                    <div class="field">
-                        <label for="expense-amount">금액</label>
-                        <div class="amount-input">
-                            <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @bind="amount" required />
-                            <span>원</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="field">
-                    <label for="expense-category">카테고리</label>
-                    <select id="expense-category" @bind="category">
-                        @foreach (var option in categories)
-                        {
-                            <option value="@option">@CategoryLabel(option)</option>
-                        }
-                    </select>
-                </div>
-
-                <div class="field">
-                    <label for="expense-memo">메모 <span class="optional">선택</span></label>
-                    <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" @bind="memo" />
-                </div>
-                <div class="field">
-                    <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
-                    <select id="expense-payment" @bind="paymentMethodId">
-                        <option value="">미지정</option>
-                        @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
-                    </select>
-                    <div class="template-picker-actions">
-                        <a href="/payment-methods">결제수단 관리·월별 합계</a>
-                        <button type="button" class="filter-reset" @onclick="RefreshPaymentMethodsAsync" disabled="@paymentBusy">목록 새로고침</button>
-                    </div>
-                    @if (paymentError is not null) { <p class="form-error" role="alert">@paymentError</p> }
-                </div>
-
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <p class="form-error" role="alert">@errorMessage</p>
-                }
-
-                @if (!string.IsNullOrEmpty(saveNotice))
-                {
-                    <p class="save-notice" role="status">@saveNotice</p>
-                }
-
-                <button class="add-button" type="submit" disabled="@templateBusy">+ 지출 기록하기</button>
-            </form>
-        </section>
+        <ExpenseForm Templates="templates" SelectedTemplateId="@selectedTemplateId" TemplateBusy="templateBusy"
+                     TemplateError="@templateError" TemplateNotice="@templateNotice"
+                     OnTemplateSelected="ApplyTemplateAsync" OnRefreshTemplates="RefreshTemplatesAsync"
+                     @bind-Date="expenseDate" @bind-Amount="amount" @bind-Category="category" @bind-Memo="memo"
+                     @bind-PaymentMethodId="paymentMethodId" Categories="categories" CategoryLabel="CategoryLabel"
+                     PaymentMethods="paymentMethods" PaymentBusy="paymentBusy" PaymentError="@paymentError"
+                     OnRefreshPaymentMethods="RefreshPaymentMethodsAsync" ErrorMessage="@errorMessage"
+                     SaveNotice="@saveNotice" OnSubmit="AddExpenseAsync" />
 
         <section class="panel history-panel" aria-labelledby="history-title">
             <div class="panel-heading history-heading">
@@ -307,64 +83,9 @@
                 </div>
             </div>
 
-            <form class="filter-form" @onsubmit="ApplyFiltersAsync" @onsubmit:preventDefault>
-                <div class="filter-field">
-                    <label for="filter-month">월</label>
-                    <input id="filter-month" type="month" value="@searchInput.Month" @onchange="e => searchInput.Month = e.Value?.ToString() ?? string.Empty" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-category">카테고리</label>
-                    <select id="filter-category" @bind="searchInput.Category">
-                        <option value="">전체 카테고리</option>
-                        @foreach (var option in allCategories)
-                        {
-                            <option value="@option">@CategoryLabel(option)</option>
-                        }
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="filter-search">메모 검색</label>
-                    <input id="filter-search" type="search" maxlength="100" placeholder="예: 커피, 택시" @bind="searchInput.Search" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-start">시작일</label>
-                    <input id="filter-start" type="date" value="@searchInput.StartDate" @onchange="e => searchInput.StartDate = e.Value?.ToString() ?? string.Empty" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-end">종료일</label>
-                    <input id="filter-end" type="date" value="@searchInput.EndDate" @onchange="e => searchInput.EndDate = e.Value?.ToString() ?? string.Empty" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-min">최소 금액 (원)</label>
-                    <input id="filter-min" type="number" min="0" step="1" placeholder="제한 없음" @bind="searchInput.MinAmount" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-max">최대 금액 (원)</label>
-                    <input id="filter-max" type="number" min="0" step="1" placeholder="제한 없음" @bind="searchInput.MaxAmount" />
-                </div>
-                <div class="filter-field">
-                    <label for="filter-sort">정렬</label>
-                    <select id="filter-sort" @bind="searchInput.Sort">
-                        <option value="Newest">최신순</option>
-                        <option value="Oldest">오래된순</option>
-                        <option value="HighestAmount">금액 높은순</option>
-                        <option value="LowestAmount">금액 낮은순</option>
-                    </select>
-                </div>
-                <div class="filter-field">
-                    <label for="filter-payment">결제수단</label>
-                    <select id="filter-payment" @bind="searchInput.PaymentMethod">
-                        <option value="">전체 결제수단</option>
-                        <option value="none">미지정</option>
-                        @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
-                    </select>
-                </div>
-                <p class="filter-help">입력한 조건을 모두 만족하는 기록을 조회합니다. 종료일과 금액 경계값도 포함합니다.</p>
-                <div class="filter-buttons">
-                    <button type="submit" class="filter-apply" disabled="@isSearching">@(isSearching ? "조회 중..." : "조회")</button>
-                    <button type="button" class="filter-reset" @onclick="ResetFiltersAsync" disabled="@isSearching">초기화</button>
-                </div>
-            </form>
+            <ExpenseFilterForm Input="searchInput" Categories="allCategories" CategoryLabel="CategoryLabel"
+                               PaymentMethods="paymentMethods" IsSearching="isSearching"
+                               OnApply="ApplyFiltersAsync" OnReset="ResetFiltersAsync" />
 
             <p class="filter-result" role="status">@FilterDescription · @expenses.Count 건 · 합계 @FilteredTotal.ToString("N0")원</p>
 
@@ -406,91 +127,13 @@
                 <p class="history-notice" role="status">@historyNotice</p>
             }
 
-            @if (expenses.Count == 0)
-            {
-                <div class="empty-state">
-                    <div class="empty-icon" aria-hidden="true">↗</div>
-                    <h3>@(activeFilter.IsActive ? "조건에 맞는 기록이 없어요" : "아직 기록이 없어요")</h3>
-                    <p>@(activeFilter.IsActive ? "검색어 또는 기간·금액 조건을 바꾸거나 필터를 초기화해 보세요." : "첫 지출을 입력하면 이곳에 내역이 표시됩니다.")</p>
-                </div>
-            }
-            else
-            {
-                <div class="expense-list">
-                    @foreach (var expense in expenses)
-                    {
-                        <div class="expense-item" @key="expense.Id">
-                            <div class="expense-row">
-                                <div class="category-icon" aria-hidden="true">@CategoryIcon(expense.Category)</div>
-                                <div class="expense-details">
-                                    <strong>@expense.Category</strong>
-                                    <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
-                                    <span>결제수단: @(expense.PaymentMethod?.Name ?? "미지정")</span>
-                                </div>
-                                <div class="expense-actions">
-                                    <strong>-@expense.Amount.ToString("N0")원</strong>
-                                    <div class="row-actions">
-                                        <button type="button" class="edit-button" @onclick="() => StartEdit(expense)" disabled="@isSavingEdit" aria-label="@expense.Category 지출 수정">수정</button>
-                                        <button type="button" class="delete-button" @onclick="() => DeleteExpenseAsync(expense.Id)" disabled="@isSavingEdit" aria-label="@expense.Category 지출 삭제">삭제</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            @if (editingId == expense.Id)
-                            {
-                                <form class="edit-form" @onsubmit="SaveEditAsync" @onsubmit:preventDefault>
-                                    <h3>지출 수정</h3>
-                                    <div class="field-grid">
-                                        <div class="field">
-                                            <label for="edit-date">날짜</label>
-                                            <input id="edit-date" type="date" @bind="editDate" required />
-                                        </div>
-                                        <div class="field">
-                                            <label for="edit-amount">금액</label>
-                                            <div class="amount-input">
-                                                <input id="edit-amount" type="number" min="1" step="1" @bind="editAmount" required />
-                                                <span>원</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="field-grid">
-                                        <div class="field">
-                                            <label for="edit-category">카테고리</label>
-                                            <select id="edit-category" @bind="editCategory">
-                                                @foreach (var option in EditCategories)
-                                                {
-                                                    <option value="@option">@CategoryLabel(option)</option>
-                                                }
-                                            </select>
-                                        </div>
-                                        <div class="field">
-                                            <label for="edit-memo">메모 <span class="optional">선택</span></label>
-                                            <input id="edit-memo" type="text" maxlength="100" @bind="editMemo" />
-                                        </div>
-                                    </div>
-
-                                    @if (!string.IsNullOrEmpty(editError))
-                                    {
-                                        <p class="form-error" role="alert">@editError</p>
-                                    }
-                                    <div class="field">
-                                        <label for="edit-payment">결제수단</label>
-                                        <select id="edit-payment" @bind="editPaymentMethodId">
-                                            <option value="">미지정</option>
-                                            @foreach (var method in paymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
-                                        </select>
-                                    </div>
-
-                                    <div class="edit-form-actions">
-                                        <button type="button" class="edit-cancel" @onclick="CancelEdit" disabled="@isSavingEdit">취소</button>
-                                        <button type="submit" class="edit-save" disabled="@isSavingEdit">@(isSavingEdit ? "저장 중..." : "변경 저장")</button>
-                                    </div>
-                                </form>
-                            }
-                        </div>
-                    }
-                </div>
-            }
+            <ExpenseList Expenses="expenses" FilterActive="activeFilter.IsActive" EditingId="editingId"
+                         IsSavingEdit="isSavingEdit" EditError="@editError" EditCategories="EditCategories"
+                         CategoryLabel="CategoryLabel" PaymentMethods="paymentMethods"
+                         @bind-EditDate="editDate" @bind-EditAmount="editAmount" @bind-EditCategory="editCategory"
+                         @bind-EditMemo="editMemo" @bind-EditPaymentMethodId="editPaymentMethodId"
+                         OnStartEdit="StartEdit" OnDelete="DeleteExpenseAsync" OnSaveEdit="SaveEditAsync"
+                         OnCancelEdit="CancelEdit" />
         </section>
     </div>
 </div>

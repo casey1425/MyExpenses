@@ -11,9 +11,8 @@ public partial class PaymentMethods
     private string ownerId = "";
     private string name = "";
     private string type = "체크카드";
-    private static DateTime KoreanToday => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Asia/Seoul").Date;
-    private DateTime month = new(KoreanToday.Year, KoreanToday.Month, 1);
-    private string monthInput = KoreanToday.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private DateTime month = new(KoreanClock.Today.Year, KoreanClock.Today.Month, 1);
+    private string monthInput = KoreanClock.Today.ToString("yyyy-MM", CultureInfo.InvariantCulture);
     private List<PaymentMethod> methods = [];
     private List<PaymentMethodTotal> totals = [];
     private int? editingId;

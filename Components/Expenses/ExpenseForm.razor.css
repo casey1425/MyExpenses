@@ -1,0 +1,140 @@
+.section-kicker {
+    margin: 0 0 .45rem;
+    color: #537cbb;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+}
+
+.panel {
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
+}
+
+.panel {
+    padding: 1.6rem;
+}
+
+.panel-heading {
+    margin-bottom: 1.4rem;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 750;
+    letter-spacing: -.03em;
+}
+
+.template-picker { background: #f8fafc; border: 1px solid #e4eaf2; border-radius: 12px; padding: 1rem; margin-bottom: 1.25rem; }
+
+.template-picker-actions { display: flex; align-items: center; flex-wrap: wrap; gap: .8rem; }
+
+.template-help { color: #64748b; font-size: .8rem; margin: .75rem 0 0; }
+
+.filter-reset {
+    min-height: 40px;
+    padding: .45rem .75rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.filter-reset {
+    border: 1px solid #d8dfe7;
+    background: #fff;
+    color: #4d5d70;
+}
+
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .8rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    margin-bottom: 1.1rem;
+}
+
+.field label {
+    color: #40516a;
+    font-size: .86rem;
+    font-weight: 700;
+}
+
+.optional {
+    color: #9caabc;
+    font-size: .76rem;
+    font-weight: 400;
+}
+
+.field input, .field select {
+    width: 100%;
+    min-height: 46px;
+    padding: .65rem .85rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    outline: none;
+    background: #fff;
+    color: #1e293b;
+}
+
+.field input:focus, .field select:focus {
+    border-color: #4279ba;
+    box-shadow: 0 0 0 3px #4279ba20;
+}
+
+.amount-input {
+    position: relative;
+}
+
+.amount-input input {
+    padding-right: 2.2rem;
+}
+
+.amount-input span {
+    position: absolute;
+    right: .85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8da0b5;
+}
+
+.add-button {
+    width: 100%;
+    min-height: 48px;
+    margin-top: .2rem;
+    border: 0;
+    border-radius: 10px;
+    background: #285889;
+    color: #fff;
+    font-weight: 700;
+    transition: background-color .15s ease;
+}
+
+.add-button:hover {
+    background: #1b426e;
+}
+
+.form-error {
+    margin: 0 0 .75rem;
+    color: #be3f47;
+    font-size: .86rem;
+}
+
+.save-notice {
+    margin: 0 0 .75rem;
+    color: #246a4d;
+    font-size: .86rem;
+}
+
+@media (max-width: 600px) {
+    .panel {padding: 1.2rem;}
+    .field-grid {grid-template-columns: 1fr; gap: 0;}
+}

@@ -341,9 +341,16 @@ MyExpenses/
 │   ├── Charts/
 │   │   ├── ExpenseTrendChart.razor # 월별 지출 SVG 막대그래프
 │   │   └── CashflowChart.razor    # 월별 수입·지출 묶음 막대그래프
+│   ├── Expenses/                  # 지출 기록 화면을 이루는 컴포넌트(각자 .razor.css 보유)
+│   │   ├── BudgetPanel.razor      # 월별 예산
+│   │   ├── CategoryBudgetPanel.razor # 카테고리별 월 예산
+│   │   ├── CategoryStatsPanel.razor  # 카테고리별 지출 통계
+│   │   ├── ExpenseForm.razor      # 새 지출 입력과 템플릿 선택
+│   │   ├── ExpenseFilterForm.razor # 조회 조건 입력
+│   │   └── ExpenseList.razor      # 지출 목록과 수정 폼
 │   └── Pages/
-│       ├── Home.razor             # 지출·예산·검색 화면 마크업
-│       ├── Home.razor.cs          # 화면 상태, 초기화, 요약 표시
+│       ├── Home.razor             # 지출 기록 화면: 요약과 위 컴포넌트 배치, 내역 머리글
+│       ├── Home.razor.cs          # 화면 상태, 초기화, 요약 표시(상태와 로직은 Home에 둠)
 │       ├── Home.Expenses.cs       # 조회 조건과 지출 CRUD 이벤트
 │       ├── Home.Budgets.cs        # 월별·카테고리별 예산 이벤트
 │       ├── Home.Templates.cs      # 템플릿·결제수단 선택 이벤트
@@ -403,7 +410,7 @@ MyExpenses/
 │   ├── PaymentMethodService.cs    # 결제수단 CRUD·소유자 검증·월별 집계
 │   ├── IncomeService.cs           # 수입 CRUD·소유자 검증·월별 순수지 집계
 │   ├── SavingsGoalService.cs      # 목표·저축 CRUD·소유자 검증·평균 순수지
-│   ├── KoreanClock.cs             # 한국 시간 기준 오늘 날짜
+│   ├── KoreanClock.cs             # 한국 시간 기준 오늘 날짜·현재 시각(앱 전체가 사용)
 │   ├── YearlyStatisticsService.cs # 연간 통계 데이터 조회
 │   ├── ExpenseTrendsService.cs    # 사용자별 추이 데이터 조회
 │   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
@@ -479,7 +486,7 @@ dotnet run --project tests/StatisticsChecks
 | ExpenseSearchChecks | 검색·필터·정렬 |
 | ExpenseTemplateChecks | 템플릿 CRUD, 사용자 격리, 기존 DB 보완, 계정 삭제 |
 | PaymentMethodChecks | 결제수단·지출·템플릿 연결, 월별 집계, 사용자 격리, CSV 4열·6열 호환, DB 업그레이드 |
-| ServiceChecks | 지출·예산 CRUD·입력 검증, 예산 간 독립성, 로그인 계정 변경 시 화면 저장 차단 |
+| ServiceChecks | 지출·예산 CRUD·입력 검증, 예산 간 독립성, 로그인 계정 변경 시 화면 저장 차단, **서버 시간(`DateTime.Today`·`Now`) 사용 금지 확인** |
 | CategoryChecks | 기존 DB 보완, 사용자 격리, 이름 일괄 변경, 순서·보관·복원, 지출·예산·템플릿·정기 지출·통계·CSV 연동, 계정 삭제 |
 | IncomeChecks | 수입 CRUD·입력 검증, 월 경계, 순수지·저축률, 월별 추이(오늘까지·소유자 격리), 차트 렌더링, 수입 CSV 내보내기·가져오기(중복·원자성), 기존 DB 업그레이드, 계정 삭제 |
 | RecurringIncomeChecks | 정기 수입 규칙 CRUD, 지정일 생성·누락 월 보충·중복 방지, 말일 보정, 중지·재시작 소급 방지, 사용자 격리, 입력 검증, 기존 DB 업그레이드, 계정 삭제 |

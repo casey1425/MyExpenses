@@ -9,13 +9,12 @@ namespace MyExpenses.Components.Pages;
 public partial class Income
 {
     private string ownerId = "";
-    private static DateTime KoreanToday => TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Asia/Seoul").Date;
-    private DateTime date = KoreanToday;
+    private DateTime date = KoreanClock.Today;
     private long amount;
     private string source = IncomeRecord.Sources[0];
     private string memo = "";
-    private DateTime month = new(KoreanToday.Year, KoreanToday.Month, 1);
-    private string monthInput = KoreanToday.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+    private DateTime month = new(KoreanClock.Today.Year, KoreanClock.Today.Month, 1);
+    private string monthInput = KoreanClock.Today.ToString("yyyy-MM", CultureInfo.InvariantCulture);
     private List<IncomeRecord> incomes = [];
     private MonthlyCashflow cashflow = new(0, 0);
     private int? editingId;
@@ -67,7 +66,7 @@ public partial class Income
         await CheckOwnerAsync();
         try
         {
-            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanToday);
+            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanClock.Today);
         }
         catch (Exception ex) { Logger.LogWarning(ex, "정기 수입을 생성하지 못했습니다."); }
     }
@@ -133,7 +132,7 @@ public partial class Income
     private void CancelEdit()
     {
         editingId = null;
-        date = KoreanToday;
+        date = KoreanClock.Today;
         amount = 0;
         source = IncomeRecord.Sources[0];
         memo = "";

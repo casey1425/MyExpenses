@@ -8,7 +8,7 @@ public partial class RecurringIncome
 {
     private string ownerId = string.Empty;
     private List<RecurringIncomeRule> rules = [];
-    private int dayOfMonth = RecurringIncomeService.KoreanToday.Day;
+    private int dayOfMonth = KoreanClock.Today.Day;
     private long amount;
     private string source = IncomeRecord.Sources[0];
     private string memo = string.Empty;
@@ -31,7 +31,7 @@ public partial class RecurringIncome
 
         try
         {
-            await RecurringIncomeService.GenerateDueAsync(ownerId, RecurringIncomeService.KoreanToday);
+            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
         }
         catch (Exception ex)
@@ -69,7 +69,7 @@ public partial class RecurringIncome
         isBusy = true;
         try
         {
-            var today = RecurringIncomeService.KoreanToday;
+            var today = KoreanClock.Today;
             await RecurringIncomeService.CreateAsync(ownerId, today, dayOfMonth, amount, source, memo);
             var generated = await RecurringIncomeService.GenerateDueAsync(ownerId, today);
             await ReloadAsync();
@@ -110,7 +110,7 @@ public partial class RecurringIncome
         {
             if (!await RecurringIncomeService.UpdateAsync(ownerId, id, editDay, editAmount, editSource, editMemo))
                 throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
-            await RecurringIncomeService.GenerateDueAsync(ownerId, RecurringIncomeService.KoreanToday);
+            await RecurringIncomeService.GenerateDueAsync(ownerId, KoreanClock.Today);
             await ReloadAsync();
             editingId = null;
             errorMessage = null;
@@ -130,7 +130,7 @@ public partial class RecurringIncome
         isBusy = true;
         try
         {
-            var today = RecurringIncomeService.KoreanToday;
+            var today = KoreanClock.Today;
             if (!await RecurringIncomeService.SetActiveAsync(ownerId, rule.Id, !rule.IsActive, today))
                 throw new InvalidOperationException("규칙을 찾을 수 없습니다.");
             if (!rule.IsActive)

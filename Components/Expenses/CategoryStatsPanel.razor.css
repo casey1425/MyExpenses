@@ -1,0 +1,140 @@
+.section-kicker {
+    margin: 0 0 .45rem;
+    color: #537cbb;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .16em;
+}
+
+.panel {
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
+}
+
+.statistics-panel {
+    margin-bottom: 1.25rem;
+}
+
+.statistics-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.statistics-period {
+    margin: .35rem 0 0;
+    color: #8a9aad;
+    font-size: .82rem;
+}
+
+.statistics-total {
+    flex-shrink: 0;
+    color: #285889;
+    font-size: 1.2rem;
+    letter-spacing: -.03em;
+}
+
+.statistics-empty {
+    margin: 0;
+    padding: 1.15rem 0;
+    color: #8a9aad;
+    font-size: .9rem;
+    text-align: center;
+}
+
+.statistics-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 2rem;
+}
+
+.statistic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .55rem;
+}
+
+.statistic-name {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.statistic-icon {
+    font-size: 1.05rem;
+}
+
+.statistic-name strong {
+    white-space: nowrap;
+    font-size: .9rem;
+}
+
+.statistic-name small {
+    margin-left: .25rem;
+    color: #97a6b7;
+    font-size: .75rem;
+    font-weight: 400;
+}
+
+.statistic-values {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+    flex-shrink: 0;
+}
+
+.statistic-values strong {
+    font-size: .9rem;
+}
+
+.statistic-values span {
+    color: #6885a5;
+    font-size: .78rem;
+}
+
+.statistic-track {
+    height: 9px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #eaf0f7;
+}
+
+.statistic-fill {
+    min-width: 3px;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2d598b, #79a8d6);
+}
+
+.panel {
+    padding: 1.6rem;
+}
+
+.panel-heading {
+    margin-bottom: 1.4rem;
+}
+
+.panel-heading h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 750;
+    letter-spacing: -.03em;
+}
+
+@media (max-width: 900px) {
+    .statistics-list {grid-template-columns: 1fr;}
+}
+
+@media (max-width: 600px) {
+    .panel {padding: 1.2rem;}
+    .statistics-heading {align-items: flex-start; flex-direction: column;}
+    .statistics-total {font-size: 1.05rem;}
+    .statistic-header {align-items: flex-start;}
+    .statistic-values {align-items: flex-end; flex-direction: column; gap: 0;}
+}

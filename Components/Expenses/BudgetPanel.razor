@@ -1,0 +1,82 @@
+@using System.Globalization
+
+<section class="panel budget-panel" aria-labelledby="budget-title">
+    <div class="panel-heading budget-heading">
+        <div>
+            <p class="section-kicker">MONTHLY BUDGET</p>
+            <h2 id="budget-title">월별 예산</h2>
+            <p class="budget-description">선택한 달의 전체 지출과 예산을 비교합니다.</p>
+        </div>
+    </div>
+
+    <form class="budget-form" @onsubmit="() => OnSave.InvokeAsync()" @onsubmit:preventDefault>
+        <div class="budget-field">
+            <label for="budget-month">월</label>
+            <input id="budget-month" type="month" value="@MonthInput" @onchange="OnMonthChanged"
+                   disabled="@Disabled" required />
+        </div>
+        <div class="budget-field">
+            <label for="budget-amount">예산 금액</label>
+            <div class="amount-input">
+                <input id="budget-amount" type="number" min="1" step="1" @bind="Input" @bind:after="() => InputChanged.InvokeAsync(Input)" required />
+                <span>원</span>
+            </div>
+        </div>
+        <div class="budget-buttons">
+            <button type="submit" class="budget-save" disabled="@IsSaving">@(IsSaving ? "저장 중..." : Amount is null ? "예산 설정" : "예산 변경")</button>
+            @if (Amount is not null)
+            {
+                <button type="button" class="budget-delete" @onclick="() => OnDelete.InvokeAsync()" disabled="@IsSaving">예산 삭제</button>
+            }
+        </div>
+    </form>
+
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <p class="form-error" role="alert">@Error</p>
+    }
+    @if (!string.IsNullOrEmpty(Notice))
+    {
+        <p class="budget-notice" role="status">@Notice</p>
+    }
+
+    @if (Amount is long limit)
+    {
+        <div class="budget-progress">
+            <div class="budget-progress-labels">
+                <strong>@Spent.ToString("N0")원 사용</strong>
+                <span>예산 @limit.ToString("N0")원 · @Percentage.ToString("0.#")%</span>
+            </div>
+            <div class="budget-track" role="progressbar" aria-label="예산 사용률" aria-valuenow="@Math.Min(Percentage, 100).ToString("0.#", CultureInfo.InvariantCulture)" aria-valuemin="0" aria-valuemax="100">
+                <div class="budget-fill @(Spent > limit ? "over-budget" : "")" style="width: @BarWidth%"></div>
+            </div>
+            <p class="budget-balance @(Spent > limit ? "over-budget" : "")">
+                @(Spent > limit ? $"예산을 {(Spent - limit):N0}원 초과했어요." : $"예산이 {(limit - Spent):N0}원 남았어요.")
+            </p>
+        </div>
+    }
+    else
+    {
+        <p class="budget-empty">@Month.ToString("yyyy년 M월") 지출은 @Spent.ToString("N0")원입니다. 예산을 설정하면 사용률과 남은 금액을 볼 수 있어요.</p>
+    }
+</section>
+
+@code {
+    [Parameter] public DateTime Month { get; set; }
+    [Parameter] public string MonthInput { get; set; } = string.Empty;
+    [Parameter] public EventCallback<ChangeEventArgs> OnMonthChanged { get; set; }
+    // 월 선택은 예산 저장 중이거나 카테고리 예산을 저장하는 동안 막습니다.
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public long Input { get; set; }
+    [Parameter] public EventCallback<long> InputChanged { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public long? Amount { get; set; }
+    [Parameter] public long Spent { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public string? Notice { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private decimal Percentage => Amount is > 0 ? (decimal)Spent / Amount.Value * 100 : 0;
+    private string BarWidth => Math.Min(Percentage, 100).ToString("0.#", CultureInfo.InvariantCulture);
+}

@@ -115,7 +115,7 @@ foreach (var legacy in new[] { false, true })
     // 화면 로직: 정기 수입 화면과, 수입 기록 화면 접속 시 자동 생성되는 흐름을 확인합니다.
     // (InteractiveServer 페이지는 HtmlRenderer로 직접 렌더링할 수 없어 기존 Home 검증처럼 리플렉션을 씁니다.)
     const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-    var realToday = RecurringIncomeService.KoreanToday;
+    var realToday = KoreanClock.Today;
     await recurring.CreateAsync("Z", realToday, 1, 2_000_000, "급여", "월급날");
     var auth = new TestAuth("Z");
     T Page<T>(Action<T> inject) where T : new() { var page = new T(); inject(page); return page; }

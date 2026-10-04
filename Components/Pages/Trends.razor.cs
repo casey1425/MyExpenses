@@ -18,7 +18,7 @@ public partial class Trends
 
     protected override async Task OnInitializedAsync()
     {
-        today = KoreanToday();
+        today = DateOnly.FromDateTime(KoreanClock.Today);
         selectedMonth = ExpenseTrends.MonthStart(today);
         monthInput = selectedMonth.ToString("yyyy-MM", CultureInfo.InvariantCulture);
         var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -29,7 +29,7 @@ public partial class Trends
     private async Task OnMonthChangedAsync(ChangeEventArgs args)
     {
         var value = args.Value?.ToString() ?? string.Empty;
-        today = KoreanToday();
+        today = DateOnly.FromDateTime(KoreanClock.Today);
         if (!DateTime.TryParseExact(value, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) ||
             DateOnly.FromDateTime(parsed) < ExpenseTrends.MinimumMonth ||
             DateOnly.FromDateTime(parsed) > ExpenseTrends.MonthStart(today))
@@ -57,7 +57,7 @@ public partial class Trends
                 errorMessage = "로그인 상태가 바뀌었습니다. 페이지를 새로고침해 주세요.";
                 return;
             }
-            today = KoreanToday();
+            today = DateOnly.FromDateTime(KoreanClock.Today);
             await RecurringExpenseService.GenerateDueAsync(ownerId, today.ToDateTime(TimeOnly.MinValue));
             try
             {
@@ -78,8 +78,6 @@ public partial class Trends
         finally { isLoading = false; }
     }
 
-    private static DateOnly KoreanToday() => DateOnly.FromDateTime(
-        TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTimeOffset.UtcNow, "Asia/Seoul").DateTime);
     private static string Period(DateOnly start, DateOnly end) => $"{start:yyyy.MM.dd} ~ {end:yyyy.MM.dd}";
     private static string ChangeClass(ExpenseMonthComparison comparison) => comparison.Difference switch
     {

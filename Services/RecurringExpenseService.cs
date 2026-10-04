@@ -20,7 +20,7 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
     public async Task CreateAsync(string ownerId, int dayOfMonth, long amount, string category, string memo)
     {
         Validate(ownerId, dayOfMonth, amount, category, memo);
-        var today = DateTime.Today;
+        var today = KoreanClock.Today;
         await using var db = await dbFactory.CreateDbContextAsync();
         await using var transaction = await db.Database.BeginTransactionAsync();
         await CategoryService.VerifyAsync(db, ownerId, category);
@@ -65,7 +65,7 @@ public sealed class RecurringExpenseService(IDbContextFactory<ExpensesDbContext>
             return false;
 
         if (isActive && !rule.IsActive)
-            rule.StartMonth = MonthStart(DateTime.Today); // 중지 기간의 지출은 소급 생성하지 않습니다.
+            rule.StartMonth = MonthStart(KoreanClock.Today); // 중지 기간의 지출은 소급 생성하지 않습니다.
         rule.IsActive = isActive;
         await db.SaveChangesAsync();
         return true;

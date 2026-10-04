@@ -52,7 +52,7 @@ public static class ExpenseExportEndpoints
         }
         catch (ArgumentException ex) { return Results.BadRequest(ex.Message); }
 
-        var fileName = $"MyExpenses-{scope}-{DateTime.Today:yyyy-MM-dd}.csv";
+        var fileName = $"MyExpenses-{scope}-{KoreanClock.Today:yyyy-MM-dd}.csv";
         return Results.File(ExpenseCsvExporter.Create(expenses), "text/csv; charset=utf-8", fileName);
     }
 }
