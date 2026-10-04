@@ -1,0 +1,211 @@
+@page "/statistics"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject YearlyStatisticsService StatisticsService
+@inject RecurringExpenseService RecurringExpenseService
+@inject RecurringIncomeService RecurringIncomeService
+@inject ILogger<Statistics> Logger
+
+<PageTitle>연간 통계 | MyExpenses</PageTitle>
+
+<main class="stats-page">
+    <header class="stats-heading">
+        <p class="kicker">YEARLY STATISTICS</p>
+        <h1>연간 통계</h1>
+        <p>한 해의 수입·지출 흐름과 어디에 얼마를 썼는지 한눈에 확인해 보세요.</p>
+    </header>
+
+    <div class="year-controls">
+        <label for="stats-year">조회할 해</label>
+        <select id="stats-year" value="@year" @onchange="OnYearChangedAsync" disabled="@isLoading">
+            @foreach (var option in years)
+            {
+                <option value="@option" selected="@(option == year)">@(option)년</option>
+            }
+        </select>
+        <button type="button" @onclick="ReloadAsync" disabled="@isLoading">새로고침</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="loading" role="status">통계를 불러오고 있습니다...</p>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="error" role="alert">@errorMessage</p>
+    }
+
+    @if (report is not null && !isLoading)
+    {
+        var empty = report.Current.ExpenseCount == 0 && report.Current.IncomeCount == 0;
+        <section class="stats-panel" aria-labelledby="summary-title">
+            <h2 id="summary-title">@(report.Year)년 요약</h2>
+            <p class="period-note">@Period(report.From, report.To)@(report.IsCurrentYear ? " · 올해는 오늘까지의 합계이며, 전년도는 같은 날짜까지 비교합니다." : " · 한 해 전체를 전년도와 비교합니다.") 날짜는 한국 시간 기준입니다.</p>
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <span>수입 · @(report.Current.IncomeCount)건</span>
+                    <strong class="income-text">@report.Current.Income.ToString("N0")<small>원</small></strong>
+                    <span class="@ChangeClass(report.Current.Income, report.Previous.Income, true)">@ChangeText(report.Current.Income, report.Previous.Income)</span>
+                </div>
+                <div class="summary-card">
+                    <span>지출 · @(report.Current.ExpenseCount)건</span>
+                    <strong>@report.Current.Expense.ToString("N0")<small>원</small></strong>
+                    <span class="@ChangeClass(report.Current.Expense, report.Previous.Expense, false)">@ChangeText(report.Current.Expense, report.Previous.Expense)</span>
+                </div>
+                <div class="summary-card">
+                    <span>순수지</span>
+                    <strong class="@(report.Current.Net < 0 ? "negative" : "income-text")">@(report.Current.Net < 0 ? "-" : "")@Math.Abs(report.Current.Net).ToString("N0")<small>원</small></strong>
+                    <span>저축률 @RateText(report.Current.SavingsRate)</span>
+                </div>
+                <div class="summary-card">
+                    <span>월 평균 지출</span>
+                    <strong>@(report.AverageMonthlyExpense is long average ? average.ToString("N0") : "-")<small>@(report.AverageMonthlyExpense.HasValue ? "원" : "")</small></strong>
+                    <span>@(report.AverageMonthCount > 0 ? $"지난 {report.AverageMonthCount}개월 평균" : "지난 달 기록이 아직 없습니다")</span>
+                </div>
+            </div>
+            <p class="comparison-help">전년도 같은 기간: 수입 @report.Previous.Income.ToString("N0")원 · 지출 @report.Previous.Expense.ToString("N0")원. 월 평균에는 아직 끝나지 않은 달을 넣지 않습니다.</p>
+        </section>
+
+        @if (empty)
+        {
+            <p class="empty">@(report.Year)년에는 기록된 수입이나 지출이 없습니다.</p>
+        }
+        else
+        {
+            <section class="stats-panel" aria-labelledby="months-title">
+                <h2 id="months-title">월별 수입·지출</h2>
+                <p class="period-note">금액 단위는 원입니다.</p>
+                <div class="table-wrap">
+                    <table class="stats-table">
+                        <caption class="visually-hidden">월별 수입, 지출, 순수지, 저축률</caption>
+                        <thead><tr><th scope="col">월</th><th scope="col">수입</th><th scope="col">지출</th><th scope="col">순수지</th><th scope="col">저축률</th></tr></thead>
+                        <tbody>
+                            @foreach (var month in report.Months)
+                            {
+                                <tr class="@(month.IsFuture ? "future" : "")">
+                                    <th scope="row">@(month.Month.Month)월@(month.IsPartial ? " (오늘까지)" : "")</th>
+                                    @if (month.IsFuture)
+                                    {
+                                        <td colspan="4" class="future-note">아직 오지 않았습니다</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="income-text">@month.Income.ToString("N0")<span class="won">원</span></td>
+                                        <td>@month.Expense.ToString("N0")<span class="won">원</span></td>
+                                        <td class="@(month.Net < 0 ? "negative" : "")">@(month.Net < 0 ? "-" : "")@Math.Abs(month.Net).ToString("N0")<span class="won">원</span></td>
+                                        <td>@RateText(month.SavingsRate)</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="stats-panel" aria-labelledby="category-title">
+                <h2 id="category-title">카테고리별 지출</h2>
+                <p class="period-note">금액 단위는 원이며, 전년도 같은 기간과 비교합니다. 좁은 화면에서는 전년도 금액을 숨기고 증감만 보여 줍니다.</p>
+                @if (report.Categories.Count == 0)
+                {
+                    <p class="empty-inline">이 기간에 기록된 지출이 없습니다.</p>
+                }
+                else
+                {
+                    <div class="table-wrap">
+                        <table class="stats-table">
+                            <caption class="visually-hidden">카테고리별 지출 금액과 비중, 전년도 대비 변화</caption>
+                            <thead><tr><th scope="col">카테고리</th><th scope="col">지출</th><th scope="col">비중</th><th scope="col" class="hide-sm">전년도</th><th scope="col">증감</th></tr></thead>
+                            <tbody>
+                                @foreach (var row in report.Categories)
+                                {
+                                    <tr>
+                                        <th scope="row">@row.Category<span class="bar" aria-hidden="true"><i style="@row.WidthStyle"></i></span></th>
+                                        <td>@row.Amount.ToString("N0")<span class="won">원</span><span class="count"> · @(row.Count)건</span></td>
+                                        <td>@row.Percentage.ToString("0.#", CultureInfo.InvariantCulture)%</td>
+                                        <td class="hide-sm">@row.PreviousAmount.ToString("N0")원</td>
+                                        <td class="@ChangeClass(row.Amount, row.PreviousAmount, false)">@ChangeText(row.Amount, row.PreviousAmount)</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+
+            <section class="stats-panel" aria-labelledby="method-title">
+                <h2 id="method-title">결제수단별 지출</h2>
+                @if (report.Methods.Count == 0)
+                {
+                    <p class="empty-inline">이 기간에 기록된 지출이 없습니다.</p>
+                }
+                else
+                {
+                    <ul class="bar-list">
+                        @foreach (var row in report.Methods)
+                        {
+                            <li>
+                                <div class="bar-line"><span>@row.Name@(string.IsNullOrEmpty(row.Type) ? "" : $" · {row.Type}")</span><strong>@row.Amount.ToString("N0")원</strong></div>
+                                <span class="bar" aria-hidden="true"><i style="@row.WidthStyle"></i></span>
+                                <small>@row.Percentage.ToString("0.#", CultureInfo.InvariantCulture)% · @(row.Count)건</small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            <section class="stats-panel" aria-labelledby="weekday-title">
+                <h2 id="weekday-title">요일별 지출</h2>
+                <ul class="bar-list">
+                    @foreach (var row in report.Weekdays)
+                    {
+                        <li>
+                            <div class="bar-line"><span>@YearlyStatistics.WeekdayName(row.Day)요일</span><strong>@row.Amount.ToString("N0")원</strong></div>
+                            <span class="bar" aria-hidden="true"><i style="@row.WidthStyle"></i></span>
+                            <small>@row.Percentage.ToString("0.#", CultureInfo.InvariantCulture)% · @(row.Count)건</small>
+                        </li>
+                    }
+                </ul>
+            </section>
+
+            <section class="stats-panel" aria-labelledby="top-title">
+                <h2 id="top-title">가장 큰 지출 TOP @YearlyStatistics.TopCount</h2>
+                @if (report.TopExpenses.Count == 0)
+                {
+                    <p class="empty-inline">이 기간에 기록된 지출이 없습니다.</p>
+                }
+                else
+                {
+                    <ol class="rank-list">
+                        @foreach (var row in report.TopExpenses)
+                        {
+                            <li><span>@row.Date.ToString("yyyy.MM.dd") · @row.Category@(string.IsNullOrEmpty(row.Memo) ? "" : $" · {row.Memo}")</span><strong>@row.Amount.ToString("N0")원</strong></li>
+                        }
+                    </ol>
+                }
+            </section>
+
+            <section class="stats-panel" aria-labelledby="memo-title">
+                <h2 id="memo-title">자주 쓴 항목</h2>
+                <p class="period-note">같은 메모가 @(YearlyStatistics.MinimumMemoRepeats)번 이상 기록된 항목입니다. 대소문자와 앞뒤 공백은 같은 것으로 봅니다.</p>
+                @if (report.FrequentMemos.Count == 0)
+                {
+                    <p class="empty-inline">반복해서 기록한 메모가 아직 없습니다.</p>
+                }
+                else
+                {
+                    <ol class="rank-list">
+                        @foreach (var row in report.FrequentMemos)
+                        {
+                            <li><span>@row.Memo · @(row.Count)회</span><strong>@row.Amount.ToString("N0")원</strong></li>
+                        }
+                    </ol>
+                }
+            </section>
+        }
+    }
+    <a href="/">← 지출 기록으로 돌아가기</a>
+</main>
