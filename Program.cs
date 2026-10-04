@@ -77,6 +77,7 @@ builder.Services.AddScoped<PaymentMethodService>();
 builder.Services.AddScoped<ExpenseService>();
 builder.Services.AddScoped<IncomeService>();
 builder.Services.AddScoped<SavingsGoalService>();
+builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<RecurringIncomeService>();
 builder.Services.AddScoped<IncomeCsvImportService>();
 builder.Services.AddScoped<BudgetService>();
@@ -150,5 +151,6 @@ app.MapAccountEndpoints();
 app.MapGet("/healthz", () => Results.Text("Healthy", "text/plain")).AllowAnonymous();
 app.MapExpenseExportEndpoints();
 app.MapIncomeExportEndpoints();
+app.MapBackupEndpoints();
 
 app.Run();
