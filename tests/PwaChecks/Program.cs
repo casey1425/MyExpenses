@@ -47,7 +47,7 @@ Check(File.Exists(appleIcon) && PngSize(File.ReadAllBytes(appleIcon)) == (180, 1
 Check(File.ReadAllBytes(appleIcon)[25] == 2 && File.ReadAllBytes(P("wwwroot/icons/icon-maskable-512.png"))[25] == 2, "apple-touch-icon/maskable 아이콘에 투명 채널이 있습니다.");
 
 // ---- 바로가기는 실제로 존재하는 화면 경로여야 합니다 ----
-var routes = Directory.GetFiles(P("Components/Pages"), "*.razor")
+var routes = Directory.GetFiles(P("Components/Pages"), "*.razor", SearchOption.AllDirectories)
     .SelectMany(file => Regex.Matches(File.ReadAllText(file), "^@page \"([^\"]+)\"", RegexOptions.Multiline).Select(match => match.Groups[1].Value))
     .ToHashSet();
 foreach (var shortcut in manifest.GetProperty("shortcuts").EnumerateArray())

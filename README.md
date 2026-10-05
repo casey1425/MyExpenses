@@ -307,10 +307,9 @@ curl http://localhost:10000/healthz
 ```text
 MyExpenses/
 ├── Program.cs                 # 앱 시작과 서비스·인증·DB 설정
-├── AccountEndpoints.cs        # 로그인·로그아웃·계정 삭제
-├── ExpenseExportEndpoints.cs  # CSV 내보내기
+├── Endpoints/                 # 로그인·로그아웃·CSV·백업 등 HTTP 요청 처리
 ├── Components/                # 화면·레이아웃·차트
-│   └── Pages/                 # Razor 마크업과 C# 화면 상태·이벤트
+│   └── Pages/                 # 기능별 폴더(지출·수입·저축·분석·관리·공개)의 Razor 화면
 ├── Services/                  # 사용자별 조회·저장·삭제
 ├── Data/                      # 모델·EF Core·검증·통계·CSV 로직
 ├── wwwroot/                   # 정적 파일과 공통 스타일
@@ -328,10 +327,11 @@ MyExpenses/
 ```text
 MyExpenses/
 ├── Program.cs                     # 앱 시작, 서비스·인증·DB 초기화, 엔드포인트 연결
-├── AccountEndpoints.cs            # Google 로그인 콜백, 로그아웃, 계정 삭제
-├── ExpenseExportEndpoints.cs      # 인증된 사용자의 CSV 내보내기 요청 처리
-├── IncomeExportEndpoints.cs       # 수입 CSV 내보내기 요청 처리
-├── BackupEndpoints.cs             # 전체 백업 내려받기 요청 처리
+├── Endpoints/                     # 화면이 아닌 HTTP 요청 처리
+│   ├── AccountEndpoints.cs        # Google 로그인 콜백, 로그아웃, 계정 삭제
+│   ├── ExpenseExportEndpoints.cs  # 인증된 사용자의 CSV 내보내기 요청 처리
+│   ├── IncomeExportEndpoints.cs   # 수입 CSV 내보내기 요청 처리
+│   └── BackupEndpoints.cs         # 전체 백업 내려받기 요청 처리
 ├── MyExpenses.csproj              # .NET 대상 버전과 NuGet 패키지 참조
 ├── Components/
 │   ├── App.razor                  # HTML 문서와 앱 진입점
@@ -348,30 +348,38 @@ MyExpenses/
 │   │   ├── ExpenseForm.razor      # 새 지출 입력과 템플릿 선택
 │   │   ├── ExpenseFilterForm.razor # 조회 조건 입력
 │   │   └── ExpenseList.razor      # 지출 목록과 수정 폼
-│   └── Pages/
-│       ├── Home.razor             # 지출 기록 화면: 요약과 위 컴포넌트 배치, 내역 머리글
-│       ├── Home.razor.cs          # 화면 상태, 초기화, 요약 표시(상태와 로직은 Home에 둠)
-│       ├── Home.Expenses.cs       # 조회 조건과 지출 CRUD 이벤트
-│       ├── Home.Budgets.cs        # 월별·카테고리별 예산 이벤트
-│       ├── Home.Templates.cs      # 템플릿·결제수단 선택 이벤트
-│       ├── Import.razor           # CSV 가져오기와 미리보기
-│       ├── ImportIncome.razor     # 수입 CSV 가져오기와 미리보기
-│       ├── Backup.razor           # 전체 백업·복원과 미리보기
-│       ├── Recurring.razor        # 정기 지출 규칙 관리
-│       ├── RecurringIncome.razor  # 정기 수입 규칙 관리
-│       ├── Templates.razor        # 즐겨찾기 지출 템플릿 관리
-│       ├── PaymentMethods.razor   # 결제수단 관리와 월별 합계
-│       ├── Income.razor           # 수입 기록과 월별 순수지
-│       ├── Savings.razor          # 목표 저축과 저축 내역
-│       ├── Categories.razor       # 사용자별 카테고리 관리
-│       ├── Statistics.razor       # 연간 통계
-│       ├── Trends.razor           # 월별 수입·지출 추이와 전월 비교
-│       ├── Login.razor            # Google 로그인 화면
-│       ├── Welcome.razor          # 신규 사용자 시작 안내
-│       ├── Account.razor          # 계정·데이터 삭제 화면
-│       ├── About.razor            # 서비스 소개
-│       ├── Privacy.razor          # 개인정보 처리방침
-│       └── Terms.razor            # 이용약관
+│   └── Pages/                     # 화면(라우트). 기능별 폴더로 나누고 네임스페이스는 모두 MyExpenses.Components.Pages
+│       ├── Expenses/              # 지출
+│       │   ├── Home.razor         # 지출 기록 화면: 요약과 위 컴포넌트 배치, 내역 머리글
+│       │   ├── Home.razor.cs      # 화면 상태, 초기화, 요약 표시(상태와 로직은 Home에 둠)
+│       │   ├── Home.Expenses.cs   # 조회 조건과 지출 CRUD 이벤트
+│       │   ├── Home.Budgets.cs    # 월별·카테고리별 예산 이벤트
+│       │   ├── Home.Templates.cs  # 템플릿·결제수단 선택 이벤트
+│       │   ├── Templates.razor    # 즐겨찾기 지출 템플릿 관리
+│       │   ├── Recurring.razor    # 정기 지출 규칙 관리
+│       │   └── Import.razor       # CSV 가져오기와 미리보기
+│       ├── Income/                # 수입
+│       │   ├── Income.razor       # 수입 기록과 월별 순수지
+│       │   ├── RecurringIncome.razor # 정기 수입 규칙 관리
+│       │   └── ImportIncome.razor # 수입 CSV 가져오기와 미리보기
+│       ├── Savings/Savings.razor  # 목표 저축과 저축 내역
+│       ├── Insights/              # 분석
+│       │   ├── Statistics.razor   # 연간 통계
+│       │   └── Trends.razor       # 월별 수입·지출 추이와 전월 비교
+│       ├── Settings/              # 관리
+│       │   ├── Categories.razor   # 사용자별 카테고리 관리
+│       │   ├── PaymentMethods.razor # 결제수단 관리와 월별 합계
+│       │   ├── Backup.razor       # 전체 백업·복원과 미리보기
+│       │   ├── Account.razor      # 계정·데이터 삭제 화면
+│       │   └── AccountDeleted.razor
+│       └── Public/                # 로그인 전에도 보이는 화면
+│           ├── Login.razor        # Google 로그인 화면
+│           ├── Welcome.razor      # 신규 사용자 시작 안내
+│           ├── About.razor        # 서비스 소개
+│           ├── Privacy.razor      # 개인정보 처리방침
+│           ├── Terms.razor        # 이용약관
+│           ├── NotFound.razor
+│           └── Error.razor
 ├── Data/
 │   ├── ExpenseRecord.cs           # 지출 모델
 │   ├── UserCategory.cs            # 사용자별 카테고리·순서·보관 상태

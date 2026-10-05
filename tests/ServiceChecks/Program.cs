@@ -77,7 +77,7 @@ var serverTimeUsers = Directory.EnumerateFiles(repoRoot!.FullName, "*.*", Search
     .Where(path => path.EndsWith(".cs") || path.EndsWith(".razor"))
     .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}") &&
                    !path.Contains($"{Path.DirectorySeparatorChar}tests{Path.DirectorySeparatorChar}") && !path.Contains($"{Path.DirectorySeparatorChar}Migrations{Path.DirectorySeparatorChar}"))
-    .Where(path => Path.GetFileName(path) is not ("Weather.razor" or "KoreanClock.cs"))
+    .Where(path => Path.GetFileName(path) is not "KoreanClock.cs")
     .Where(path => File.ReadAllText(path).Contains("DateTime.Today") || File.ReadAllText(path).Contains("DateTime.Now") || File.ReadAllText(path).Contains("DateTimeOffset.Now"))
     .Select(Path.GetFileName).ToList();
 Check(serverTimeUsers.Count == 0, "Server local time used instead of KoreanClock: " + string.Join(", ", serverTimeUsers));
