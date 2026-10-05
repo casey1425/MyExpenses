@@ -1,0 +1,29 @@
+.nav-item { font-size: .92rem; padding-bottom: .15rem; }
+
+.nav-item ::deep .nav-link {
+    color: #dbe5f3;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    height: 2.7rem;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+}
+
+.nav-item ::deep .nav-icon { flex: 0 0 20px; opacity: .85; }
+
+.nav-item ::deep a.active {
+    background-color: rgba(255,255,255,.18);
+    color: #fff;
+    font-weight: 700;
+}
+
+.nav-item ::deep a.active .nav-icon { opacity: 1; }
+
+.nav-item ::deep .nav-link:hover {
+    background-color: rgba(255,255,255,.1);
+    color: #fff;
+}
+

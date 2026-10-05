@@ -13,11 +13,7 @@
 <PageTitle>수입 CSV 가져오기 | MyExpenses</PageTitle>
 
 <main class="import-page">
-    <header class="import-heading">
-        <p class="import-kicker">IMPORT INCOME</p>
-        <h1>수입 CSV 가져오기</h1>
-        <p>MyExpenses에서 내보낸 수입 CSV 파일을 현재 로그인한 계정에 가져옵니다.</p>
-    </header>
+    <PageHeader Title="수입 CSV 가져오기" Description="MyExpenses에서 내보낸 수입 CSV 파일을 현재 로그인한 계정에 가져옵니다." />
 
     <section class="import-card" aria-labelledby="upload-title">
         <h2 id="upload-title">파일 선택</h2>
@@ -26,7 +22,7 @@
                    disabled="@(isReading || isSaving)" aria-label="수입 CSV 파일 선택" />
         <p class="format-hint">첫 줄: <code>@IncomeCsvExporter.HeaderLine</code></p>
         <p class="format-hint">분류는 @string.Join(" · ", IncomeRecord.Sources) 중 하나여야 합니다.</p>
-        <p class="format-hint">지출 CSV는 <a href="/import">CSV 가져오기</a>에서 가져오세요. <a href="/income">← 수입 기록으로 돌아가기</a></p>
+        <p class="format-hint">지출 CSV는 <a href="/import">CSV 가져오기</a>에서 가져오세요.</p>
     </section>
 
     @if (isReading)

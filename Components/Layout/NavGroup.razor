@@ -1,0 +1,12 @@
+<div class="nav-group" role="group" aria-label="@Title">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <p class="nav-group-title" aria-hidden="true">@Title</p>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

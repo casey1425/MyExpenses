@@ -12,12 +12,7 @@
 
 <PageTitle>수입 기록 | MyExpenses</PageTitle>
 <main class="income-page">
-    <header>
-        <p class="kicker">INCOME</p>
-        <h1>수입 기록</h1>
-        <p>월급·부수입·용돈을 기록하고 같은 달 지출과 비교해 순수지와 저축률을 확인합니다. 금액은 원 단위입니다.</p>
-        <a href="/">← 지출 기록으로 돌아가기</a>
-    </header>
+    <PageHeader Title="수입 기록" Description="월급·부수입·용돈을 기록하고 같은 달 지출과 비교해 순수지와 저축률을 확인합니다. 금액은 원 단위입니다." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
     <section class="income-card" aria-labelledby="income-form-title">

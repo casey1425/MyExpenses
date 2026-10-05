@@ -4,22 +4,6 @@
     padding: 2rem 0 3rem;
 }
 
-.account-management-heading {
-    margin-bottom: 1.5rem;
-}
-
-.account-management-heading h1 {
-    margin: 0;
-    color: #172033;
-    font-size: clamp(2rem, 5vw, 2.65rem);
-}
-
-.account-management-heading > p:last-child {
-    margin: .7rem 0 0;
-    color: #68758c;
-}
-
-.account-management-kicker,
 .danger-kicker {
     margin: 0 0 .45rem;
     color: #537cbb;
@@ -135,9 +119,7 @@
 }
 
 @media (max-width: 520px) {
-    .account-details {
-        grid-template-columns: 1fr;
-    }
+    .account-details {grid-template-columns: 1fr;}
 }
 
 .account-export-link + .account-export-link {

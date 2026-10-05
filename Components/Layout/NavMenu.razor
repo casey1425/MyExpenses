@@ -4,78 +4,43 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="메뉴 열기·닫기" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> 지출 기록
-            </NavLink>
-        </div>
+    <nav class="nav flex-column" aria-label="주 메뉴">
         <AuthorizeView>
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="income">
-                        <span class="nav-symbol" aria-hidden="true">＋</span> 수입 기록
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="recurring-income">
-                        <span class="nav-symbol" aria-hidden="true">↻</span> 정기 수입
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="savings">
-                        <span class="nav-symbol" aria-hidden="true">◎</span> 목표 저축
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="categories">
-                        <span class="nav-symbol" aria-hidden="true">▦</span> 카테고리 관리
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="payment-methods">
-                        <span class="nav-symbol" aria-hidden="true">▣</span> 결제수단
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="templates">
-                        <span class="nav-symbol" aria-hidden="true">☆</span> 즐겨찾기 지출
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="trends">
-                        <span class="nav-symbol" aria-hidden="true">▥</span> 월별 수입·지출 추이
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="statistics">
-                        <span class="nav-symbol" aria-hidden="true">◔</span> 연간 통계
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="recurring">
-                        <span class="nav-symbol" aria-hidden="true">↻</span> 정기 지출
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="import">
-                        <span class="nav-symbol" aria-hidden="true">⇧</span> CSV 가져오기
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="backup">
-                        <span class="nav-symbol" aria-hidden="true">⇩</span> 백업·복원
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="account">
-                        <span class="nav-symbol" aria-hidden="true">⚙</span> 계정 관리
-                    </NavLink>
-                </div>
+                <NavGroup Title="기록">
+                    <NavItem Href="" Icon="expense" Match="NavLinkMatch.All">지출 기록</NavItem>
+                    <NavItem Href="income" Icon="income">수입 기록</NavItem>
+                </NavGroup>
+                <NavGroup Title="분석">
+                    <NavItem Href="statistics" Icon="stats">연간 통계</NavItem>
+                    <NavItem Href="trends" Icon="trends">월별 추이</NavItem>
+                </NavGroup>
+                <NavGroup Title="계획">
+                    <NavItem Href="savings" Icon="goal">목표 저축</NavItem>
+                    <NavItem Href="recurring" Icon="repeat">정기 지출</NavItem>
+                    <NavItem Href="recurring-income" Icon="repeat">정기 수입</NavItem>
+                </NavGroup>
+                <NavGroup Title="관리">
+                    <NavItem Href="categories" Icon="category">카테고리</NavItem>
+                    <NavItem Href="payment-methods" Icon="card">결제수단</NavItem>
+                    <NavItem Href="templates" Icon="star">즐겨찾기 지출</NavItem>
+                </NavGroup>
+                <NavGroup Title="데이터">
+                    <NavItem Href="import" Icon="upload">CSV 가져오기</NavItem>
+                    <NavItem Href="backup" Icon="download">백업·복원</NavItem>
+                </NavGroup>
+                <NavGroup Title="계정">
+                    <NavItem Href="account" Icon="user">계정 관리</NavItem>
+                </NavGroup>
             </Authorized>
+            <NotAuthorized>
+                <NavGroup>
+                    <NavItem Href="" Icon="expense" Match="NavLinkMatch.All">지출 기록</NavItem>
+                </NavGroup>
+            </NotAuthorized>
         </AuthorizeView>
     </nav>
 </div>

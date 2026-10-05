@@ -100,8 +100,6 @@ h1 {
 }
 
 @media (max-width: 640px) {
-    .welcome-card {
-        padding: 2rem 1.25rem;
-        border-radius: 22px;
-    }
+    .welcome-card {padding: 2rem 1.25rem;
+        border-radius: 22px;}
 }

@@ -8,12 +8,7 @@
 
 <PageTitle>카테고리 관리 | MyExpenses</PageTitle>
 <main class="categories-page">
-    <header>
-        <p class="kicker">MY CATEGORIES</p>
-        <h1>카테고리 관리</h1>
-        <p>나에게 맞는 분류를 만들고 표시 순서를 바꿔 보세요.</p>
-        <a href="/">← 지출 기록으로 돌아가기</a>
-    </header>
+    <PageHeader Title="카테고리 관리" Description="나에게 맞는 분류를 만들고 표시 순서를 바꿔 보세요." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
     <section class="card">

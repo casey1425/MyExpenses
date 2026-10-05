@@ -5,32 +5,12 @@
     color: #1e293b;
 }
 
-.page-heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 1rem;
-    margin-bottom: 1.8rem;
-}
-
-.eyebrow, .section-kicker {
+.section-kicker {
     margin: 0 0 .45rem;
     color: #537cbb;
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .16em;
-}
-
-h1 {
-    margin: 0;
-    font-size: clamp(2rem, 4vw, 2.8rem);
-    font-weight: 800;
-    letter-spacing: -.05em;
-}
-
-.subtitle {
-    margin: .6rem 0 0;
-    color: #718096;
 }
 
 .today-chip {
@@ -45,7 +25,7 @@ h1 {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 1rem;
     margin-bottom: 1.25rem;
 }
@@ -253,9 +233,64 @@ h1 {
 }
 
 @media (max-width: 600px) {
-    .page-heading {align-items: flex-start; flex-direction: column;}
     .summary-grid {gap: .7rem;}
     .summary-card {min-height: 135px; padding: 1rem;}
     .summary-card strong {font-size: 1.5rem;}
     .panel {padding: 1.2rem;}
+}
+
+.budget-summary { color: inherit; text-decoration: none; }
+
+.budget-summary:hover { border-color: #b9c9de; }
+
+.budget-summary strong { font-size: 1.5rem; }
+
+.budget-summary strong.over-budget { color: #a73e48; }
+
+.summary-meter {
+    display: block;
+    height: 6px;
+    margin: .2rem 0 .1rem;
+    border-radius: 3px;
+    background: #e8eef6;
+    overflow: hidden;
+}
+
+.summary-meter i { display: block; height: 100%; background: #4279ba; }
+
+.summary-meter i.over-budget { background: #be3f47; }
+
+.section-heading {
+    margin: 2rem 0 1rem;
+    color: #1e293b;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -.02em;
+}
+
+@media (max-width: 800px) {
+    .summary-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
+    .primary-summary {grid-column: 1 / -1;}
+    .summary-card {min-height: 120px;}
+}
+
+.filter-box { margin-bottom: 1rem; }
+
+.filter-box > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #285889;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.filter-box[open] > summary { margin-bottom: .75rem; }
+
+@media (max-width: 800px) {
+    .budget-summary strong { font-size: 1.25rem; }
 }

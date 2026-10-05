@@ -134,7 +134,7 @@ curl http://localhost:10000/healthz
 
 ## 사용 안내
 
-로그인 후 지출 기록 화면에서 기록·검색·예산·카테고리 통계를 확인할 수 있습니다. 별도 관리 화면은 메뉴에서 열 수 있습니다. 각 항목을 펼치면 세부 동작과 제한을 확인할 수 있습니다.
+로그인 후 지출 기록 화면에서 기록·검색·예산·카테고리 통계를 확인할 수 있습니다. 위에서부터 이번 달 지출·기록 건수·월 예산 현황 요약, 새 지출 추가와 지출 내역(검색·필터는 접어 두었다가 펼쳐서 사용), 예산과 통계 순서로 배치했습니다. 왼쪽 메뉴는 기록·분석·계획·관리·데이터·계정으로 묶여 있습니다. 각 항목을 펼치면 세부 동작과 제한을 확인할 수 있습니다.
 
 <details>
 <summary>사용자별 카테고리 관리</summary>
@@ -337,7 +337,8 @@ MyExpenses/
 │   ├── App.razor                  # HTML 문서와 앱 진입점
 │   ├── Routes.razor               # 페이지 라우팅과 인증 처리
 │   ├── _Imports.razor             # 컴포넌트 공통 네임스페이스
-│   ├── Layout/                    # 공통 레이아웃, 메뉴, 연결 복구 UI
+│   ├── Layout/                    # 공통 레이아웃, 그룹별 메뉴(NavMenu·NavGroup·NavItem·NavIcon), 연결 복구 UI
+│   ├── Shared/PageHeader.razor    # 모든 화면이 쓰는 제목·설명 머리글
 │   ├── Charts/
 │   │   ├── ExpenseTrendChart.razor # 월별 지출 SVG 막대그래프
 │   │   └── CashflowChart.razor    # 월별 수입·지출 묶음 막대그래프

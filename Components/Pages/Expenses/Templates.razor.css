@@ -1,26 +1,51 @@
 .templates-page { max-width: 1050px; margin: 0 auto; padding: 2rem 0; color: #1e293b; }
-header { margin-bottom: 1.5rem; }
-.kicker { color: #4f63d4; letter-spacing: .12em; font-size: .8rem; font-weight: 700; }
-header p, .help { color: #64748b; }
+
+
+.help { color: #64748b; }
+
 .template-card { background: #fff; border: 1px solid #e4eaf2; border-radius: 16px; padding: 1.5rem; margin-bottom: 1.25rem; }
+
 h2 { font-size: 1.2rem; margin: 0 0 1rem; }
+
 h3 { font-size: 1rem; margin: 0; }
+
 fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+
 .template-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+
 label { display: flex; flex-direction: column; gap: .4rem; font-size: .85rem; font-weight: 600; }
+
 input, select { width: 100%; min-height: 42px; border: 1px solid #dbe4ee; border-radius: 8px; padding: .6rem; background: #fff; }
-button { border: 1px solid #4055cb; border-radius: 8px; padding: .55rem .85rem; background: #4055cb; color: white; }
+
+button { border: 1px solid #285889; border-radius: 8px; padding: .55rem .85rem; background: #285889; color: white; }
+
 button.secondary { background: #fff; color: #40516a; border-color: #dbe4ee; }
+
 button.danger { background: #fff3f3; color: #a34242; border-color: #efcccc; }
+
 button:disabled { opacity: .55; cursor: wait; }
+
 .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
 .list-heading, .template-summary { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+
 .list-heading { margin-bottom: 1rem; }
+
 .list-heading h2 { margin: 0; }
+
 .template-item { border-top: 1px solid #e4eaf2; padding: 1rem 0; overflow-wrap: anywhere; }
+
 .template-summary p { margin: .4rem 0 0; }
+
 .delete-confirm { margin-top: .75rem; padding: .85rem; border-radius: 8px; background: #fff5f5; }
+
 .error, .notice { padding: .8rem; border-radius: 8px; }
+
 .error { background: #fff2f2; color: #a34242; }
+
 .notice { background: #edf7f1; color: #286449; }
-@media (max-width: 600px) { .template-fields { grid-template-columns: 1fr; } .template-summary { flex-direction: column; align-items: flex-start; } }
+
+@media (max-width: 600px) {
+    .template-fields {grid-template-columns: 1fr;}
+    .template-summary {flex-direction: column; align-items: flex-start;}
+}

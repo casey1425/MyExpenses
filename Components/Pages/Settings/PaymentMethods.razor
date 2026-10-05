@@ -11,12 +11,7 @@
 
 <PageTitle>결제수단 | MyExpenses</PageTitle>
 <main class="methods-page">
-    <header>
-        <p class="kicker">PAYMENT METHODS</p>
-        <h1>결제수단별 지출 관리</h1>
-        <p>현금·카드·계좌이체를 구분해 기록합니다. 금융기관과 연결하지 않으며 카드번호나 계좌번호는 입력하지 마세요.</p>
-        <a href="/">← 지출 기록으로 돌아가기</a>
-    </header>
+    <PageHeader Title="결제수단별 지출 관리" Description="현금·카드·계좌이체를 구분해 기록합니다. 금융기관과 연결하지 않으며 카드번호나 계좌번호는 입력하지 마세요." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
     <section class="method-card" aria-labelledby="method-form-title">

@@ -11,12 +11,7 @@
 
 <PageTitle>목표 저축 | MyExpenses</PageTitle>
 <main class="income-page">
-    <header>
-        <p class="kicker">SAVINGS GOALS</p>
-        <h1>목표 저축</h1>
-        <p>여행 자금, 비상금처럼 모으고 싶은 금액을 목표로 정하고 저축할 때마다 기록합니다. 저축은 수입·지출과 자동으로 연결되지 않으며, 직접 기록한 금액만 진행률에 반영됩니다.</p>
-        <a href="/income">← 수입 기록으로 돌아가기</a>
-    </header>
+    <PageHeader Title="목표 저축" Description="여행 자금, 비상금처럼 모으고 싶은 금액을 목표로 정하고 저축할 때마다 기록합니다. 저축은 수입·지출과 자동으로 연결되지 않으며, 직접 기록한 금액만 진행률에 반영됩니다." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
 

@@ -178,23 +178,13 @@
 }
 
 @media (max-width: 850px) {
-    .about-hero {
-        grid-template-columns: 1fr;
-    }
-
-    .about-preview {
-        max-width: 520px;
-    }
+    .about-hero {grid-template-columns: 1fr;}
+    .about-preview {max-width: 520px;}
 }
 
 @media (max-width: 640px) {
-    .about-features {
-        grid-template-columns: 1fr;
-    }
-
-    .about-actions a {
-        width: 100%;
-    }
+    .about-features {grid-template-columns: 1fr;}
+    .about-actions a {width: 100%;}
 }
 
 .about-install {

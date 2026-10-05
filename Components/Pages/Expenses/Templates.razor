@@ -14,12 +14,7 @@
 <PageTitle>즐겨찾기 지출 | MyExpenses</PageTitle>
 
 <main class="templates-page">
-    <header>
-        <p class="kicker">FAVORITE EXPENSES</p>
-        <h1>즐겨찾기 지출 템플릿</h1>
-        <p>커피·점심처럼 자주 입력하는 지출을 저장해 두세요. 자동으로 지출을 생성하지는 않습니다.</p>
-        <a href="/">← 지출 기록에서 템플릿 사용하기</a>
-    </header>
+    <PageHeader Title="즐겨찾기 지출 템플릿" Description="커피·점심처럼 자주 입력하는 지출을 저장해 두세요. 자동으로 지출을 생성하지는 않습니다." />
 
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }

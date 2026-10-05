@@ -1,0 +1,12 @@
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="@Href" Match="Match">
+        <NavIcon Name="@Icon" /> <span>@ChildContent</span>
+    </NavLink>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Href { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
+    [Parameter] public NavLinkMatch Match { get; set; } = NavLinkMatch.Prefix;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
