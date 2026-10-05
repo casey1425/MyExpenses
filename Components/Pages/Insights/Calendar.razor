@@ -1,0 +1,113 @@
+@page "/calendar"
+@namespace MyExpenses.Components.Pages
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject CalendarService CalendarService
+@inject RecurringExpenseService RecurringExpenseService
+@inject RecurringIncomeService RecurringIncomeService
+@inject ILogger<Calendar> Logger
+
+<PageTitle>달력 | MyExpenses</PageTitle>
+
+<main class="calendar-page">
+    <PageHeader Title="달력" Description="날짜별 지출과 수입을 한눈에 보고, 날짜를 눌러 그날의 내역을 확인하세요." />
+
+    <div class="month-controls" role="group" aria-label="월 이동">
+        <button type="button" class="step" @onclick="() => ShiftAsync(-1)" disabled="@isLoading" aria-label="이전 달">‹</button>
+        <strong class="month-title" aria-live="polite">@month.ToString("yyyy년 M월")</strong>
+        <button type="button" class="step" @onclick="() => ShiftAsync(1)" disabled="@isLoading" aria-label="다음 달">›</button>
+        <button type="button" class="today" @onclick="GoTodayAsync" disabled="@isLoading">이번 달</button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="error" role="alert">@errorMessage</p>
+    }
+    @if (isLoading)
+    {
+        <p class="loading" role="status">달력을 불러오고 있습니다...</p>
+    }
+
+    @if (data is not null && !isLoading)
+    {
+        var view = data.View;
+        <section class="summary" aria-label="이번 달 합계">
+            <div><span>수입 · @(view.IncomeCount)건</span><strong class="income-text">@view.IncomeTotal.ToString("N0")원</strong></div>
+            <div><span>지출 · @(view.ExpenseCount)건</span><strong>@view.ExpenseTotal.ToString("N0")원</strong></div>
+            <div><span>순수지</span><strong class="@(view.Net < 0 ? "negative" : "")">@(view.Net < 0 ? "-" : "")@Math.Abs(view.Net).ToString("N0")원</strong></div>
+        </section>
+
+        <section class="panel" aria-label="월간 달력">
+            <div class="grid weekdays" aria-hidden="true">
+                @foreach (var name in new[] { "일", "월", "화", "수", "목", "금", "토" })
+                {
+                    <span class="@(name == "일" ? "sun" : name == "토" ? "sat" : "")">@name</span>
+                }
+            </div>
+            @foreach (var week in view.Weeks)
+            {
+                <div class="grid week">
+                    @foreach (var day in week)
+                    {
+                        if (!day.InMonth)
+                        {
+                            <span class="cell blank" aria-hidden="true"></span>
+                            continue;
+                        }
+                        <button type="button" class="cell @(day.IsToday ? "is-today" : "") @(day.Date == selected ? "is-selected" : "")"
+                                aria-pressed="@(day.Date == selected ? "true" : "false")"
+                                aria-label="@DayLabel(day)" @onclick="() => Select(day.Date)">
+                            <span class="day-number @(day.Date.DayOfWeek == DayOfWeek.Sunday ? "sun" : day.Date.DayOfWeek == DayOfWeek.Saturday ? "sat" : "")">@day.Date.Day</span>
+                            @if (day.Income > 0) { <span class="amount in">+@CalendarMonth.Compact(day.Income)</span> }
+                            @if (day.Expense > 0) { <span class="amount out">@CalendarMonth.Compact(day.Expense)</span> }
+                        </button>
+                    }
+                </div>
+            }
+            <p class="legend"><span class="amount out">지출</span> <span class="amount in">+수입</span> · 1만 이상은 만·억 단위로 줄여 표시합니다.</p>
+        </section>
+
+        <section class="panel day-panel" aria-labelledby="day-title">
+            @if (selected is DateOnly date)
+            {
+                <div class="day-heading">
+                    <h2 id="day-title">@date.ToString("M월 d일") (@YearlyStatistics.WeekdayName(date.DayOfWeek))</h2>
+                    <a class="add-link" href="/?date=@date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)">이 날짜에 지출 추가 →</a>
+                </div>
+                @if (dayExpenses.Count == 0 && dayIncomes.Count == 0)
+                {
+                    <p class="empty">이날 기록된 수입과 지출이 없어요.</p>
+                }
+                @if (dayExpenses.Count > 0)
+                {
+                    <h3>지출 · @dayExpenses.Sum(e => e.Amount).ToString("N0")원</h3>
+                    <ul class="records">
+                        @foreach (var expense in dayExpenses)
+                        {
+                            <li><span>@expense.Category · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)<small>@(expense.PaymentMethod?.Name ?? "결제수단 미지정")</small></span><strong>-@expense.Amount.ToString("N0")원</strong></li>
+                        }
+                    </ul>
+                }
+                @if (dayIncomes.Count > 0)
+                {
+                    <h3>수입 · @dayIncomes.Sum(i => i.Amount).ToString("N0")원</h3>
+                    <ul class="records">
+                        @foreach (var income in dayIncomes)
+                        {
+                            <li><span>@income.Source · @(string.IsNullOrWhiteSpace(income.Memo) ? "메모 없음" : income.Memo)</span><strong class="income-text">+@income.Amount.ToString("N0")원</strong></li>
+                        }
+                    </ul>
+                }
+            }
+            else
+            {
+                <h2 id="day-title" class="visually-hidden">날짜별 내역</h2>
+                <p class="empty">날짜를 누르면 그날의 수입과 지출이 여기에 표시됩니다.</p>
+            }
+        </section>
+    }
+</main>

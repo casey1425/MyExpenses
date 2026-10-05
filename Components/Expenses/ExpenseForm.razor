@@ -1,4 +1,6 @@
 @using MyExpenses.Data
+@using MyExpenses.Services
+@using Microsoft.JSInterop
 
 <section class="panel entry-panel" aria-labelledby="entry-title">
     <div class="panel-heading">
@@ -36,7 +38,7 @@
             <div class="field">
                 <label for="expense-amount">금액</label>
                 <div class="amount-input">
-                    <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @bind="Amount" @bind:after="() => AmountChanged.InvokeAsync(Amount)" required />
+                    <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @ref="amountInput" @bind="Amount" @bind:after="() => AmountChanged.InvokeAsync(Amount)" required />
                     <span>원</span>
                 </div>
             </div>
@@ -54,7 +56,17 @@
 
         <div class="field">
             <label for="expense-memo">메모 <span class="optional">선택</span></label>
-            <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" @bind="Memo" @bind:after="() => MemoChanged.InvokeAsync(Memo)" />
+            <input id="expense-memo" type="text" maxlength="100" placeholder="예: 점심 식사" list="memo-suggestions" autocomplete="off" @bind="Memo" @bind:after="() => MemoChanged.InvokeAsync(Memo)" />
+            <datalist id="memo-suggestions">
+                @foreach (var suggestion in Suggestions)
+                {
+                    <option value="@suggestion.Memo">@suggestion.Category · @suggestion.Amount.ToString("N0")원</option>
+                }
+            </datalist>
+            @if (!string.IsNullOrEmpty(AutofillNotice))
+            {
+                <p class="autofill-notice" role="status">@AutofillNotice</p>
+            }
         </div>
         <div class="field">
             <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
@@ -84,6 +96,19 @@
 </section>
 
 @code {
+    private ElementReference amountInput;
+
+    // 지출을 기록한 뒤 바로 다음 금액을 입력할 수 있게 금액 칸으로 포커스를 옮깁니다.
+    public async Task FocusAmountAsync()
+    {
+        try { await amountInput.FocusAsync(); }
+        catch (InvalidOperationException) { /* 아직 화면에 연결되지 않았으면 건너뜁니다. */ }
+        catch (JSException) { }
+    }
+
+    [Parameter] public IReadOnlyList<MemoSuggestion> Suggestions { get; set; } = [];
+    [Parameter] public string? AutofillNotice { get; set; }
+
     [Parameter] public List<ExpenseTemplate> Templates { get; set; } = [];
     [Parameter] public string SelectedTemplateId { get; set; } = string.Empty;
     [Parameter] public bool TemplateBusy { get; set; }

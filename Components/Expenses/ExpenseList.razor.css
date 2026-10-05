@@ -233,3 +233,18 @@
     .field-grid {grid-template-columns: 1fr; gap: 0;}
     .edit-form {margin-left: 0;}
 }
+
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-top: .6rem;
+    padding: .55rem .2rem .35rem;
+    border-bottom: 2px solid #e4eaf2;
+    color: #40516a;
+    font-size: .85rem;
+}
+
+.day-header:first-child { margin-top: 0; }
+.day-header span { color: #63758d; }

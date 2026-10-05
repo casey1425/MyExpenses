@@ -11,8 +11,17 @@
 else
 {
     <div class="expense-list">
-        @foreach (var expense in Expenses)
+        @for (var index = 0; index < Expenses.Count; index++)
         {
+            var expense = Expenses[index];
+            if (GroupByDate && (index == 0 || Expenses[index - 1].Date.Date != expense.Date.Date))
+            {
+                var day = expense.Date.Date;
+                <div class="day-header" @key="@($"day-{day:yyyyMMdd}")">
+                    <strong>@day.ToString("M월 d일") (@YearlyStatistics.WeekdayName(day.DayOfWeek))</strong>
+                    <span>@(DayCounts[day])건 · @DayTotals[day].ToString("N0")원</span>
+                </div>
+            }
             <div class="expense-item" @key="expense.Id">
                 <div class="expense-row">
                     <div class="category-icon" aria-hidden="true">@ExpenseCategories.Icon(expense.Category)</div>
@@ -87,6 +96,18 @@ else
 }
 
 @code {
+    // 날짜별 묶음의 합계는 지금 표시된 목록만으로 계산합니다.
+    private Dictionary<DateTime, long> DayTotals = [];
+    private Dictionary<DateTime, int> DayCounts = [];
+
+    protected override void OnParametersSet()
+    {
+        var days = Expenses.GroupBy(e => e.Date.Date).ToList();
+        DayTotals = days.ToDictionary(g => g.Key, g => g.Sum(e => e.Amount));
+        DayCounts = days.ToDictionary(g => g.Key, g => g.Count());
+    }
+    [Parameter] public bool GroupByDate { get; set; }
+
     [Parameter] public List<ExpenseRecord> Expenses { get; set; } = [];
     [Parameter] public bool FilterActive { get; set; }
     [Parameter] public int? EditingId { get; set; }

@@ -44,6 +44,7 @@ public partial class Home
             deleteError = null;
             saveNotice = null;
             historyNotice = null;
+            lastDeleted = null;
             showDeleteAllConfirmation = false;
             CancelEdit();
         }
@@ -71,6 +72,66 @@ public partial class Home
         await ApplyFiltersAsync();
     }
 
+    private async Task ShiftMonthAsync(int delta)
+    {
+        var baseMonth = activeFilter.Month ?? KoreanClock.Today;
+        DateTime target;
+        try { target = new DateTime(baseMonth.Year, baseMonth.Month, 1).AddMonths(delta); }
+        catch (ArgumentOutOfRangeException) { return; }
+        await ShowMonthAsync(target);
+    }
+
+    private Task ShowThisMonthAsync() => ShowMonthAsync(KoreanClock.Today);
+
+    private async Task ShowMonthAsync(DateTime month)
+    {
+        if (isSearching || month.Year < 2) return;
+        searchInput.Month = month.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+        await ApplyFiltersAsync();
+    }
+
+    private async Task LoadSuggestionsAsync()
+    {
+        try
+        {
+            var loaded = await ExpenseService.SuggestionsAsync(ownerId, KoreanClock.Today);
+            await CheckOwnerAsync();
+            memoSuggestions = loaded;
+        }
+        catch (Exception ex)
+        {
+            // 자동 완성은 편의 기능이므로 실패해도 입력을 막지 않습니다.
+            Logger.LogWarning(ex, "메모 자동 완성 목록을 불러오지 못했습니다.");
+        }
+    }
+
+    // 이전에 쓴 메모를 입력하면 그 메모로 마지막에 기록한 카테고리·결제수단을 채우고, 금액이 비어 있으면 금액도 채웁니다.
+    private void OnMemoChanged(string value)
+    {
+        memo = value ?? string.Empty;
+        autofillNotice = null;
+        var match = memoSuggestions.FirstOrDefault(item => string.Equals(item.Memo, memo.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is null) return;
+
+        var filled = new List<string>();
+        if (categories.Contains(match.Category) && category != match.Category)
+        {
+            category = match.Category;
+            filled.Add(match.Category);
+        }
+        if (match.PaymentMethodId is int methodId && paymentMethodId != methodId && paymentMethods.Any(m => m.Id == methodId))
+        {
+            paymentMethodId = methodId;
+            filled.Add(paymentMethods.First(m => m.Id == methodId).Name);
+        }
+        if (amount <= 0)
+        {
+            amount = match.Amount;
+            filled.Add($"{match.Amount:N0}원");
+        }
+        if (filled.Count > 0) autofillNotice = $"이전 ‘{match.Memo}’ 기록을 따라 {string.Join(" · ", filled)}을(를) 채웠어요. 다르면 바꿔 주세요.";
+    }
+
     private async Task AddExpenseAsync()
     {
         if (templateBusy) return;
@@ -93,16 +154,20 @@ public partial class Home
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
 
+            // 연속 입력을 위해 날짜·카테고리·결제수단은 남기고 금액과 메모만 비웁니다.
             amount = 0;
             memo = string.Empty;
             selectedTemplateId = "";
             templateNotice = null;
-            paymentMethodId = null;
+            autofillNotice = null;
+            lastDeleted = null;
             errorMessage = null;
             saveNotice = activeFilter.IsActive && !activeFilter.Matches(newExpense)
                 ? "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."
                 : null;
             showDeleteAllConfirmation = false;
+            await LoadSuggestionsAsync();
+            if (entryForm is not null) await entryForm.FocusAmountAsync();
         }
         catch (ArgumentException ex)
         {
@@ -129,6 +194,7 @@ public partial class Home
         editError = null;
         historyNotice = null;
         deleteError = null;
+        lastDeleted = null;
         showDeleteAllConfirmation = false;
     }
 
@@ -170,6 +236,7 @@ public partial class Home
 
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
+            lastDeleted = null;
 
             historyNotice = activeFilter.IsActive && !activeFilter.Matches(expense)
                 ? "수정했습니다. 변경된 기록은 현재 조회 조건에 맞지 않아 목록에서 보이지 않습니다."
@@ -193,6 +260,7 @@ public partial class Home
 
     private async Task DeleteExpenseAsync(int id)
     {
+        var target = expenses.FirstOrDefault(item => item.Id == id);
         try
         {
             await CheckOwnerAsync();
@@ -206,6 +274,8 @@ public partial class Home
             await RefreshBudgetAsync();
             deleteError = null;
             historyNotice = null;
+            // 방금 지운 기록을 되돌릴 수 있게 내용을 기억해 둡니다. 다른 작업을 하면 사라집니다.
+            lastDeleted = target is null ? null : new ExpenseInput(target.Date, target.Amount, target.Category, target.Memo, target.PaymentMethodId);
             showDeleteAllConfirmation = false;
             if (editingId == id)
                 CancelEdit();
@@ -214,6 +284,40 @@ public partial class Home
         {
             Logger.LogError(ex, "지출 내역을 삭제하지 못했습니다.");
             deleteError = "지출 내역을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+    }
+
+    private async Task UndoDeleteAsync()
+    {
+        if (lastDeleted is not ExpenseInput input || undoBusy) return;
+        undoBusy = true;
+        try
+        {
+            await CheckOwnerAsync();
+            var restored = await ExpenseService.AddAsync(ownerId, input);
+            lastDeleted = null;
+            await LoadExpensesAsync();
+            await RefreshBudgetAsync();
+            await LoadSuggestionsAsync();
+            deleteError = null;
+            historyNotice = activeFilter.IsActive && !activeFilter.Matches(restored)
+                ? "되돌렸습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."
+                : "삭제한 지출을 되돌렸습니다.";
+        }
+        catch (ArgumentException ex)
+        {
+            // 그 사이 카테고리를 보관했거나 결제수단을 삭제한 경우처럼 다시 시도해도 같은 결과입니다.
+            lastDeleted = null;
+            deleteError = $"되돌리지 못했습니다. {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "삭제한 지출을 되돌리지 못했습니다.");
+            deleteError = "되돌리지 못했습니다. 잠시 후 다시 시도해 주세요.";
+        }
+        finally
+        {
+            undoBusy = false;
         }
     }
 
@@ -241,6 +345,7 @@ public partial class Home
         {
             await CheckOwnerAsync();
             await ExpenseService.DeleteAllAsync(ownerId);
+            lastDeleted = null;
             await LoadExpensesAsync();
             await RefreshBudgetAsync();
             showDeleteAllConfirmation = false;

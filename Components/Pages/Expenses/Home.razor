@@ -54,10 +54,11 @@
     </section>
 
     <div class="content-grid">
-        <ExpenseForm Templates="templates" SelectedTemplateId="@selectedTemplateId" TemplateBusy="templateBusy"
+        <ExpenseForm @ref="entryForm" Templates="templates" SelectedTemplateId="@selectedTemplateId" TemplateBusy="templateBusy"
                      TemplateError="@templateError" TemplateNotice="@templateNotice"
                      OnTemplateSelected="ApplyTemplateAsync" OnRefreshTemplates="RefreshTemplatesAsync"
-                     @bind-Date="expenseDate" @bind-Amount="amount" @bind-Category="category" @bind-Memo="memo"
+                     @bind-Date="expenseDate" @bind-Amount="amount" @bind-Category="category" Memo="@memo" MemoChanged="OnMemoChanged"
+                     Suggestions="memoSuggestions" AutofillNotice="@autofillNotice"
                      @bind-PaymentMethodId="paymentMethodId" Categories="categories" CategoryLabel="CategoryLabel"
                      PaymentMethods="paymentMethods" PaymentBusy="paymentBusy" PaymentError="@paymentError"
                      OnRefreshPaymentMethods="RefreshPaymentMethodsAsync" ErrorMessage="@errorMessage"
@@ -78,8 +79,15 @@
                 </div>
             </div>
 
-            <details class="filter-box" open="@activeFilter.IsActive">
-                <summary>검색·필터@(activeFilter.IsActive ? " (적용 중)" : "")</summary>
+            <div class="month-nav" role="group" aria-label="월 이동">
+                <button type="button" class="month-step" @onclick="() => ShiftMonthAsync(-1)" disabled="@isSearching" aria-label="이전 달">‹</button>
+                <strong class="month-label" aria-live="polite">@MonthNavLabel</strong>
+                <button type="button" class="month-step" @onclick="() => ShiftMonthAsync(1)" disabled="@isSearching" aria-label="다음 달">›</button>
+                <button type="button" class="month-today" @onclick="ShowThisMonthAsync" disabled="@isSearching">이번 달</button>
+            </div>
+
+            <details class="filter-box" open="@HasDetailedFilter">
+                <summary>검색·필터@(HasDetailedFilter ? " (적용 중)" : "")</summary>
                 <ExpenseFilterForm Input="searchInput" Categories="allCategories" CategoryLabel="CategoryLabel"
                                PaymentMethods="paymentMethods" IsSearching="isSearching"
                                OnApply="ApplyFiltersAsync" OnReset="ResetFiltersAsync" />
@@ -120,12 +128,21 @@
                 <p class="form-error" role="alert">@deleteError</p>
             }
 
+            @if (lastDeleted is not null)
+            {
+                <p class="history-notice undo-notice" role="status">
+                    <span>@UndoLabel 기록을 삭제했습니다.</span>
+                    <button type="button" class="undo-button" @onclick="UndoDeleteAsync" disabled="@undoBusy">되돌리기</button>
+                </p>
+            }
+
             @if (!string.IsNullOrEmpty(historyNotice))
             {
                 <p class="history-notice" role="status">@historyNotice</p>
             }
 
-            <ExpenseList Expenses="expenses" FilterActive="activeFilter.IsActive" EditingId="editingId"
+            <ExpenseList Expenses="expenses" FilterActive="activeFilter.IsActive"
+                         GroupByDate="@(activeFilter.Sort is ExpenseSort.Newest or ExpenseSort.Oldest)" EditingId="editingId"
                          IsSavingEdit="isSavingEdit" EditError="@editError" EditCategories="EditCategories"
                          CategoryLabel="CategoryLabel" PaymentMethods="paymentMethods"
                          @bind-EditDate="editDate" @bind-EditAmount="editAmount" @bind-EditCategory="editCategory"

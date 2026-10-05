@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Components;
+using MyExpenses.Components.Expenses;
 using MyExpenses.Data;
 using MyExpenses.Services;
 
@@ -8,6 +9,9 @@ namespace MyExpenses.Components.Pages;
 
 public partial class Home
 {
+    // 달력 화면 등에서 /?date=2026-10-05 로 들어오면 그 날짜로 지출을 입력합니다.
+    [Parameter, SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
+
     private List<UserCategory> categoryItems = [];
     private IReadOnlyList<string> categories = ExpenseCategories.All;
     private IReadOnlyList<string> allCategories => categoryItems.Count == 0 ? categories : categoryItems.Select(c => c.Name).ToList();
@@ -25,6 +29,11 @@ public partial class Home
     private int? editPaymentMethodId;
     private bool paymentBusy;
     private string? paymentError;
+    private List<MemoSuggestion> memoSuggestions = [];
+    private string? autofillNotice;
+    private ExpenseInput? lastDeleted;
+    private bool undoBusy;
+    private ExpenseForm? entryForm;
     private List<ExpenseTemplate> templates = [];
     private string selectedTemplateId = "";
     private bool templateBusy;
@@ -61,6 +70,10 @@ public partial class Home
     private string editMemo = string.Empty;
     private string? editError;
     private bool isSavingEdit;
+    private string UndoLabel => lastDeleted is null ? string.Empty : $"{lastDeleted.Category} {lastDeleted.Amount:N0}원";
+    // 월 이동만으로는 검색 조건을 펼쳐 두지 않도록, 월을 뺀 나머지 조건이 있을 때만 "적용 중"으로 봅니다.
+    private bool HasDetailedFilter => (activeFilter with { Month = null }).IsActive;
+    private string MonthNavLabel => activeFilter.Month is DateTime month ? month.ToString("yyyy년 M월") : "전체 기간";
     private decimal FilteredTotal => expenses.Sum(item => (decimal)item.Amount);
     private decimal MonthlyTotal => expenses
         .Where(item => item.Date.Year == KoreanClock.Today.Year && item.Date.Month == KoreanClock.Today.Month)
@@ -120,6 +133,10 @@ public partial class Home
             return;
         }
 
+        if (DateTime.TryParseExact(DateParameter, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var requestedDate) &&
+            requestedDate.Year >= 2)
+            expenseDate = requestedDate;
+
         if (await UserDataProvisioner.EnsureUserAsync(ownerId))
         {
             Navigation.NavigateTo("/welcome");
@@ -142,6 +159,7 @@ public partial class Home
         await RefreshBudgetAsync();
         await RefreshPaymentMethodsAsync();
         await RefreshTemplatesAsync();
+        await LoadSuggestionsAsync();
     }
 
     private async Task LoadCategoriesAsync()

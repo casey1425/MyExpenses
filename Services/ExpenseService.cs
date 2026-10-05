@@ -5,6 +5,9 @@ namespace MyExpenses.Services;
 
 public sealed record ExpenseInput(DateTime Date, long Amount, string Category, string Memo, int? PaymentMethodId = null);
 
+// 자주 쓴 메모와 그 메모로 가장 최근에 기록한 카테고리·결제수단·금액입니다. 입력 자동 완성에 씁니다.
+public sealed record MemoSuggestion(string Memo, string Category, int? PaymentMethodId, long Amount, int Count);
+
 public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactory)
 {
     public async Task<List<ExpenseRecord>> ListAsync(string ownerId, ExpenseFilter filter, CancellationToken cancellationToken = default)
@@ -14,6 +17,29 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         if (filter.Category is not null) await CategoryService.VerifyAsync(db, ownerId, filter.Category, true, cancellationToken);
         var query = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod).Where(e => e.OwnerId == ownerId);
         return await filter.Order(filter.ApplyTo(query)).ToListAsync(cancellationToken);
+    }
+
+    public const int SuggestionLimit = 30;
+    public const int SuggestionDays = 365;
+
+    // 최근 1년 기록에서 많이 쓴 메모 순으로 돌려줍니다. 대소문자와 앞뒤 공백은 같은 메모로 봅니다.
+    public async Task<List<MemoSuggestion>> SuggestionsAsync(string ownerId, DateTime today, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        var since = today.Date.AddDays(-SuggestionDays);
+        await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
+        var rows = await db.Expenses.AsNoTracking()
+            .Where(e => e.OwnerId == ownerId && e.Memo != "" && e.Date >= since && e.Date <= today.Date)
+            .Select(e => new { e.Id, e.Date, e.Memo, e.Category, e.PaymentMethodId, e.Amount })
+            .ToListAsync(cancellationToken);
+        return rows.GroupBy(e => e.Memo.Trim(), StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var latest = g.OrderByDescending(e => e.Date).ThenByDescending(e => e.Id).First();
+                return new MemoSuggestion(latest.Memo.Trim(), latest.Category, latest.PaymentMethodId, latest.Amount, g.Count());
+            })
+            .OrderByDescending(m => m.Count).ThenBy(m => m.Memo, StringComparer.Ordinal)
+            .Take(SuggestionLimit).ToList();
     }
 
     public async Task ValidatePaymentAsync(string ownerId, int? paymentMethodId, CancellationToken cancellationToken = default)

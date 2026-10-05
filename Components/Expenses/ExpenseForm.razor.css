@@ -138,3 +138,5 @@
     .panel {padding: 1.2rem;}
     .field-grid {grid-template-columns: 1fr; gap: 0;}
 }
+
+.autofill-notice { margin: .45rem 0 0; color: #285889; font-size: .8rem; line-height: 1.5; }

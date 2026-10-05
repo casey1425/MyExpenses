@@ -294,3 +294,40 @@
 @media (max-width: 800px) {
     .budget-summary strong { font-size: 1.25rem; }
 }
+
+.month-nav {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .75rem;
+}
+
+.month-label { flex: 1; text-align: center; font-size: 1.05rem; }
+
+.month-step, .month-today {
+    min-height: 40px;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #285889;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.month-step { width: 44px; font-size: 1.25rem; line-height: 1; }
+.month-today { padding: 0 .9rem; }
+.month-step:disabled, .month-today:disabled { opacity: .6; cursor: default; }
+
+.undo-notice { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+
+.undo-button {
+    flex-shrink: 0;
+    min-height: 36px;
+    padding: 0 .9rem;
+    border: 1px solid #285889;
+    border-radius: 8px;
+    background: #fff;
+    color: #285889;
+    font-weight: 700;
+    cursor: pointer;
+}
