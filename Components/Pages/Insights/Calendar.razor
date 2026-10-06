@@ -88,7 +88,7 @@
                     <ul class="records">
                         @foreach (var expense in dayExpenses)
                         {
-                            <li><span>@expense.Category · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)<small>@(expense.PaymentMethod?.Name ?? "결제수단 미지정")</small></span><strong>-@expense.Amount.ToString("N0")원</strong></li>
+                            <li><span>@expense.Category · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)<small>@(expense.PaymentMethod?.Name ?? "결제수단 미지정")@(expense.TagLinks.Count > 0 ? " · " + string.Join(" ", expense.TagNames.Select(name => "#" + name)) : "")</small></span><strong>-@expense.Amount.ToString("N0")원</strong></li>
                         }
                     </ul>
                 }

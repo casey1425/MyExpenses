@@ -19,7 +19,7 @@ public sealed class CalendarService(IDbContextFactory<ExpensesDbContext> dbFacto
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         // 지출과 수입을 같은 시점에 읽어 날짜별 합계가 서로 어긋나지 않게 합니다.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var expenses = await db.Expenses.AsNoTracking().Include(e => e.PaymentMethod)
+        var expenses = await db.Expenses.AsNoTracking().Include(e => e.PaymentMethod).Include(e => e.TagLinks).ThenInclude(link => link.Tag).AsSplitQuery()
             .Where(e => e.OwnerId == ownerId && e.Date >= from && e.Date < to)
             .OrderBy(e => e.Date).ThenBy(e => e.Id).ToListAsync(cancellationToken);
         var incomes = await db.Incomes.AsNoTracking()

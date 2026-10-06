@@ -90,6 +90,50 @@ public partial class Home
         await ApplyFiltersAsync();
     }
 
+    private async Task LoadTagsAsync()
+    {
+        try
+        {
+            var loaded = await TagService.ListAsync(ownerId);
+            await CheckOwnerAsync();
+            tagUsage = loaded;
+        }
+        catch (Exception ex)
+        {
+            // 태그 목록은 편의 기능이므로 실패해도 지출 입력을 막지 않습니다.
+            Logger.LogWarning(ex, "태그 목록을 불러오지 못했습니다.");
+        }
+    }
+
+    // 추천 태그를 누르면 입력 칸에 넣고, 이미 있으면 뺍니다.
+    private void ToggleTag(string name)
+    {
+        IReadOnlyList<string> current;
+        try { current = TagNames.Parse(tagsText); }
+        catch (ArgumentException ex) { errorMessage = ex.Message; return; }
+
+        var key = TagNames.Key(name);
+        var next = current.Where(item => TagNames.Key(item) != key).ToList();
+        if (next.Count == current.Count)
+        {
+            if (current.Count >= TagNames.MaxPerExpense)
+            {
+                errorMessage = $"태그는 지출 하나에 {TagNames.MaxPerExpense}개까지 붙일 수 있습니다.";
+                return;
+            }
+            next.Add(name);
+        }
+        errorMessage = null;
+        tagsText = TagNames.Join(next);
+    }
+
+    private async Task ShowTagAsync(int tagId)
+    {
+        if (isSearching) return;
+        searchInput.Tag = tagId.ToString(CultureInfo.InvariantCulture);
+        await ApplyFiltersAsync();
+    }
+
     private async Task LoadSuggestionsAsync()
     {
         try
@@ -150,11 +194,12 @@ public partial class Home
         try
         {
             await CheckOwnerAsync();
-            var newExpense = await ExpenseService.AddAsync(ownerId, new(expenseDate, amount, category, memo, paymentMethodId));
+            var newExpense = await ExpenseService.AddAsync(ownerId, new(expenseDate, amount, category, memo, paymentMethodId, TagNames.Parse(tagsText)));
             await LoadExpensesAsync();
+            await LoadTagsAsync();
             await RefreshBudgetAsync();
 
-            // 연속 입력을 위해 날짜·카테고리·결제수단은 남기고 금액과 메모만 비웁니다.
+            // 연속 입력을 위해 날짜·카테고리·결제수단·태그는 남기고 금액과 메모만 비웁니다(여행 중 여러 건 입력 등).
             amount = 0;
             memo = string.Empty;
             selectedTemplateId = "";
@@ -191,6 +236,7 @@ public partial class Home
         editCategory = expense.Category;
         editMemo = expense.Memo;
         editPaymentMethodId = expense.PaymentMethodId;
+        editTagsText = TagNames.Join(expense.TagNames);
         editError = null;
         historyNotice = null;
         deleteError = null;
@@ -225,7 +271,7 @@ public partial class Home
         try
         {
             await CheckOwnerAsync();
-            var expense = await ExpenseService.UpdateAsync(ownerId, id, new(editDate, editAmount, editCategory, editMemo, editPaymentMethodId));
+            var expense = await ExpenseService.UpdateAsync(ownerId, id, new(editDate, editAmount, editCategory, editMemo, editPaymentMethodId, TagNames.Parse(editTagsText)));
             if (expense is null)
             {
                 await LoadExpensesAsync();
@@ -235,6 +281,7 @@ public partial class Home
             }
 
             await LoadExpensesAsync();
+            await LoadTagsAsync();
             await RefreshBudgetAsync();
             lastDeleted = null;
 
@@ -275,7 +322,7 @@ public partial class Home
             deleteError = null;
             historyNotice = null;
             // 방금 지운 기록을 되돌릴 수 있게 내용을 기억해 둡니다. 다른 작업을 하면 사라집니다.
-            lastDeleted = target is null ? null : new ExpenseInput(target.Date, target.Amount, target.Category, target.Memo, target.PaymentMethodId);
+            lastDeleted = target is null ? null : new ExpenseInput(target.Date, target.Amount, target.Category, target.Memo, target.PaymentMethodId, target.TagNames);
             showDeleteAllConfirmation = false;
             if (editingId == id)
                 CancelEdit();
@@ -297,6 +344,7 @@ public partial class Home
             var restored = await ExpenseService.AddAsync(ownerId, input);
             lastDeleted = null;
             await LoadExpensesAsync();
+            await LoadTagsAsync();
             await RefreshBudgetAsync();
             await LoadSuggestionsAsync();
             deleteError = null;

@@ -10,19 +10,22 @@ namespace MyExpenses.Data;
 public sealed record BackupFile(string Format, int Version, DateTimeOffset ExportedAt, BackupCounts Counts, BackupData Data)
 {
     public const string FormatName = "MyExpensesBackup";
-    public const int CurrentVersion = 1;
+    // 2: 태그 추가. 버전 1 파일(태그 없음)도 복원할 수 있습니다.
+    public const int CurrentVersion = 2;
+    public const int MinimumVersion = 1;
 }
 
 public sealed record BackupCounts(int Categories, int PaymentMethods, int Expenses, int Templates, int MonthlyBudgets,
-    int CategoryBudgets, int RecurringExpenses, int Incomes, int RecurringIncomes, int SavingsGoals, int SavingsDeposits)
+    int CategoryBudgets, int RecurringExpenses, int Incomes, int RecurringIncomes, int SavingsGoals, int SavingsDeposits, int Tags = 0)
 {
     [JsonIgnore]
     public int Total => Categories + PaymentMethods + Expenses + Templates + MonthlyBudgets + CategoryBudgets +
-                        RecurringExpenses + Incomes + RecurringIncomes + SavingsGoals + SavingsDeposits;
+                        RecurringExpenses + Incomes + RecurringIncomes + SavingsGoals + SavingsDeposits + Tags;
 
     public static BackupCounts Of(BackupData data) => new(data.Categories.Count, data.PaymentMethods.Count, data.Expenses.Count,
         data.Templates.Count, data.MonthlyBudgets.Count, data.CategoryBudgets.Count, data.RecurringExpenses.Count,
-        data.Incomes.Count, data.RecurringIncomes.Count, data.SavingsGoals.Count, data.SavingsGoals.Sum(goal => goal.Deposits.Count));
+        data.Incomes.Count, data.RecurringIncomes.Count, data.SavingsGoals.Count, data.SavingsGoals.Sum(goal => goal.Deposits.Count),
+        data.Tags?.Count ?? 0);
 }
 
 public sealed record BackupData(
@@ -35,11 +38,14 @@ public sealed record BackupData(
     IReadOnlyList<BackupRecurringExpense> RecurringExpenses,
     IReadOnlyList<BackupIncome> Incomes,
     IReadOnlyList<BackupRecurringIncome> RecurringIncomes,
-    IReadOnlyList<BackupSavingsGoal> SavingsGoals);
+    IReadOnlyList<BackupSavingsGoal> SavingsGoals,
+    // 버전 2부터. 쓰지 않는 태그도 보존하기 위해 모든 태그 이름을 담습니다.
+    IReadOnlyList<string>? Tags = null);
 
 public sealed record BackupCategory(string Name, int Position, bool IsArchived);
 public sealed record BackupPaymentMethod(string Name, string Type);
-public sealed record BackupExpense(DateOnly Date, long Amount, string Category, string Memo, string? PaymentMethod);
+public sealed record BackupExpense(DateOnly Date, long Amount, string Category, string Memo, string? PaymentMethod,
+    IReadOnlyList<string>? Tags = null);
 public sealed record BackupTemplate(string Name, long Amount, string Category, string Memo, string? PaymentMethod);
 public sealed record BackupMonthlyBudget(string Month, long Amount);
 public sealed record BackupCategoryBudget(string Month, string Category, long Amount);
@@ -129,7 +135,7 @@ public static class BackupValidator
 
         if (file.Format != BackupFile.FormatName)
             return ["MyExpenses 백업 파일이 아닙니다."];
-        if (file.Version != BackupFile.CurrentVersion)
+        if (file.Version is < BackupFile.MinimumVersion or > BackupFile.CurrentVersion)
             return [file.Version > BackupFile.CurrentVersion
                 ? "더 새로운 버전의 백업 파일입니다. 앱을 최신 버전으로 업데이트한 뒤 다시 시도해 주세요."
                 : "지원하지 않는 백업 파일 버전입니다."];
@@ -142,6 +148,9 @@ public static class BackupValidator
             return ["파일이 손상되었거나 일부가 잘렸을 수 있습니다. 항목 수가 파일에 기록된 값과 다릅니다."];
         if (actual.Total > BackupLimits.MaxRows)
             return [$"항목이 너무 많습니다. 최대 {BackupLimits.MaxRows:N0}건까지 복원할 수 있습니다."];
+
+        if (file.Version < 2 && (data.Tags is not null || data.Expenses.Any(e => e.Tags is not null)))
+            return ["버전 1 백업 파일에는 태그 정보가 있을 수 없습니다. 파일이 손상되었을 수 있습니다."];
 
         var report = new IssueCollector();
 
@@ -180,11 +189,30 @@ public static class BackupValidator
             if (date < MinDate || date > MaxDate) report.Add(section, index, "날짜가 올바르지 않습니다.");
         }
 
+        // 태그: 앱이 만드는 이름 규칙과 같게 검사하고, 지출의 태그는 모두 태그 목록에 있어야 합니다.
+        var tagKeys = new HashSet<string>(StringComparer.Ordinal);
+        var tagList = data.Tags ?? [];
+        if (tagList.Count > TagNames.MaxPerOwner) report.Add("태그", 0, $"태그는 최대 {TagNames.MaxPerOwner}개까지 복원할 수 있습니다.");
+        for (var i = 0; i < tagList.Count; i++)
+        {
+            if (tagList[i] is null || TagNames.Clean(tagList[i]) != tagList[i]) report.Add("태그", i, "태그 이름은 쉼표·세미콜론 없이 1~20자여야 합니다.");
+            else if (!tagKeys.Add(TagNames.Key(tagList[i]))) report.Add("태그", i, "같은 이름의 태그가 중복되었습니다.");
+        }
+
         for (var i = 0; i < data.Expenses.Count; i++)
         {
             var item = data.Expenses[i];
             CheckDate("지출", i, item.Date);
             CheckFields("지출", i, item.Amount, item.Category, item.PaymentMethod, item.Memo);
+            var expenseTags = item.Tags ?? [];
+            if (expenseTags.Count > TagNames.MaxPerExpense) report.Add("지출", i, $"태그는 지출 하나에 {TagNames.MaxPerExpense}개까지 붙일 수 있습니다.");
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var tag in expenseTags)
+            {
+                if (tag is null || TagNames.Clean(tag) != tag) report.Add("지출", i, "태그 이름이 올바르지 않습니다.");
+                else if (!seen.Add(TagNames.Key(tag))) report.Add("지출", i, "같은 태그가 두 번 붙어 있습니다.");
+                else if (!tagKeys.Contains(TagNames.Key(tag))) report.Add("지출", i, $"백업의 태그 목록에 없는 태그입니다: ‘{Shorten(tag)}’");
+            }
         }
 
         for (var i = 0; i < data.Templates.Count; i++)

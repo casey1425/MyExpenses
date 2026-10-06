@@ -13,6 +13,7 @@
 @inject ExpenseTemplateService TemplateService
 @inject PaymentMethodService MethodService
 @inject ExpenseService ExpenseService
+@inject TagService TagService
 @inject BudgetService BudgetService
 @inject CategoryService CategoryService
 @inject NavigationManager Navigation
@@ -59,6 +60,7 @@
                      OnTemplateSelected="ApplyTemplateAsync" OnRefreshTemplates="RefreshTemplatesAsync"
                      @bind-Date="expenseDate" @bind-Amount="amount" @bind-Category="category" Memo="@memo" MemoChanged="OnMemoChanged"
                      Suggestions="memoSuggestions" AutofillNotice="@autofillNotice"
+                     @bind-TagsText="tagsText" TagChoices="TagChoices" OnToggleTag="ToggleTag"
                      @bind-PaymentMethodId="paymentMethodId" Categories="categories" CategoryLabel="CategoryLabel"
                      PaymentMethods="paymentMethods" PaymentBusy="paymentBusy" PaymentError="@paymentError"
                      OnRefreshPaymentMethods="RefreshPaymentMethodsAsync" ErrorMessage="@errorMessage"
@@ -89,7 +91,7 @@
             <details class="filter-box" open="@HasDetailedFilter">
                 <summary>검색·필터@(HasDetailedFilter ? " (적용 중)" : "")</summary>
                 <ExpenseFilterForm Input="searchInput" Categories="allCategories" CategoryLabel="CategoryLabel"
-                               PaymentMethods="paymentMethods" IsSearching="isSearching"
+                               PaymentMethods="paymentMethods" Tags="tagUsage" IsSearching="isSearching"
                                OnApply="ApplyFiltersAsync" OnReset="ResetFiltersAsync" />
             </details>
 
@@ -146,7 +148,8 @@
                          IsSavingEdit="isSavingEdit" EditError="@editError" EditCategories="EditCategories"
                          CategoryLabel="CategoryLabel" PaymentMethods="paymentMethods"
                          @bind-EditDate="editDate" @bind-EditAmount="editAmount" @bind-EditCategory="editCategory"
-                         @bind-EditMemo="editMemo" @bind-EditPaymentMethodId="editPaymentMethodId"
+                         @bind-EditMemo="editMemo" @bind-EditPaymentMethodId="editPaymentMethodId" @bind-EditTagsText="editTagsText"
+                         OnTagClick="ShowTagAsync"
                          OnStartEdit="StartEdit" OnDelete="DeleteExpenseAsync" OnSaveEdit="SaveEditAsync"
                          OnCancelEdit="CancelEdit" />
         </section>

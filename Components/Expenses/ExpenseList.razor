@@ -29,6 +29,15 @@ else
                         <strong>@expense.Category</strong>
                         <span>@expense.Date.ToString("yyyy.MM.dd") · @(string.IsNullOrWhiteSpace(expense.Memo) ? "메모 없음" : expense.Memo)</span>
                         <span>결제수단: @(expense.PaymentMethod?.Name ?? "미지정")</span>
+                        @if (expense.TagLinks.Count > 0)
+                        {
+                            <span class="expense-tags">
+                                @foreach (var link in expense.TagLinks.Where(l => l.Tag is not null).OrderBy(l => l.Tag!.Name, StringComparer.Ordinal))
+                                {
+                                    <button type="button" class="tag-chip" title="이 태그가 붙은 지출만 보기" @onclick="() => OnTagClick.InvokeAsync(link.TagId)">#@link.Tag!.Name</button>
+                                }
+                            </span>
+                        }
                     </div>
                     <div class="expense-actions">
                         <strong>-@expense.Amount.ToString("N0")원</strong>
@@ -76,6 +85,10 @@ else
                         {
                             <p class="form-error" role="alert">@EditError</p>
                         }
+                        <div class="field">
+                            <label for="edit-tags">태그 <span class="optional">쉼표로 구분, 최대 @(TagNames.MaxPerExpense)개</span></label>
+                            <input id="edit-tags" type="text" autocomplete="off" @bind="EditTagsText" @bind:after="() => EditTagsTextChanged.InvokeAsync(EditTagsText)" />
+                        </div>
                         <div class="field">
                             <label for="edit-payment">결제수단</label>
                             <select id="edit-payment" @bind="EditPaymentMethodId" @bind:after="() => EditPaymentMethodIdChanged.InvokeAsync(EditPaymentMethodId)">
@@ -128,6 +141,9 @@ else
     [Parameter] public int? EditPaymentMethodId { get; set; }
     [Parameter] public EventCallback<int?> EditPaymentMethodIdChanged { get; set; }
 
+    [Parameter] public string EditTagsText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> EditTagsTextChanged { get; set; }
+    [Parameter] public EventCallback<int> OnTagClick { get; set; }
     [Parameter] public EventCallback<ExpenseRecord> OnStartEdit { get; set; }
     [Parameter] public EventCallback<int> OnDelete { get; set; }
     [Parameter] public EventCallback OnSaveEdit { get; set; }

@@ -140,3 +140,19 @@
 }
 
 .autofill-notice { margin: .45rem 0 0; color: #285889; font-size: .8rem; line-height: 1.5; }
+
+.tag-choices { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+
+.tag-choice {
+    min-height: 32px;
+    padding: 0 .7rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 999px;
+    background: #fff;
+    color: #285889;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tag-choice.selected { border-color: #285889; background: #285889; color: #fff; }

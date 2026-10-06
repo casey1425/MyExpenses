@@ -69,6 +69,20 @@
             }
         </div>
         <div class="field">
+            <label for="expense-tags">태그 <span class="optional">선택 · 쉼표로 구분, 최대 @(TagNames.MaxPerExpense)개</span></label>
+            <input id="expense-tags" type="text" placeholder="예: 여행, 경조사" autocomplete="off" @bind="TagsText" @bind:after="() => TagsTextChanged.InvokeAsync(TagsText)" />
+            @if (TagChoices.Count > 0)
+            {
+                <div class="tag-choices" role="group" aria-label="자주 쓰는 태그">
+                    @foreach (var choice in TagChoices)
+                    {
+                        <button type="button" class="tag-choice @(IsSelected(choice.Name) ? "selected" : "")" aria-pressed="@(IsSelected(choice.Name) ? "true" : "false")"
+                                @onclick="() => OnToggleTag.InvokeAsync(choice.Name)">#@choice.Name</button>
+                    }
+                </div>
+            }
+        </div>
+        <div class="field">
             <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
             <select id="expense-payment" @bind="PaymentMethodId" @bind:after="() => PaymentMethodIdChanged.InvokeAsync(PaymentMethodId)">
                 <option value="">미지정</option>
@@ -104,6 +118,17 @@
         try { await amountInput.FocusAsync(); }
         catch (InvalidOperationException) { /* 아직 화면에 연결되지 않았으면 건너뜁니다. */ }
         catch (JSException) { }
+    }
+
+    [Parameter] public string TagsText { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> TagsTextChanged { get; set; }
+    [Parameter] public IReadOnlyList<TagUsage> TagChoices { get; set; } = [];
+    [Parameter] public EventCallback<string> OnToggleTag { get; set; }
+
+    private bool IsSelected(string name)
+    {
+        var key = TagNames.Key(name);
+        return TagsText.Split([',', '，'], StringSplitOptions.RemoveEmptyEntries).Select(item => TagNames.Clean(item)).Any(item => item is not null && TagNames.Key(item) == key);
     }
 
     [Parameter] public IReadOnlyList<MemoSuggestion> Suggestions { get; set; } = [];

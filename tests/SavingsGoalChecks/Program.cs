@@ -57,8 +57,9 @@ foreach (var legacy in new[] { false, true })
         await db.Database.ExecuteSqlRawAsync("CREATE TABLE Expenses (Id INTEGER PRIMARY KEY AUTOINCREMENT, OwnerId TEXT NOT NULL, Date TEXT NOT NULL, Amount INTEGER NOT NULL, Category TEXT NOT NULL, Memo TEXT NOT NULL);");
     else
         await db.Database.EnsureCreatedAsync();
-    await ExpensesSchema.EnsureCreatedAsync(db);
-    await ExpensesSchema.EnsureCreatedAsync(db);
+    // 오래된 DB는 앱과 같은 방식(옛 스키마 보강 → 기준선 → 이후 마이그레이션)으로 올립니다.
+    if (legacy) { await DatabaseMigrator.MigrateExpensesAsync(db); await DatabaseMigrator.MigrateExpensesAsync(db); }
+    else { await ExpensesSchema.EnsureCreatedAsync(db); await ExpensesSchema.EnsureCreatedAsync(db); }
 
     var factory = new TestFactory(options);
     var service = new SavingsGoalService(factory);

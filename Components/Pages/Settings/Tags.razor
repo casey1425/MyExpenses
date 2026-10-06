@@ -1,0 +1,96 @@
+@page "/tags"
+@namespace MyExpenses.Components.Pages
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Globalization
+@using System.Security.Claims
+@using MyExpenses.Data
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject TagService TagService
+@inject ILogger<Tags> Logger
+
+<PageTitle>태그 | MyExpenses</PageTitle>
+
+<main class="tags-page">
+    <PageHeader Title="태그" Description="지출에 붙인 태그를 한곳에서 관리해요. 이름을 바꾸거나 같은 뜻의 태그를 합치고, 쓰지 않는 태그를 지울 수 있어요." />
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="error" role="alert">@errorMessage</p>
+    }
+    @if (!string.IsNullOrEmpty(notice))
+    {
+        <p class="notice" role="status">@notice</p>
+    }
+    @if (conflictTarget is not null)
+    {
+        <div class="conflict" role="alert">
+            <p>이미 ‘@conflictTarget’ 태그가 있어요. 합치면 ‘@conflictSource’ 태그가 붙은 지출이 ‘@conflictTarget’(으)로 옮겨지고 ‘@conflictSource’ 태그는 사라집니다.</p>
+            <div class="actions">
+                <button type="button" class="secondary" @onclick="CancelConflict" disabled="@isBusy">취소</button>
+                <button type="button" @onclick="() => SaveRenameAsync(true)" disabled="@isBusy">합치기</button>
+            </div>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <p class="loading" role="status">태그를 불러오고 있습니다...</p>
+    }
+    else if (tags.Count == 0)
+    {
+        <section class="panel empty">
+            <p>아직 태그가 없어요.</p>
+            <p class="help">지출을 기록할 때 ‘태그’ 칸에 <strong>여행, 경조사</strong>처럼 입력하면 자동으로 만들어집니다. <a href="/">지출 기록으로 가기</a></p>
+        </section>
+    }
+    else
+    {
+        <section class="panel" aria-label="태그 목록">
+            <p class="summary">태그 @(tags.Count)개 · 최대 @(TagNames.MaxPerOwner)개까지 만들 수 있어요. 한 지출에 태그가 여러 개 붙으면 각 태그의 합계에 모두 포함돼요.</p>
+            <ul class="tag-list">
+                @foreach (var tag in tags)
+                {
+                    <li @key="tag.Id">
+                        @if (editingId == tag.Id)
+                        {
+                            <form class="rename-form" @onsubmit="() => SaveRenameAsync(false)" @onsubmit:preventDefault>
+                                <label class="visually-hidden" for="rename-@tag.Id">새 이름</label>
+                                <input id="rename-@tag.Id" type="text" maxlength="@(TagNames.MaxLength + 5)" @bind="editName" required />
+                                <button type="submit" disabled="@isBusy">저장</button>
+                                <button type="button" class="secondary" @onclick="CancelRename" disabled="@isBusy">취소</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <div class="tag-info">
+                                <strong>#@tag.Name</strong>
+                                <span>@(tag.ExpenseCount)건 · @tag.Amount.ToString("N0")원</span>
+                            </div>
+                            <div class="actions">
+                                @if (tag.ExpenseCount > 0)
+                                {
+                                    <a class="link-button" href="/?tag=@tag.Id" aria-label="@tag.Name 태그가 붙은 지출 보기">지출 보기</a>
+                                }
+                                <button type="button" class="secondary" @onclick="() => StartRename(tag)" disabled="@isBusy" aria-label="@tag.Name 태그 이름 변경">이름 변경</button>
+                                @if (deletingId == tag.Id)
+                                {
+                                    <button type="button" class="danger" @onclick="() => DeleteAsync(tag)" disabled="@isBusy">정말 지우기</button>
+                                    <button type="button" class="secondary" @onclick="CancelDelete" disabled="@isBusy">취소</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="secondary danger-text" @onclick="() => AskDelete(tag)" disabled="@isBusy" aria-label="@tag.Name 태그 삭제">삭제</button>
+                                }
+                            </div>
+                            @if (deletingId == tag.Id)
+                            {
+                                <p class="delete-help">태그만 사라지고 @(tag.ExpenseCount)건의 지출은 그대로 남아요.</p>
+                            }
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</main>

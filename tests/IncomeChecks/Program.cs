@@ -36,8 +36,9 @@ foreach (var legacy in new[] { false, true })
         db.Expenses.Add(new ExpenseRecord { OwnerId = "A", Date = new(2026, 10, 5), Amount = 300000, Category = "식비", Memo = "existing" });
         await db.SaveChangesAsync();
     }
-    await ExpensesSchema.EnsureCreatedAsync(db);
-    await ExpensesSchema.EnsureCreatedAsync(db);
+    // 오래된 DB는 앱과 같은 방식(옛 스키마 보강 → 기준선 → 이후 마이그레이션)으로 올립니다.
+    if (legacy) { await DatabaseMigrator.MigrateExpensesAsync(db); await DatabaseMigrator.MigrateExpensesAsync(db); }
+    else { await ExpensesSchema.EnsureCreatedAsync(db); await ExpensesSchema.EnsureCreatedAsync(db); }
 
     var factory = new TestFactory(options);
     var service = new IncomeService(factory);

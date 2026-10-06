@@ -39,6 +39,7 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
             ? []
             : await ExistingKeysAsync(db, ownerId, rows, cancellationToken);
 
+        var tagsByKey = await TagService.EnsureAsync(db, ownerId, rows.SelectMany(row => row.Tags ?? []), cancellationToken);
         var imported = 0;
         foreach (var row in rows)
         {
@@ -46,7 +47,7 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
             if (!includeDuplicates && !known.Add(Key(row, methodId)))
                 continue;
 
-            db.Expenses.Add(new ExpenseRecord
+            var expense = new ExpenseRecord
             {
                 OwnerId = ownerId,
                 Date = row.Date,
@@ -54,7 +55,10 @@ public sealed class ExpenseCsvImportService(IDbContextFactory<ExpensesDbContext>
                 Category = row.Category,
                 Memo = row.Memo,
                 PaymentMethodId = methodId
-            });
+            };
+            foreach (var tag in row.Tags ?? [])
+                expense.TagLinks.Add(new ExpenseTag { Expense = expense, Tag = tagsByKey[TagNames.Key(tag)] });
+            db.Expenses.Add(expense);
             imported++;
         }
 

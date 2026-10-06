@@ -4,7 +4,7 @@ using Microsoft.VisualBasic.FileIO;
 namespace MyExpenses.Data;
 
 public sealed record ExpenseCsvRow(int RowNumber, DateTime Date, long Amount, string Category, string Memo,
-    string PaymentMethodName = "", string PaymentMethodType = "");
+    string PaymentMethodName = "", string PaymentMethodType = "", IReadOnlyList<string>? Tags = null);
 
 public sealed record ExpenseCsvIssue(int RowNumber, string Message);
 
@@ -17,6 +17,7 @@ public static class ExpenseCsvImporter
     public const int MaxRows = 1_000;
     private static readonly string[] Header = ["날짜", "금액(원)", "카테고리", "메모"];
     private static readonly string[] PaymentHeader = ["날짜", "금액(원)", "카테고리", "메모", "결제수단", "결제유형"];
+    private static readonly string[] TagHeader = ["날짜", "금액(원)", "카테고리", "메모", "결제수단", "결제유형", "태그"];
 
     public static ExpenseCsvParseResult Parse(TextReader reader, IReadOnlyList<string>? categories = null)
     {
@@ -42,9 +43,10 @@ public static class ExpenseCsvImporter
             return new ExpenseCsvParseResult(rows, [new ExpenseCsvIssue(1, "CSV 제목 행을 읽을 수 없습니다.")]);
         }
 
-        if (actualHeader is null || (!actualHeader.SequenceEqual(Header, StringComparer.Ordinal) && !actualHeader.SequenceEqual(PaymentHeader, StringComparer.Ordinal)))
+        if (actualHeader is null || (!actualHeader.SequenceEqual(Header, StringComparer.Ordinal) && !actualHeader.SequenceEqual(PaymentHeader, StringComparer.Ordinal) &&
+                                 !actualHeader.SequenceEqual(TagHeader, StringComparer.Ordinal)))
             return new ExpenseCsvParseResult(rows,
-                [new ExpenseCsvIssue(1, "제목 행은 날짜,금액(원),카테고리,메모 또는 여기에 결제수단,결제유형을 추가한 순서여야 합니다.")]);
+                [new ExpenseCsvIssue(1, "제목 행은 날짜,금액(원),카테고리,메모 또는 여기에 결제수단,결제유형(,태그)을 추가한 순서여야 합니다.")]);
 
         var rowNumber = 1;
         while (!parser.EndOfData)
@@ -99,14 +101,32 @@ public static class ExpenseCsvImporter
                 continue;
             }
 
-            var methodName = fields.Length == 6 ? RemoveExportProtection(fields[4]).Trim() : "";
-            var methodType = fields.Length == 6 ? fields[5] : "";
+            var methodName = fields.Length >= 6 ? RemoveExportProtection(fields[4]).Trim() : "";
+            var methodType = fields.Length >= 6 ? fields[5] : "";
             if (methodName.Length > 50 || (methodName == "" ? methodType != "" : !PaymentMethod.Types.Contains(methodType)))
             {
                 issues.Add(new ExpenseCsvIssue(rowNumber, "결제수단 이름은 50자 이하이고 결제유형과 함께 입력해야 합니다. 미지정은 두 열을 비워 주세요."));
                 continue;
             }
-            rows.Add(new ExpenseCsvRow(rowNumber, date.Date, amount, RemoveExportProtection(fields[2]), memo, methodName, methodType));
+            // 태그 열은 세미콜론으로 구분합니다. 규칙에 맞지 않는 태그가 하나라도 있으면 그 행을 가져오지 않습니다.
+            var tags = new List<string>();
+            if (fields.Length == 7)
+            {
+                var tagKeys = new HashSet<string>();
+                var tagsValid = true;
+                foreach (var piece in RemoveExportProtection(fields[6]).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                {
+                    var tag = TagNames.Clean(piece);
+                    if (tag is null) { tagsValid = false; break; }
+                    if (tagKeys.Add(TagNames.Key(tag))) tags.Add(tag);
+                }
+                if (!tagsValid || tags.Count > TagNames.MaxPerExpense)
+                {
+                    issues.Add(new ExpenseCsvIssue(rowNumber, $"태그는 세미콜론(;)으로 구분하며 {TagNames.MaxLength}자 이하로 최대 {TagNames.MaxPerExpense}개까지 입력할 수 있습니다."));
+                    continue;
+                }
+            }
+            rows.Add(new ExpenseCsvRow(rowNumber, date.Date, amount, RemoveExportProtection(fields[2]), memo, methodName, methodType, tags));
         }
 
         if (rows.Count == 0 && issues.Count == 0)

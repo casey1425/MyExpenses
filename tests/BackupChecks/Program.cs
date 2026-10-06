@@ -101,7 +101,7 @@ var fileA = await Export("A");
 
 // ---- 1. 내보내기 ----
 Check(fileA.Counts == new BackupCounts(7, 3, 5, 1, 2, 1, 2, 3, 1, 2, 2), $"Export counts wrong: {fileA.Counts}");
-Check(fileA.Format == "MyExpensesBackup" && fileA.Version == 1 && fileA.ExportedAt == now, "Export header wrong");
+Check(fileA.Format == "MyExpensesBackup" && fileA.Version == BackupFile.CurrentVersion && BackupFile.CurrentVersion == 2 && fileA.ExportedAt == now, "Export header wrong");
 var secondExportA = await ExportBytes("A");
 Check(bytesA.SequenceEqual(secondExportA), "Export is not deterministic");
 var json = Encoding.UTF8.GetString(bytesA);
@@ -281,7 +281,7 @@ Check(okContext.Response.ContentType == "application/json; charset=utf-8", $"Con
 var disposition = okContext.Response.Headers.ContentDisposition.ToString();
 Check(disposition.Contains("attachment") && disposition.Contains("MyExpenses-backup-") && disposition.Contains(".json"), $"Download file name wrong: {disposition}");
 var served = BackupSerializer.Parse(body);
-Check(served.File is not null && served.File.Counts == fileA.Counts && served.File.Data.Expenses.SequenceEqual(fileA.Data.Expenses), "Endpoint body is not the user's backup");
+Check(served.File is not null && served.File.Counts == fileA.Counts && served.File.Data.Expenses.Select(e => (e.Date, e.Amount, e.Category, e.Memo, e.PaymentMethod, string.Join("|", e.Tags ?? []))).SequenceEqual(fileA.Data.Expenses.Select(e => (e.Date, e.Amount, e.Category, e.Memo, e.PaymentMethod, string.Join("|", e.Tags ?? [])))), "Endpoint body is not the user's backup");
 var denied = EndpointContext(null);
 var deniedResult = await BackupEndpoints.ExportAsync(denied, backup, CancellationToken.None);
 await deniedResult.ExecuteAsync(denied);

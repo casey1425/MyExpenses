@@ -29,6 +29,11 @@ public sealed record YearMethodRow(string Name, string Type, long Amount, int Co
     public string WidthStyle => $"width: {Percentage.ToString("0.##", CultureInfo.InvariantCulture)}%";
 }
 
+public sealed record YearTagRow(int TagId, string Name, long Amount, int Count, double Percentage)
+{
+    public string WidthStyle => $"width: {Math.Min(Percentage, 100).ToString("0.##", CultureInfo.InvariantCulture)}%";
+}
+
 public sealed record TopExpenseRow(DateOnly Date, long Amount, string Category, string Memo);
 
 public sealed record FrequentMemoRow(string Memo, int Count, long Amount);
@@ -42,7 +47,8 @@ public sealed record YearlyReport(int Year, DateOnly From, DateOnly To, DateOnly
     bool IsCurrentYear, IReadOnlyList<YearMonthRow> Months, YearTotals Current, YearTotals Previous,
     long? AverageMonthlyExpense, int AverageMonthCount, IReadOnlyList<YearCategoryRow> Categories,
     IReadOnlyList<YearMethodRow> Methods, IReadOnlyList<TopExpenseRow> TopExpenses,
-    IReadOnlyList<FrequentMemoRow> FrequentMemos, IReadOnlyList<WeekdayRow> Weekdays);
+    IReadOnlyList<FrequentMemoRow> FrequentMemos, IReadOnlyList<WeekdayRow> Weekdays,
+    IReadOnlyList<YearTagRow>? Tags = null, long UntaggedAmount = 0, int UntaggedCount = 0);
 
 public static class YearlyStatistics
 {
@@ -132,8 +138,15 @@ public static class YearlyStatistics
                 return new WeekdayRow(day, group.Amount, group.Count, Share(group.Amount, currentTotals.Expense));
             }).ToList();
 
+        // 한 지출에 태그가 여러 개면 각 태그에 모두 들어가므로 태그별 합계를 더하면 전체 지출보다 클 수 있습니다.
+        var tagRows = current.SelectMany(e => e.TagLinks.Where(link => link.Tag is not null).Select(link => (Expense: e, link.TagId, Name: link.Tag!.Name)))
+            .GroupBy(item => item.TagId)
+            .Select(g => new YearTagRow(g.Key, g.First().Name, g.Sum(item => item.Expense.Amount), g.Count(), Share(g.Sum(item => item.Expense.Amount), currentTotals.Expense)))
+            .OrderByDescending(row => row.Amount).ThenBy(row => row.Name, StringComparer.Ordinal).Take(TopCount * 2).ToList();
+        var untagged = current.Where(e => !e.TagLinks.Any(link => link.Tag is not null)).ToList();
+
         return new YearlyReport(year, from, to, previousFrom, previousTo, isCurrent, months, currentTotals, previousTotals,
-            average, averageMonths.Count, categoryRows, methodRows, top, memos, weekdays);
+            average, averageMonths.Count, categoryRows, methodRows, top, memos, weekdays, tagRows, untagged.Sum(e => e.Amount), untagged.Count);
     }
 
     public static string WeekdayName(DayOfWeek day) => day switch

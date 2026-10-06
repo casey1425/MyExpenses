@@ -14,6 +14,8 @@ public sealed class ExpenseSearchInput
     public string MaxAmount { get; set; } = "";
     public string Sort { get; set; } = nameof(ExpenseSort.Newest);
     public string PaymentMethod { get; set; } = "";
+    // 태그 번호(빈 문자열이면 전체)
+    public string Tag { get; set; } = "";
 
     public bool TryCreate(out ExpenseFilter filter, out string? error)
     {
@@ -37,9 +39,12 @@ public sealed class ExpenseSearchInput
             error = "정렬 방법을 다시 선택해 주세요.";
         else if (PaymentMethod is not ("" or "none") && (!int.TryParse(PaymentMethod, NumberStyles.None, CultureInfo.InvariantCulture, out var methodId) || methodId <= 0))
             error = "결제수단을 다시 선택해 주세요.";
+        else if (Tag != "" && (!int.TryParse(Tag, NumberStyles.None, CultureInfo.InvariantCulture, out var tagId) || tagId <= 0))
+            error = "태그를 다시 선택해 주세요.";
         else
             filter = new(month, Category == "" ? null : Category, Search.Trim(), start, end, min, max, sort,
-                PaymentMethod is "" or "none" ? null : int.Parse(PaymentMethod, CultureInfo.InvariantCulture), PaymentMethod == "none");
+                PaymentMethod is "" or "none" ? null : int.Parse(PaymentMethod, CultureInfo.InvariantCulture), PaymentMethod == "none",
+                Tag == "" ? null : int.Parse(Tag, CultureInfo.InvariantCulture));
         return error is null;
     }
 

@@ -11,6 +11,8 @@ public partial class Home
 {
     // 달력 화면 등에서 /?date=2026-10-05 로 들어오면 그 날짜로 지출을 입력합니다.
     [Parameter, SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
+    // 태그 관리 화면 등에서 /?tag=3 으로 들어오면 그 태그의 지출만 보여 줍니다.
+    [Parameter, SupplyParameterFromQuery(Name = "tag")] public string? TagParameter { get; set; }
 
     private List<UserCategory> categoryItems = [];
     private IReadOnlyList<string> categories = ExpenseCategories.All;
@@ -30,6 +32,9 @@ public partial class Home
     private bool paymentBusy;
     private string? paymentError;
     private List<MemoSuggestion> memoSuggestions = [];
+    private string tagsText = string.Empty;
+    private string editTagsText = string.Empty;
+    private List<TagUsage> tagUsage = [];
     private string? autofillNotice;
     private ExpenseInput? lastDeleted;
     private bool undoBusy;
@@ -74,6 +79,9 @@ public partial class Home
     // 월 이동만으로는 검색 조건을 펼쳐 두지 않도록, 월을 뺀 나머지 조건이 있을 때만 "적용 중"으로 봅니다.
     private bool HasDetailedFilter => (activeFilter with { Month = null }).IsActive;
     private string MonthNavLabel => activeFilter.Month is DateTime month ? month.ToString("yyyy년 M월") : "전체 기간";
+    // 자주 쓰는 태그를 입력 칸 아래에 바로 고를 수 있게 보여 줍니다.
+    private IReadOnlyList<TagUsage> TagChoices => tagUsage.OrderByDescending(tag => tag.ExpenseCount)
+        .ThenBy(tag => tag.Name, StringComparer.Ordinal).Take(8).ToList();
     private decimal FilteredTotal => expenses.Sum(item => (decimal)item.Amount);
     private decimal MonthlyTotal => expenses
         .Where(item => item.Date.Year == KoreanClock.Today.Year && item.Date.Month == KoreanClock.Today.Month)
@@ -98,6 +106,7 @@ public partial class Home
             if (activeFilter.MinAmount.HasValue || activeFilter.MaxAmount.HasValue)
                 parts.Add($"{activeFilter.MinAmount?.ToString("N0") ?? "0"}원 ~ {activeFilter.MaxAmount?.ToString("N0") ?? "제한 없음"}");
             if (activeFilter.UnspecifiedPayment) parts.Add("결제수단: 미지정");
+            if (activeFilter.TagId is int tagId) parts.Add($"태그: {tagUsage.FirstOrDefault(t => t.Id == tagId)?.Name ?? "삭제된 태그"}");
             if (activeFilter.PaymentMethodId is int methodId) parts.Add($"결제수단: {paymentMethods.FirstOrDefault(m => m.Id == methodId)?.Name ?? "삭제된 수단"}");
             return string.Join(" · ", parts);
         }
@@ -119,6 +128,7 @@ public partial class Home
             url += $"&sort={activeFilter.Sort}";
             if (activeFilter.UnspecifiedPayment) url += "&payment=none";
             if (activeFilter.PaymentMethodId is int methodId) url += $"&payment={methodId}";
+            if (activeFilter.TagId is int tagId) url += $"&tag={tagId}";
             return url;
         }
     }
@@ -143,6 +153,12 @@ public partial class Home
             return;
         }
 
+        if (int.TryParse(TagParameter, NumberStyles.None, CultureInfo.InvariantCulture, out var requestedTag) && requestedTag > 0)
+        {
+            searchInput.Tag = requestedTag.ToString(CultureInfo.InvariantCulture);
+            if (searchInput.TryCreate(out var initialFilter, out _)) activeFilter = initialFilter;
+        }
+
         try
         {
             await LoadCategoriesAsync();
@@ -160,6 +176,7 @@ public partial class Home
         await RefreshPaymentMethodsAsync();
         await RefreshTemplatesAsync();
         await LoadSuggestionsAsync();
+        await LoadTagsAsync();
     }
 
     private async Task LoadCategoriesAsync()

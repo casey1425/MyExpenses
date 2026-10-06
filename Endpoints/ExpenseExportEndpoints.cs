@@ -38,7 +38,8 @@ public static class ExpenseExportEndpoints
                 MinAmount = context.Request.Query["min"].ToString(),
                 MaxAmount = context.Request.Query["max"].ToString(),
                 Sort = context.Request.Query["sort"].FirstOrDefault() ?? nameof(ExpenseSort.Newest),
-                PaymentMethod = context.Request.Query["payment"].ToString()
+                PaymentMethod = context.Request.Query["payment"].ToString(),
+                Tag = context.Request.Query["tag"].ToString()
             };
             if (!input.TryCreate(out filter, out var error))
                 return Results.BadRequest(error);

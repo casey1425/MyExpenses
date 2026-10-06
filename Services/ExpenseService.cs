@@ -3,7 +3,9 @@ using MyExpenses.Data;
 
 namespace MyExpenses.Services;
 
-public sealed record ExpenseInput(DateTime Date, long Amount, string Category, string Memo, int? PaymentMethodId = null);
+// Tags가 null이면 수정할 때 기존 태그를 그대로 두고, 빈 목록이면 모두 지웁니다. 추가할 때 null은 태그 없음입니다.
+public sealed record ExpenseInput(DateTime Date, long Amount, string Category, string Memo, int? PaymentMethodId = null,
+    IReadOnlyList<string>? Tags = null);
 
 // 자주 쓴 메모와 그 메모로 가장 최근에 기록한 카테고리·결제수단·금액입니다. 입력 자동 완성에 씁니다.
 public sealed record MemoSuggestion(string Memo, string Category, int? PaymentMethodId, long Amount, int Count);
@@ -15,7 +17,8 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         if (filter.Category is not null) await CategoryService.VerifyAsync(db, ownerId, filter.Category, true, cancellationToken);
-        var query = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod).Where(e => e.OwnerId == ownerId);
+        var query = db.Expenses.AsNoTracking().Include(e => e.PaymentMethod).Include(e => e.TagLinks).ThenInclude(l => l.Tag)
+            .AsSplitQuery().Where(e => e.OwnerId == ownerId);
         return await filter.Order(filter.ApplyTo(query)).ToListAsync(cancellationToken);
     }
 
@@ -59,6 +62,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         var expense = new ExpenseRecord { OwnerId = ownerId };
         Apply(expense, input);
         db.Expenses.Add(expense);
+        await TagService.ApplyAsync(db, ownerId, expense, input.Tags ?? [], cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return expense;
@@ -70,10 +74,12 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await PaymentMethodService.VerifyOwnedAsync(db, ownerId, input.PaymentMethodId, cancellationToken);
-        var expense = await db.Expenses.SingleOrDefaultAsync(e => e.OwnerId == ownerId && e.Id == id, cancellationToken);
+        var expense = await db.Expenses.Include(e => e.TagLinks).ThenInclude(l => l.Tag)
+            .SingleOrDefaultAsync(e => e.OwnerId == ownerId && e.Id == id, cancellationToken);
         if (expense is null) return null;
         await CategoryService.VerifyAsync(db, ownerId, input.Category, expense.Category == input.Category, cancellationToken);
         Apply(expense, input);
+        if (input.Tags is not null) await TagService.ApplyAsync(db, ownerId, expense, input.Tags, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return expense;
@@ -99,6 +105,7 @@ public sealed class ExpenseService(IDbContextFactory<ExpensesDbContext> dbFactor
         if (input.Date == default || input.Amount <= 0) throw new ArgumentException("날짜와 1원 이상의 금액을 입력해 주세요.");
         if (string.IsNullOrWhiteSpace(input.Category) || input.Category.Length > 30 || input.Memo is null || input.Memo.Trim().Length > 100)
             throw new ArgumentException("카테고리와 100자 이하 메모를 확인해 주세요.");
+        TagService.Normalize(input.Tags);
     }
 
     private static void Apply(ExpenseRecord expense, ExpenseInput input)

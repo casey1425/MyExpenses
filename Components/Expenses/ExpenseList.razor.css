@@ -248,3 +248,18 @@
 
 .day-header:first-child { margin-top: 0; }
 .day-header span { color: #63758d; }
+
+.expense-tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+
+.tag-chip {
+    padding: .1rem .55rem;
+    border: 0;
+    border-radius: 999px;
+    background: #eaf0f7;
+    color: #285889;
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.tag-chip:hover { background: #d9e5f2; }

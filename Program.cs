@@ -73,6 +73,7 @@ builder.Services.AddScoped<ExpenseCsvImportService>();
 builder.Services.AddScoped<RecurringExpenseService>();
 builder.Services.AddScoped<ExpenseTrendsService>();
 builder.Services.AddScoped<YearlyStatisticsService>();
+builder.Services.AddScoped<TagService>();
 builder.Services.AddScoped<CalendarService>();
 builder.Services.AddScoped<ExpenseTemplateService>();
 builder.Services.AddScoped<PaymentMethodService>();

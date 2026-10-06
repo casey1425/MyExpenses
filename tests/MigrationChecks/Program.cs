@@ -81,7 +81,7 @@ await using var modelConnection = await OpenAsync();
     Check((await migrated.Database.GetAppliedMigrationsAsync()).SequenceEqual(allMigrations) && !(await migrated.Database.GetPendingMigrationsAsync()).Any(), "Fresh DB did not apply all migrations");
     var migratedSchema = await SchemaAsync(migratedConnection);
     var modelSchema = await SchemaAsync(modelConnection);
-    Check(migratedSchema.Count == 14 && migratedSchema.Keys.SequenceEqual(modelSchema.Keys), $"Table set differs: {string.Join(",", migratedSchema.Keys.Except(modelSchema.Keys))} / {string.Join(",", modelSchema.Keys.Except(migratedSchema.Keys))}");
+    Check(migratedSchema.Count == 16 && migratedSchema.Keys.SequenceEqual(modelSchema.Keys), $"Table set differs: {string.Join(",", migratedSchema.Keys.Except(modelSchema.Keys))} / {string.Join(",", modelSchema.Keys.Except(migratedSchema.Keys))}");
     foreach (var (table, definition) in modelSchema)
         Check(migratedSchema[table] == definition, $"Schema differs from model for {table}:\n  migration: {migratedSchema[table]}\n  model:     {definition}");
 
@@ -117,6 +117,8 @@ await using var legacyConnection = await OpenAsync();
     await using (var seed = new ExpensesDbContext(ExpensesOptions(legacyConnection)))
     {
         await seed.Database.EnsureCreatedAsync();
+        // 태그 기능 이전 DB를 흉내 냅니다. 태그 테이블은 기준선 이후 AddTags 마이그레이션이 만들어야 합니다.
+        await seed.Database.ExecuteSqlRawAsync("DROP TABLE ExpenseTags; DROP TABLE Tags;");
         await ExpensesSchema.EnsureCreatedAsync(seed);
         seed.PaymentMethods.Add(new PaymentMethod { OwnerId = "A", Name = "카드", Type = "체크카드" });
         seed.Expenses.Add(new ExpenseRecord { OwnerId = "A", Date = new(2026, 9, 1), Amount = 12_000, Category = "식비", Memo = "점심" });
@@ -131,9 +133,10 @@ await using var legacyConnection = await OpenAsync();
     await using var db = new ExpensesDbContext(ExpensesOptions(legacyConnection));
     await DatabaseMigrator.MigrateExpensesAsync(db);
     var history = await QueryAsync(legacyConnection, "SELECT MigrationId FROM __EFMigrationsHistory");
-    Check(history.SequenceEqual(db.Database.GetMigrations()), "Legacy DB was not baselined with the initial migration only");
+    Check(history.SequenceEqual(db.Database.GetMigrations()) && history.Count == 2 && history[1].EndsWith("_AddTags"), "Legacy DB must be baselined with InitialCreate and then receive AddTags");
     Check(SameCounts(before, await CountsAsync(legacyConnection)) && (await CountsAsync(legacyConnection)).Values.Sum() == before.Values.Sum(), "Legacy data changed during baseline");
-    Check((await SchemaAsync(legacyConnection)).SequenceEqual(schemaBefore), "Baseline must not rebuild existing tables");
+    var schemaAfter = await SchemaAsync(legacyConnection);
+    Check(schemaAfter.Where(pair => schemaBefore.ContainsKey(pair.Key)).SequenceEqual(schemaBefore) && schemaAfter.ContainsKey("Tags") && schemaAfter.ContainsKey("ExpenseTags"), "Baseline must not rebuild existing tables, and must add the tag tables");
     Check((await db.Expenses.SingleAsync()).Memo == "점심" && (await db.Incomes.SingleAsync()).Amount == 3_000_000, "Legacy rows unreadable after baseline");
     await DatabaseMigrator.MigrateExpensesAsync(db);
     Check((await QueryAsync(legacyConnection, "SELECT COUNT(*) FROM __EFMigrationsHistory"))[0] == history.Count.ToString(), "Second startup re-baselined");
@@ -152,9 +155,9 @@ await using var ancientConnection = await OpenAsync();
     await using var db = new ExpensesDbContext(ExpensesOptions(ancientConnection));
     await DatabaseMigrator.MigrateExpensesAsync(db);
     var tables = await TablesAsync(ancientConnection);
-    Check(tables.Count == 14, $"Ancient DB missing tables after upgrade: {tables.Count}");
+    Check(tables.Count == 16, $"Ancient DB missing tables after upgrade: {tables.Count}");
     Check((await db.Expenses.SingleAsync()) is { Memo: "existing", Amount: 1000 } && (await db.ExpenseTemplates.SingleAsync()).Name == "커피", "Ancient rows lost");
-    Check((await QueryAsync(ancientConnection, "SELECT COUNT(*) FROM __EFMigrationsHistory"))[0] == "1", "Ancient DB not baselined");
+    Check((await QueryAsync(ancientConnection, "SELECT COUNT(*) FROM __EFMigrationsHistory"))[0] == db.Database.GetMigrations().Count().ToString(), "Ancient DB not baselined and upgraded");
     db.Incomes.Add(new IncomeRecord { OwnerId = "A", Date = new(2026, 10, 1), Amount = 5, Source = "급여", Memo = "" });
     await db.SaveChangesAsync();
 }
@@ -165,7 +168,7 @@ await using var lockConnection = await OpenAsync();
     await using var db = new ExpensesDbContext(ExpensesOptions(lockConnection));
     await db.Database.ExecuteSqlRawAsync("CREATE TABLE __EFMigrationsLock (Id INTEGER NOT NULL CONSTRAINT PK___EFMigrationsLock PRIMARY KEY, Timestamp TEXT NOT NULL);");
     await DatabaseMigrator.MigrateExpensesAsync(db);
-    Check((await TablesAsync(lockConnection)).Count == 14 && !(await db.Database.GetPendingMigrationsAsync()).Any(), "Lock-table-only DB not treated as fresh");
+    Check((await TablesAsync(lockConnection)).Count == 16 && !(await db.Database.GetPendingMigrationsAsync()).Any(), "Lock-table-only DB not treated as fresh");
 }
 
 // ---- 5. 로그인(Identity) DB ----

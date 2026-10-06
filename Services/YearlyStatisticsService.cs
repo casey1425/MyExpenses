@@ -36,7 +36,7 @@ public sealed class YearlyStatisticsService(IDbContextFactory<ExpensesDbContext>
         await using var db = await dbFactory.CreateDbContextAsync(cancellationToken);
         // 지출·수입·결제수단을 같은 시점에 읽어 서로 어긋나지 않게 합니다.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var expenses = await db.Expenses.AsNoTracking()
+        var expenses = await db.Expenses.AsNoTracking().Include(e => e.TagLinks).ThenInclude(link => link.Tag).AsSplitQuery()
             .Where(e => e.OwnerId == ownerId && e.Date >= firstDate && e.Date <= lastDate).ToListAsync(cancellationToken);
         var incomes = await db.Incomes.AsNoTracking()
             .Where(i => i.OwnerId == ownerId && i.Date >= firstDate && i.Date <= lastDate).ToListAsync(cancellationToken);

@@ -41,8 +41,10 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
         var methods = await db.PaymentMethods.AsNoTracking().Where(m => m.OwnerId == ownerId)
             .OrderBy(m => m.Name).ThenBy(m => m.Id).ToListAsync(cancellationToken);
         var methodNames = methods.ToDictionary(m => m.Id, m => m.Name);
-        var expenses = await db.Expenses.AsNoTracking().Where(e => e.OwnerId == ownerId)
-            .OrderBy(e => e.Date).ThenBy(e => e.Id).ToListAsync(cancellationToken);
+        var expenses = await db.Expenses.AsNoTracking().Include(e => e.TagLinks).ThenInclude(link => link.Tag).AsSplitQuery()
+            .Where(e => e.OwnerId == ownerId).OrderBy(e => e.Date).ThenBy(e => e.Id).ToListAsync(cancellationToken);
+        var tagNames = (await db.Tags.AsNoTracking().Where(t => t.OwnerId == ownerId).Select(t => t.Name).ToListAsync(cancellationToken))
+            .Order(StringComparer.Ordinal).ToList();
         var templates = await db.ExpenseTemplates.AsNoTracking().Where(t => t.OwnerId == ownerId)
             .OrderBy(t => t.Name).ThenBy(t => t.Id).ToListAsync(cancellationToken);
         var monthly = await db.MonthlyBudgets.AsNoTracking().Where(b => b.OwnerId == ownerId)
@@ -81,7 +83,7 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
         var data = new BackupData(
             categoryItems,
             methods.Select(m => new BackupPaymentMethod(m.Name, m.Type)).ToList(),
-            expenses.Select(e => new BackupExpense(DateOnly.FromDateTime(e.Date), e.Amount, e.Category, e.Memo, MethodName(e.PaymentMethodId))).ToList(),
+            expenses.Select(e => new BackupExpense(DateOnly.FromDateTime(e.Date), e.Amount, e.Category, e.Memo, MethodName(e.PaymentMethodId), e.TagNames)).ToList(),
             templates.Select(t => new BackupTemplate(t.Name, t.Amount, t.Category, t.Memo, MethodName(t.PaymentMethodId))).ToList(),
             monthly.Select(b => new BackupMonthlyBudget(MonthText(b.Month), b.Amount)).ToList(),
             categoryBudgets.Select(b => new BackupCategoryBudget(MonthText(b.Month), b.Category, b.Amount)).ToList(),
@@ -90,7 +92,8 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
             incomeRules.Select(r => new BackupRecurringIncome(MonthText(r.StartMonth), r.DayOfMonth, r.Amount, r.Source, r.Memo, r.IsActive, Months(incomeOccurrences[r.Id]))).ToList(),
             goals.Select(g => new BackupSavingsGoal(g.Name, g.TargetAmount, g.TargetDate is DateTime due ? DateOnly.FromDateTime(due) : null,
                 DateOnly.FromDateTime(g.CreatedDate),
-                deposits[g.Id].Select(d => new BackupSavingsDeposit(DateOnly.FromDateTime(d.Date), d.Amount, d.Memo)).ToList())).ToList());
+                deposits[g.Id].Select(d => new BackupSavingsDeposit(DateOnly.FromDateTime(d.Date), d.Amount, d.Memo)).ToList())).ToList(),
+            tagNames);
 
         return new BackupFile(BackupFile.FormatName, BackupFile.CurrentVersion, now, BackupCounts.Of(data), data);
     }
@@ -153,6 +156,14 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
         sections.Add(Report("결제수단", data.PaymentMethods.Count, newMethods.Count));
         int? MethodId(string? name) => name is null ? null : methodIds[name];
 
+        // 태그: 이름이 같으면(대소문자 무시) 기존 태그를 쓰고 없으면 만듭니다. 지출이 ID로 연결하므로 먼저 저장합니다.
+        var backupTagNames = (data.Tags ?? []).Concat(data.Expenses.SelectMany(e => e.Tags ?? [])).ToList();
+        var existingTagKeys = (await db.Tags.AsNoTracking().Where(t => t.OwnerId == ownerId).Select(t => t.NormalizedName).ToListAsync(cancellationToken)).ToHashSet();
+        var tagsByKey = await TagService.EnsureAsync(db, ownerId, backupTagNames, cancellationToken);
+        var newTagCount = tagsByKey.Keys.Count(key => !existingTagKeys.Contains(key));
+        await db.SaveChangesAsync(cancellationToken);
+        if (data.Tags is not null) sections.Add(Report("태그", data.Tags.Count, newTagCount));
+
         // 지출: 같은 내용의 기존 기록 개수만큼만 건너뜁니다. 백업 안에서 내용이 같은 기록은 각각 별개의 기록으로 복원합니다.
         var existingExpenses = new Counter<(DateTime, long, string, string, int?)>(
             (await db.Expenses.AsNoTracking().Where(e => e.OwnerId == ownerId)
@@ -163,7 +174,11 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
         {
             var methodId = MethodId(item.PaymentMethod);
             if (existingExpenses.TryConsume((Day(item.Date), item.Amount, item.Category, item.Memo, methodId))) continue;
-            newExpenses.Add(new ExpenseRecord { OwnerId = ownerId, Date = Day(item.Date), Amount = item.Amount, Category = item.Category, Memo = item.Memo, PaymentMethodId = methodId });
+            // 이미 있는 기록은 태그를 바꾸지 않습니다. 새로 만드는 기록에만 백업의 태그를 붙입니다.
+            var record = new ExpenseRecord { OwnerId = ownerId, Date = Day(item.Date), Amount = item.Amount, Category = item.Category, Memo = item.Memo, PaymentMethodId = methodId };
+            foreach (var tag in item.Tags ?? [])
+                record.TagLinks.Add(new ExpenseTag { Expense = record, Tag = tagsByKey[TagNames.Key(tag)] });
+            newExpenses.Add(record);
         }
         db.Expenses.AddRange(newExpenses);
         sections.Add(Report("지출", data.Expenses.Count, newExpenses.Count));
@@ -294,7 +309,9 @@ public sealed class BackupService(IDbContextFactory<ExpensesDbContext> dbFactory
     private static async Task<int> DeleteAllAsync(ExpensesDbContext db, string ownerId, CancellationToken ct)
     {
         var deleted = 0;
-        // 결제수단을 참조하는 지출·템플릿을 먼저 지웁니다.
+        // 태그와 지출 연결을 먼저, 그다음 결제수단을 참조하는 지출·템플릿을 지웁니다.
+        await db.ExpenseTags.Where(link => db.Tags.Any(tag => tag.Id == link.TagId && tag.OwnerId == ownerId)).ExecuteDeleteAsync(ct);
+        deleted += await db.Tags.Where(t => t.OwnerId == ownerId).ExecuteDeleteAsync(ct);
         deleted += await db.Expenses.Where(e => e.OwnerId == ownerId).ExecuteDeleteAsync(ct);
         deleted += await db.ExpenseTemplates.Where(t => t.OwnerId == ownerId).ExecuteDeleteAsync(ct);
         deleted += await db.PaymentMethods.Where(m => m.OwnerId == ownerId).ExecuteDeleteAsync(ct);

@@ -5,11 +5,11 @@ public enum ExpenseSort { Newest, Oldest, HighestAmount, LowestAmount }
 public sealed record ExpenseFilter(DateTime? Month = null, string? Category = null,
     string? Search = null, DateTime? StartDate = null, DateTime? EndDate = null,
     long? MinAmount = null, long? MaxAmount = null, ExpenseSort Sort = ExpenseSort.Newest,
-    int? PaymentMethodId = null, bool UnspecifiedPayment = false)
+    int? PaymentMethodId = null, bool UnspecifiedPayment = false, int? TagId = null)
 {
     public bool IsActive => Month.HasValue || !string.IsNullOrEmpty(Category) ||
         !string.IsNullOrWhiteSpace(Search) || StartDate.HasValue || EndDate.HasValue ||
-        MinAmount.HasValue || MaxAmount.HasValue || PaymentMethodId.HasValue || UnspecifiedPayment;
+        MinAmount.HasValue || MaxAmount.HasValue || PaymentMethodId.HasValue || UnspecifiedPayment || TagId.HasValue;
 
     public IQueryable<ExpenseRecord> ApplyTo(IQueryable<ExpenseRecord> query)
     {
@@ -50,6 +50,8 @@ public sealed record ExpenseFilter(DateTime? Month = null, string? Category = nu
             query = query.Where(expense => expense.PaymentMethodId == methodId);
         if (UnspecifiedPayment)
             query = query.Where(expense => expense.PaymentMethodId == null);
+        if (TagId is int tagId)
+            query = query.Where(expense => expense.TagLinks.Any(link => link.TagId == tagId));
         return query;
     }
 
@@ -70,5 +72,6 @@ public sealed record ExpenseFilter(DateTime? Month = null, string? Category = nu
         (!MinAmount.HasValue || expense.Amount >= MinAmount) &&
         (!MaxAmount.HasValue || expense.Amount <= MaxAmount) &&
         (!PaymentMethodId.HasValue || expense.PaymentMethodId == PaymentMethodId) &&
-        (!UnspecifiedPayment || expense.PaymentMethodId == null);
+        (!UnspecifiedPayment || expense.PaymentMethodId == null) &&
+        (!TagId.HasValue || expense.TagLinks.Any(link => link.TagId == TagId));
 }

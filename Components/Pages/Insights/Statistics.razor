@@ -154,6 +154,35 @@
                 }
             </section>
 
+            <section class="stats-panel" aria-labelledby="tag-title">
+                <h2 id="tag-title">태그별 지출</h2>
+                <p class="period-note">한 지출에 태그가 여러 개 붙어 있으면 각 태그에 모두 포함되므로, 태그별 합계를 더하면 전체 지출보다 클 수 있어요. 태그를 누르면 그 태그의 지출을 볼 수 있어요.</p>
+                @if (report.Tags is not { Count: > 0 })
+                {
+                    <p class="empty-inline">이 기간에 태그가 붙은 지출이 없습니다. <a href="/tags">태그 관리</a></p>
+                }
+                else
+                {
+                    <ul class="bar-list">
+                        @foreach (var row in report.Tags)
+                        {
+                            <li>
+                                <div class="bar-line"><a href="/?tag=@row.TagId">#@row.Name</a><strong>@row.Amount.ToString("N0")원</strong></div>
+                                <span class="bar" aria-hidden="true"><i style="@row.WidthStyle"></i></span>
+                                <small>@row.Percentage.ToString("0.#", CultureInfo.InvariantCulture)% · @(row.Count)건</small>
+                            </li>
+                        }
+                        @if (report.UntaggedCount > 0)
+                        {
+                            <li>
+                                <div class="bar-line"><span>태그 없음</span><strong>@report.UntaggedAmount.ToString("N0")원</strong></div>
+                                <small>@(report.UntaggedCount)건</small>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
             <section class="stats-panel" aria-labelledby="weekday-title">
                 <h2 id="weekday-title">요일별 지출</h2>
                 <ul class="bar-list">

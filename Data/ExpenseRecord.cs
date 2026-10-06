@@ -16,4 +16,9 @@ public sealed class ExpenseRecord
     public string Memo { get; set; } = string.Empty;
     public int? PaymentMethodId { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
+    public List<ExpenseTag> TagLinks { get; set; } = [];
+
+    // 태그 이름을 가나다·알파벳 순으로 돌려줍니다. TagLinks와 Tag를 함께 읽었을 때만 값이 있습니다.
+    public IReadOnlyList<string> TagNames => TagLinks.Where(link => link.Tag is not null)
+        .Select(link => link.Tag!.Name).OrderBy(name => name, StringComparer.Ordinal).ToList();
 }

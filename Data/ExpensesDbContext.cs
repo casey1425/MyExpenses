@@ -5,6 +5,8 @@ namespace MyExpenses.Data;
 public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> options) : DbContext(options)
 {
     public DbSet<ExpenseRecord> Expenses => Set<ExpenseRecord>();
+    public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<ExpenseTag> ExpenseTags => Set<ExpenseTag>();
     public DbSet<IncomeRecord> Incomes => Set<IncomeRecord>();
     public DbSet<SavingsGoal> SavingsGoals => Set<SavingsGoal>();
     public DbSet<SavingsDeposit> SavingsDeposits => Set<SavingsDeposit>();
@@ -57,6 +59,22 @@ public sealed class ExpensesDbContext(DbContextOptions<ExpensesDbContext> option
             entity.HasIndex(expense => new { expense.OwnerId, expense.Date });
             entity.HasOne(e => e.PaymentMethod).WithMany().HasForeignKey(e => new { e.OwnerId, e.PaymentMethodId })
                 .HasPrincipalKey(m => new { m.OwnerId, m.Id }).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Tag>(entity =>
+        {
+            entity.HasKey(tag => tag.Id);
+            entity.Property(tag => tag.OwnerId).IsRequired();
+            entity.Property(tag => tag.Name).IsRequired().HasMaxLength(TagNames.MaxLength);
+            entity.Property(tag => tag.NormalizedName).IsRequired().HasMaxLength(TagNames.MaxLength * 2);
+            entity.HasIndex(tag => new { tag.OwnerId, tag.NormalizedName }).IsUnique();
+        });
+        modelBuilder.Entity<ExpenseTag>(entity =>
+        {
+            entity.HasKey(link => new { link.ExpenseId, link.TagId });
+            entity.HasOne(link => link.Expense).WithMany(expense => expense.TagLinks).HasForeignKey(link => link.ExpenseId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(link => link.Tag).WithMany(tag => tag.ExpenseLinks).HasForeignKey(link => link.TagId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(link => link.TagId);
         });
 
         modelBuilder.Entity<IncomeRecord>(entity =>

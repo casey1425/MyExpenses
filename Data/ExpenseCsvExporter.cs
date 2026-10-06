@@ -7,7 +7,7 @@ public static class ExpenseCsvExporter
 {
     public static byte[] Create(IEnumerable<ExpenseRecord> expenses)
     {
-        var csv = new StringBuilder("날짜,금액(원),카테고리,메모,결제수단,결제유형\r\n");
+        var csv = new StringBuilder("날짜,금액(원),카테고리,메모,결제수단,결제유형,태그\r\n");
 
         foreach (var expense in expenses)
         {
@@ -20,6 +20,8 @@ public static class ExpenseCsvExporter
                 .Append(EscapeText(expense.Memo))
                 .Append(',').Append(EscapeText(expense.PaymentMethod?.Name))
                 .Append(',').Append(EscapeText(expense.PaymentMethod?.Type))
+                // 태그 이름에는 세미콜론을 쓸 수 없으므로 세미콜론으로 구분해도 안전합니다.
+                .Append(',').Append(EscapeText(string.Join(";", expense.TagNames)))
                 .Append("\r\n");
         }
 
