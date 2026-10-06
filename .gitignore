@@ -16,3 +16,4 @@ appsettings.Production.json
 *.sqlite3-*
 Data/keys/
 .container-data/
+Data/backups/

@@ -459,6 +459,10 @@ MyExpenses/
 │   ├── ExpenseCsvImportService.cs # 중복 확인과 CSV 저장
 │   ├── IncomeCsvImportService.cs  # 수입 CSV 중복 확인과 저장
 │   ├── BackupService.cs           # 전체 백업 내보내기와 병합·덮어쓰기 복원
+│   ├── Backups/                   # 서버 자동 백업(DB 파일 복사)
+│   │   ├── DatabaseBackupOptions.cs   # 백업 설정과 잘못된 값 처리
+│   │   ├── DatabaseBackupService.cs   # 온라인 복사·점검·이름·목록·보관 정책
+│   │   └── DatabaseBackupWorker.cs    # 주기 실행(백그라운드 서비스)
 │   ├── RecurringExpenseService.cs # 정기 지출 생성과 중복 처리 방지
 │   ├── RecurringIncomeService.cs  # 정기 수입 규칙 관리와 생성·중복 처리 방지
 │   ├── UserDataProvisioner.cs     # 사용자 공간 초기화와 시작 상태 관리
@@ -481,6 +485,7 @@ MyExpenses/
 │   ├── SavingsGoalChecks/        # 목표 저축 계산·CRUD·사용자 격리·화면 로직 검증
 │   ├── MigrationChecks/          # 마이그레이션·기존 DB 기준선·모델 일치 검증
 │   ├── PwaChecks/                # 매니페스트·아이콘·서비스 워커·오프라인 화면 검증
+│   ├── DatabaseBackupChecks/     # 서버 자동 백업: 복사·점검·원자성·보관·주기·업그레이드 전 백업 검증
 │   ├── TagChecks/                # 태그 규칙·서비스·백업·CSV·통계·화면 검증
 │   ├── UsabilityChecks/          # 메모 자동 완성·연속 입력·월 이동·되돌리기·달력 계산과 화면 검증
 │   ├── StatisticsChecks/         # 연간 통계 계산·기간 경계·서비스 격리·화면 로직 검증
@@ -526,6 +531,7 @@ dotnet run --project tests/BackupChecks
 dotnet run --project tests/StatisticsChecks
 dotnet run --project tests/UsabilityChecks
 dotnet run --project tests/TagChecks
+dotnet run --project tests/DatabaseBackupChecks
 ```
 
 | 검증 프로젝트 | 주요 검증 범위 |
@@ -540,6 +546,7 @@ dotnet run --project tests/TagChecks
 | SavingsGoalChecks | 진행률(내림)·필요 월 저축액(올림)·기한 지남·예상 달성 시점 계산, 목표·저축 CRUD와 입력 검증, 사용자 격리, 목표 삭제 연쇄, 평균 순수지, 화면 로직, 기존 DB 업그레이드, 계정 삭제 |
 | MigrationChecks | 새·기존·아주 오래된 DB의 마이그레이션, 데이터 손실 없는 기준선 기록, 반복 시작 멱등성, 마이그레이션 결과와 모델 스키마 일치(외래 키 포함), 모델 변경 시 마이그레이션 누락 감지, 로그인 DB |
 | PwaChecks | 매니페스트 필수 항목, 아이콘 파일·크기·투명 채널, 바로가기가 실제 화면 경로인지, `App.razor` 연결, 서비스 워커의 개인정보 보호 규칙(페이지 미캐시)과 동작(Node로 시뮬레이션: 온라인/오프라인 이동, 비이동 요청·POST 미가로채기, 캐시 정리), 자체 완결형 오프라인 화면 |
+| DatabaseBackupChecks | 설정 검증·기본값, 다음 백업까지의 시간(경계·시계 역행), 실행 중 쓰기와 겹쳐도 일관된 복사본, 잠금(BUSY/LOCKED) 재시도의 횟수 제한과 그 밖 오류 비재시도, 손상된 DB 거절, 실패·취소 시 흔적 없음, 같은 초 이름 충돌, 우리 형식이 아닌 폴더·심볼릭 링크 보호, 보관 정책(정기/업그레이드 전 분리), 주기 실행(실패 재시도·취소·정리), 업그레이드 전 백업 필요 판단과 옛 스키마 스냅숏 복원 |
 | TagChecks | 태그 이름 규칙(대소문자·공백·#), 생성·재사용·계정별 분리, 수정 시 유지(null)·삭제(빈 목록)·교체, 태그 필터, 사용 현황, 이름 변경·합치기(중복 없이 이동), 삭제 시 연결 정리와 지출 보존, 계정당 100개 제한, 백업 v2 왕복 바이트 일치·병합 멱등·버전 1 호환·손상 거절, CSV 왕복·옛 형식 호환, 연간 통계, 지출·태그 관리 화면 논리와 렌더링 |
 | UsabilityChecks | 메모 추천(기간·소유자·대소문자·최신 기록), 연속 입력 후 유지·초기화, 자동 완성 규칙, 월 이동 경계, 삭제 되돌리기(보관 카테고리·삭제된 결제수단·계정 변경 거절), 내역 나눠 보기(쪽 크기·경계·합계 불변·추가/수정/되돌림 후 표시), 달력 계산(주 배치·월말·윤년·인접 월 제외)·금액 줄이기·서비스 소유자 격리, 컴포넌트 렌더링, **문자열 매개변수를 변수 이름 그대로 넘기는 실수 방지** |
 | StatisticsChecks | 올해·지난 해 기간과 전년 비교(윤일), 월별·카테고리·결제수단·요일 집계, 월 평균(끝난 달만), TOP·자주 쓴 항목 정렬, 소유자 격리, 오늘 끝까지 포함, 연도 목록, 화면 로직 |
@@ -595,9 +602,53 @@ Support__Email=...
 
 - **영구 저장:** `/app/Data`를 호스팅 제공자의 암호화된 영구 디스크에 마운트하세요. 임시 파일 시스템을 사용하면 재배포 시 계정·지출 데이터가 사라질 수 있습니다.
 - **인스턴스 수:** SQLite를 사용하는 동안은 앱 인스턴스를 하나로 유지하세요.
-- **백업과 업그레이드:** 앱을 새 버전으로 배포하면 시작 시 DB 마이그레이션이 자동으로 적용되며 **되돌리는(다운그레이드) 마이그레이션은 제공하지 않습니다.** 영구 디스크의 `/app/Data`(특히 `myexpenses.db`, `auth.db`)를 배포 전에 따로 복사해 두세요. 사용자는 앱의 **백업·복원**(`/backup`)으로 자신의 데이터를 직접 내려받을 수 있습니다(서버 DB 백업을 대신하지는 않습니다). 백업에는 사용자 데이터가 포함되므로 계정 삭제·개인정보 처리 정책에 맞게 보관 기간을 관리하세요.
+- **백업과 업그레이드:** 앱을 새 버전으로 배포하면 시작 시 DB 마이그레이션이 자동으로 적용되며 **되돌리는(다운그레이드) 마이그레이션은 제공하지 않습니다.** 대신 **스키마가 바뀌는 업그레이드 직전에 DB를 자동으로 백업**하고 매일 정기 백업도 만듭니다([서버 자동 백업](#서버-자동-백업)). 그래도 중요한 배포 전에는 영구 디스크의 `/app/Data`(특히 `myexpenses.db`, `auth.db`)를 따로 복사해 두는 편이 안전합니다. 사용자는 앱의 **백업·복원**(`/backup`)으로 자신의 데이터를 직접 내려받을 수 있습니다(서버 DB 백업을 대신하지는 않습니다). 백업에는 사용자 데이터가 포함되므로 계정 삭제·개인정보 처리 정책에 맞게 보관 기간을 관리하세요.
 - **프록시:** `ReverseProxy__UseForwardedHeaders=true`는 신뢰할 수 있는 HTTPS 종료 역방향 프록시 환경에서만 사용합니다. 앱을 인터넷에 직접 노출할 때는 활성화하지 마세요.
 - **운영 문서:** 실제 운영·백업·법적 요구사항에 맞게 개인정보 처리방침과 이용약관을 검토하고, `Support:Email`을 설정하세요.
+
+### 서버 자동 백업
+
+서버가 `myexpenses.db`와 `auth.db`를 주기적으로 복사해 `백업 폴더/yyyyMMdd-HHmmss/`(한국 시간)에 둡니다. **모든 사용자의 데이터가 들어 있으므로 화면으로 내려받는 기능은 없고**, 서버 관리자가 파일로 복원합니다. 사용자가 자기 데이터를 내려받는 `/backup`과는 별개입니다.
+
+- **언제 만드나:** 앱이 시작되고 `StartDelaySeconds`(기본 30초) 뒤에 마지막 정기 백업으로부터 `IntervalHours`(기본 24시간)가 지났으면 만들고, 이후 그 주기로 반복합니다. 앱을 껐다 켜도 최근 백업이 있으면 바로 또 만들지 않습니다. **스키마가 바뀌는 업그레이드 직전**(마이그레이션 이전 DB 또는 적용하지 않은 마이그레이션이 있을 때)에는 `-premigrate` 백업을 따로 만듭니다. 새 DB와 이미 최신인 DB는 만들지 않습니다.
+- **어떻게 만드나:** SQLite 온라인 백업 API로 실행 중에도 일관된 복사본을 만들고, 복사본을 `PRAGMA integrity_check`로 점검한 뒤에만 완성된 백업으로 인정합니다. 임시 폴더에서 만들어 이름을 바꾸므로 **실패하거나 중단돼도 반쯤 만들어진 백업이 남지 않습니다.** 정기 백업이 실패하면 오류를 남기고 1시간 뒤에 다시 시도하며, 업그레이드 전 백업이 실패해도 앱은 시작합니다(오류 기록).
+- **얼마나 보관하나:** 정기 백업은 최근 `Keep`개(기본 14), 업그레이드 전 백업은 최근 `KeepBeforeMigration`개(기본 3, 0이면 만들지 않음)만 남기고 지웁니다. 이름 형식이 다른 폴더·파일과 심볼릭 링크는 건드리지 않습니다. 디스크 사용량은 대략 DB 크기 × 보관 개수입니다.
+- **설정(환경변수 또는 appsettings):**
+
+| 키 | 기본값 | 설명 |
+| --- | --- | --- |
+| `Backup__Enabled` | `true` | `false`면 자동 백업과 업그레이드 전 백업을 모두 끕니다 |
+| `Backup__IntervalHours` | `24` | 정기 백업 주기(1~720시간) |
+| `Backup__Keep` | `14` | 보관할 정기 백업 개수(1~365) |
+| `Backup__KeepBeforeMigration` | `3` | 보관할 업그레이드 전 백업 개수(0~20) |
+| `Backup__Directory` | `Data/backups` | 백업 폴더(상대 경로는 데이터 폴더 기준) |
+| `Backup__StartDelaySeconds` | `30` | 앱 시작 후 첫 확인까지 기다리는 시간 |
+
+  잘못된 값은 기본값으로 바꾸고 시작 로그에 경고를 남깁니다.
+- **로그로 확인:** `docker logs myexpenses-local | grep 백업`. `데이터베이스 백업을 만들었습니다`가 보이면 정상입니다.
+- **데이터와 다른 곳에 두기(권장):** 기본 백업 폴더는 데이터와 **같은 볼륨**에 있어 볼륨을 잃으면 백업도 잃습니다. 가능하면 별도 볼륨(또는 다른 디스크)에 두세요.
+
+```bash
+docker volume create myexpenses-backups
+docker run -d --name myexpenses-local --env-file .env.docker \
+  -p 10000:10000 -v myexpenses-data:/app/Data \
+  -v myexpenses-backups:/app/Backups -e Backup__Directory=/app/Backups myexpenses:latest
+```
+
+- **복원(Docker):** 앱을 멈춘 뒤 원하는 백업의 두 파일을 데이터 볼륨으로 복사하고 다시 시작합니다. 옛 스키마의 백업을 복원해도 시작할 때 다시 업그레이드됩니다. 컨테이너의 `app` 사용자 번호(보통 1654)로 복사해야 앱이 읽고 쓸 수 있습니다(`docker run --rm --entrypoint id myexpenses:latest app`으로 확인).
+
+```bash
+docker run --rm -v myexpenses-data:/data alpine ls -l /data/backups      # 백업 목록(기본 폴더인 경우)
+docker stop myexpenses-local
+docker run --rm --user 1654:1654 -v myexpenses-data:/data alpine sh -c '
+  cp /data/backups/20261006-120000/myexpenses.db /data/myexpenses.db &&
+  cp /data/backups/20261006-120000/auth.db /data/auth.db &&
+  rm -f /data/myexpenses.db-wal /data/myexpenses.db-shm /data/auth.db-wal /data/auth.db-shm'
+docker start myexpenses-local
+```
+
+- **복원(로컬 실행):** 앱을 종료하고 `Data/backups/<이름>/`의 `myexpenses.db`, `auth.db`를 `Data/`에 덮어쓴 뒤 다시 실행합니다.
+- **한계:** 같은 서버 안의 복사본이라 서버·디스크 자체가 망가지는 사고(도난, 화재 등)에는 도움이 되지 않습니다. 중요한 데이터라면 백업 폴더를 정기적으로 다른 곳에 복사하세요. 로그인 키(`Data/keys/`)는 백업하지 않으므로 키가 없으면 로그인 쿠키만 무효가 되어 다시 로그인하면 됩니다.
 
 로그인 없이 접근할 수 있는 경로는 다음과 같습니다.
 
@@ -615,11 +666,12 @@ Support__Email=...
 | `Data/myexpenses.db` | 지출·예산·정기 지출·템플릿·결제수단·사용자 카테고리·첫 시작 완료 여부 |
 | `Data/auth.db` | Identity 계정과 Google 로그인 연결 |
 | `Data/keys/` | ASP.NET Core 데이터 보호 키 |
+| `Data/backups/` | 서버 자동 백업(두 DB 파일의 정기 복사본) |
 
 DB와 키는 실행 시 생성되며 Git에서 제외됩니다. Docker에서는 `myexpenses-data` 볼륨에, 별도 저장 경로를 설정한 경우에는 해당 경로에 저장됩니다.
 
 - **사용자 분리:** 데이터는 ASP.NET Core Identity 사용자 ID로 구분합니다. 결제수단 연결도 서비스 검증과 DB 제약·트리거로 다른 사용자의 연결을 차단합니다.
-- **백업:** 앱을 중지한 뒤 **두 DB 파일과 `Data/keys/`를 함께 복사**하세요. CSV는 실제 지출만 포함하므로 전체 데이터 백업을 대신하지 않습니다.
+- **백업:** 서버가 DB를 자동으로 복사해 둡니다([서버 자동 백업](#서버-자동-백업)). 직접 백업하려면 앱을 중지한 뒤 **두 DB 파일과 `Data/keys/`를 함께 복사**하세요. CSV는 실제 지출만 포함하므로 전체 데이터 백업을 대신하지 않습니다.
 - **삭제:** 지출 전체 삭제는 현재 사용자의 지출만 삭제합니다. `/account`의 계정 삭제는 해당 사용자의 예산·규칙·템플릿·결제수단·사용자 카테고리·프로필·로그인 연결까지 삭제하며, Google 계정 자체를 삭제하지는 않습니다. 삭제한 데이터는 되돌릴 수 없습니다.
 - **기존 데이터:** 이전 단일 사용자 DB를 업그레이드하면 기존 데이터는 업그레이드 후 처음 로그인한 계정에 귀속됩니다.
 - **비밀 정보:** Client Secret과 `.env.docker`를 공유하거나 커밋하지 마세요. 결제수단에는 카드번호·계좌번호·금융 인증정보를 입력하지 마세요.

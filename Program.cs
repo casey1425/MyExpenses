@@ -8,6 +8,7 @@ using MyExpenses;
 using MyExpenses.Components;
 using MyExpenses.Data;
 using MyExpenses.Services;
+using MyExpenses.Services.Backups;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,6 +88,14 @@ builder.Services.AddScoped<BudgetService>();
 builder.Services.AddScoped<CategoryService>();
 
 var authDatabasePath = Path.Combine(dataDirectory, "auth.db");
+
+// 서버 자동 백업: 주기적으로 DB 파일을 복사해 두고, 스키마가 바뀌는 업그레이드 직전에도 한 번 만듭니다.
+var backupOptions = DatabaseBackupOptions.From(builder.Configuration, dataDirectory);
+builder.Services.AddSingleton(backupOptions);
+builder.Services.AddSingleton(provider => new DatabaseBackupService(provider.GetRequiredService<DatabaseBackupOptions>(),
+    [databasePath, authDatabasePath], provider.GetRequiredService<ILogger<DatabaseBackupService>>()));
+if (backupOptions.Enabled)
+    builder.Services.AddHostedService<DatabaseBackupWorker>();
 builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseSqlite($"Data Source={authDatabasePath}"));
 builder.Services.AddIdentityCore<IdentityUser>(options =>
@@ -110,6 +119,30 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 var app = builder.Build();
+
+foreach (var warning in backupOptions.Warnings)
+    app.Logger.LogWarning("{Warning}", warning);
+
+// 업그레이드로 스키마가 바뀌기 전에 백업합니다. 이 백업이 실패해도 앱은 시작하지만 오류를 남깁니다.
+if (backupOptions.Enabled && backupOptions.KeepBeforeMigration > 0)
+{
+    try
+    {
+        await using var checkScope = app.Services.CreateAsyncScope();
+        await using var expensesCheck = await app.Services.GetRequiredService<IDbContextFactory<ExpensesDbContext>>().CreateDbContextAsync();
+        var authCheck = checkScope.ServiceProvider.GetRequiredService<AuthDbContext>();
+        if (await DatabaseMigrator.NeedsMigrationAsync(expensesCheck) || await DatabaseMigrator.NeedsMigrationAsync(authCheck))
+        {
+            var backupService = app.Services.GetRequiredService<DatabaseBackupService>();
+            await backupService.CreateAsync(beforeMigration: true);
+            backupService.Prune();
+        }
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "업그레이드 전 데이터베이스 백업에 실패했습니다. 업그레이드는 계속 진행합니다.");
+    }
+}
 
 await using (var db = await app.Services.GetRequiredService<IDbContextFactory<ExpensesDbContext>>()
     .CreateDbContextAsync())

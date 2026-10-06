@@ -21,6 +21,19 @@ public static class DatabaseMigrator
     public static Task MigrateAuthAsync(AuthDbContext db, CancellationToken cancellationToken = default) =>
         MigrateAsync(db, null, cancellationToken);
 
+    // 시작할 때 이 DB의 스키마가 바뀌는지(= 마이그레이션 이전 DB이거나 아직 적용하지 않은 마이그레이션이 있는지) 알려 줍니다.
+    // 새 DB(사용자 테이블이 없음)나 이미 최신인 DB는 false입니다. 바뀌기 전에 백업할지 판단하는 데 씁니다.
+    public static Task<bool> NeedsMigrationAsync(ExpensesDbContext db, CancellationToken cancellationToken = default) => NeedsAsync(db, cancellationToken);
+
+    public static Task<bool> NeedsMigrationAsync(AuthDbContext db, CancellationToken cancellationToken = default) => NeedsAsync(db, cancellationToken);
+
+    private static async Task<bool> NeedsAsync(DbContext db, CancellationToken cancellationToken)
+    {
+        var applied = (await db.Database.GetAppliedMigrationsAsync(cancellationToken)).ToList();
+        if (applied.Count == 0) return await HasUserTablesAsync(db, cancellationToken);
+        return (await db.Database.GetPendingMigrationsAsync(cancellationToken)).Any();
+    }
+
     private static async Task MigrateAsync(DbContext db, Func<Task>? upgradeLegacySchema, CancellationToken cancellationToken)
     {
         var migrations = db.Database.GetMigrations().ToList();

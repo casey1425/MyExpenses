@@ -14,7 +14,7 @@ RUN dotnet publish MyExpenses.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-RUN mkdir -p /app/Data && chown -R app:app /app
+RUN mkdir -p /app/Data /app/Backups && chown -R app:app /app
 COPY --from=build --chown=app:app /app/publish ./
 
 USER app
