@@ -290,6 +290,32 @@ var listHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new()
 Check(System.Text.RegularExpressions.Regex.Matches(listHtml, "class=\"day-header\"").Count == 2 && listHtml.Contains("2건 · 3,000원") && listHtml.Contains("1건 · 3,000원"), "Day headers wrong");
 Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "" } }, ["GroupByDate"] = false })).Contains("day-header"), "Day headers shown while grouping is off");
 
+// 내역 나눠 보기: 화면에는 일부만 그리고, 합계·건수·날짜별 합계는 전체 기준
+string[] sameDay = ["가", "나", "다"];
+var pagedHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new()
+{
+    ["Expenses"] = new List<ExpenseRecord>
+    {
+        new() { Id = 1, OwnerId = "R", Date = today, Amount = 1_000, Category = "식비", Memo = sameDay[0] },
+        new() { Id = 2, OwnerId = "R", Date = today, Amount = 2_000, Category = "식비", Memo = sameDay[1] },
+        new() { Id = 3, OwnerId = "R", Date = today, Amount = 4_000, Category = "식비", Memo = sameDay[2] },
+        new() { Id = 4, OwnerId = "R", Date = today.AddDays(-1), Amount = 100, Category = "교통", Memo = "라" },
+        new() { Id = 5, OwnerId = "R", Date = today.AddDays(-2), Amount = 200, Category = "교통", Memo = "마" }
+    },
+    ["GroupByDate"] = true, ["Limit"] = 2, ["PageSize"] = 2, ["EditCategories"] = new[] { "식비" }
+});
+Check(System.Text.RegularExpressions.Regex.Matches(pagedHtml, "class=\"expense-item\"").Count == 2, "Only Limit items must be rendered");
+Check(pagedHtml.Contains("5건 중 2건을 표시하고 있어요") && pagedHtml.Contains("2건 더 보기") && pagedHtml.Contains("모두 보기"), "More footer wrong");
+Check(pagedHtml.Contains("3건 · 7,000원"), "Day total must include hidden items of the same day");
+Check(System.Text.RegularExpressions.Regex.Matches(pagedHtml, "class=\"day-header\"").Count == 1, "Day headers must only be shown for visible days");
+var lastPageHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new()
+{
+    ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "a" }, new() { Id = 2, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "b" }, new() { Id = 3, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "c" } },
+    ["Limit"] = 2, ["PageSize"] = 50, ["EditCategories"] = new[] { "식비" }
+});
+Check(lastPageHtml.Contains("1건 더 보기") && !lastPageHtml.Contains("모두 보기"), "Last page footer wrong");
+Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "a" } }, ["Limit"] = 50, ["EditCategories"] = new[] { "식비" } })).Contains("더 보기"), "Footer shown although everything is visible");
+
 // 화면 조립 가드: 문자열 매개변수에 변수 이름을 @ 없이 넘기면 변수가 아니라 그 글자가 전달됩니다(예: Memo="memo").
 var componentTypes = typeof(Home).Assembly.GetTypes().Where(t => typeof(IComponent).IsAssignableFrom(t)).ToDictionary(t => t.Name);
 var markupFiles = new[] { "Components/Pages/Expenses/Home.razor" };
@@ -311,6 +337,76 @@ foreach (var file in markupFiles)
         }
     }
 }
+
+// ── 내역 나눠 보기: 지출 화면 논리 ──
+await using (var pagingDb = new ExpensesDbContext(options))
+{
+    pagingDb.UserProfiles.Add(new UserProfile { OwnerId = "PG", HasCompletedOnboarding = true });
+    for (var i = 0; i < 120; i++)
+        pagingDb.Expenses.Add(new ExpenseRecord { OwnerId = "PG", Date = today.AddDays(-(i / 3)), Amount = 1_000 + i, Category = "식비", Memo = $"기록{i:000}" });
+    await pagingDb.SaveChangesAsync();
+}
+var pagingAuth = new TestAuth("PG");
+var paging = TestComponents.CreateHome(factory, pagingAuth);
+void PSet(string name, object? value) => typeof(Home).GetField(name, flags)!.SetValue(paging, value);
+T PGet<T>(string name) => (T)typeof(Home).GetField(name, flags)!.GetValue(paging)!;
+Task PCall(string method, params object[] args) => (Task)typeof(Home).GetMethod(method, flags)!.Invoke(paging, args)!;
+object? PCallSync(string method, params object[] args) => typeof(Home).GetMethod(method, flags)!.Invoke(paging, args);
+await PCall("LoadCategoriesAsync"); await PCall("LoadExpensesAsync");
+var allTotal = PGet<List<ExpenseRecord>>("expenses").Sum(e => e.Amount);
+Check(PGet<List<ExpenseRecord>>("expenses").Count == 120 && PGet<int>("visibleCount") == 50, "Initial page size wrong");
+PCallSync("ShowMore"); Check(PGet<int>("visibleCount") == 100, "Show more wrong");
+PCallSync("ShowMore"); Check(PGet<int>("visibleCount") == 120, "Show more must stop at the total");
+PCallSync("ShowMore"); Check(PGet<int>("visibleCount") == 120, "Show more past the end");
+Check(PGet<List<ExpenseRecord>>("expenses").Sum(e => e.Amount) == allTotal && (decimal)typeof(Home).GetProperty("FilteredTotal", flags)!.GetValue(paging)! == allTotal, "Totals must not depend on how many rows are shown");
+await PCall("ApplyFiltersAsync");
+Check(PGet<int>("visibleCount") == 50, "A new search must go back to the first page");
+PCallSync("ShowAll"); Check(PGet<int>("visibleCount") == 120, "Show all wrong");
+await PCall("ShiftMonthAsync", -1);
+Check(PGet<int>("visibleCount") == 50, "Month paging must go back to the first page");
+await PCall("ResetFiltersAsync");
+// 적은 건수에서는 더 보기가 PageSize 아래로 내려가지 않음
+PSet("searchInput", new ExpenseSearchInput { Search = "기록00" });
+await PCall("ApplyFiltersAsync");
+Check(PGet<List<ExpenseRecord>>("expenses").Count == 10 && PGet<int>("visibleCount") == 50, "Small result must keep the page size");
+PCallSync("ShowMore"); Check(PGet<int>("visibleCount") == 50, "Show more on a small result");
+await PCall("ResetFiltersAsync");
+// 새 기록이 보이지 않는 위치에 들어가면 그 기록까지 넓혀서 보여 줌
+PSet("expenseDate", today.AddDays(-200)); PSet("amount", 777L); PSet("category", "식비"); PSet("memo", "아주 오래된 기록");
+await PCall("AddExpenseAsync");
+var added = PGet<List<ExpenseRecord>>("expenses").FindIndex(e => e.Memo == "아주 오래된 기록");
+Check(added == 120 && PGet<int>("visibleCount") >= 121, $"A new record at index {added} must be visible (visible={PGet<int>("visibleCount")})");
+await PCall("ResetFiltersAsync");
+// 수정으로 맨 뒤로 밀린 기록도 보이게 유지
+var firstRecord = PGet<List<ExpenseRecord>>("expenses")[0];
+PCallSync("StartEdit", firstRecord);
+PSet("editDate", today.AddDays(-300));
+await PCall("SaveEditAsync");
+var moved = PGet<List<ExpenseRecord>>("expenses").FindIndex(e => e.Id == firstRecord.Id);
+Check(moved >= 100 && PGet<int>("visibleCount") >= moved + 1, "An edited record moved down the list must stay visible");
+await PCall("ResetFiltersAsync");
+// 보이는 범위의 경계: 마지막으로 보이는 칸(49)은 그대로, 첫 번째 숨은 칸(50)은 정확히 하나만 넓힘
+PSet("visibleCount", 50);
+PCallSync("ShowThrough", PGet<List<ExpenseRecord>>("expenses")[49].Id);
+Check(PGet<int>("visibleCount") == 50, "A visible record must not widen the list");
+PCallSync("ShowThrough", PGet<List<ExpenseRecord>>("expenses")[50].Id);
+Check(PGet<int>("visibleCount") == 51, "The first hidden record must widen the list by exactly one");
+PCallSync("ShowThrough", -12345);
+Check(PGet<int>("visibleCount") == 51, "An unknown id must not change the list");
+// 지운 기록을 되돌릴 때: 오래된순에서는 같은 날짜의 맨 뒤로 가므로 쪽 경계를 넘을 수 있음
+PSet("searchInput", new ExpenseSearchInput { Sort = "Oldest" });
+await PCall("ApplyFiltersAsync");
+var oldestFirst = PGet<List<ExpenseRecord>>("expenses");
+// 같은 날짜의 기록이 쪽 경계에 걸치도록 보이는 건수를 맞춥니다(k-1은 보이고 k는 숨김, 둘은 같은 날짜).
+var k = Enumerable.Range(30, 80).First(index => oldestFirst[index - 1].Date == oldestFirst[index].Date);
+PSet("visibleCount", k);
+var boundary = oldestFirst[oldestFirst.FindIndex(e => e.Date == oldestFirst[k].Date)];
+Check(oldestFirst.IndexOf(boundary) < k, "Test setup: the record must be visible before it is deleted");
+await PCall("DeleteExpenseAsync", boundary.Id);
+await PCall("UndoDeleteAsync");
+var restoredIndex = PGet<List<ExpenseRecord>>("expenses").FindIndex(e => e.Memo == boundary.Memo);
+Check(restoredIndex >= k - 1 && PGet<int>("visibleCount") >= restoredIndex + 1, $"A restored record that crosses the page boundary must stay visible (index {restoredIndex}, visible {PGet<int>("visibleCount")}, k {k})");
+await PCall("ResetFiltersAsync");
 
 // ── 달력 화면 논리 ──
 var calAuth = new TestAuth("H");
@@ -344,7 +440,7 @@ calAuth.OwnerId = "OTHER";
 await CalCall("ReloadAsync");
 Check(CalGet<CalendarData?>("data") is null && CalGet<string?>("errorMessage") is { Length: > 0 }, "Calendar must block an account change");
 
-Console.WriteLine("PASS: memo suggestions, quick entry, month navigation, undo delete, calendar calculation, service and page logic");
+Console.WriteLine("PASS: memo suggestions, quick entry, month navigation, undo delete, history paging, calendar calculation, service and page logic");
 
 sealed class FakeNavigation : NavigationManager
 {

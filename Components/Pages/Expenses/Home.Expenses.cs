@@ -45,6 +45,7 @@ public partial class Home
             saveNotice = null;
             historyNotice = null;
             lastDeleted = null;
+            visibleCount = PageSize;
             showDeleteAllConfirmation = false;
             CancelEdit();
         }
@@ -70,6 +71,17 @@ public partial class Home
         if (isSearching) return;
         searchInput = new();
         await ApplyFiltersAsync();
+    }
+
+    private void ShowMore() => visibleCount = Math.Min(Math.Max(visibleCount, PageSize) + PageSize, Math.Max(expenses.Count, PageSize));
+
+    private void ShowAll() => visibleCount = Math.Max(expenses.Count, PageSize);
+
+    // 새로 저장하거나 되돌린 기록이 아직 보이지 않는 위치라면 그 기록까지 보이게 넓힙니다.
+    private void ShowThrough(int expenseId)
+    {
+        var index = expenses.FindIndex(item => item.Id == expenseId);
+        if (index >= visibleCount) visibleCount = index + 1;
     }
 
     private async Task ShiftMonthAsync(int delta)
@@ -196,6 +208,7 @@ public partial class Home
             await CheckOwnerAsync();
             var newExpense = await ExpenseService.AddAsync(ownerId, new(expenseDate, amount, category, memo, paymentMethodId, TagNames.Parse(tagsText)));
             await LoadExpensesAsync();
+            ShowThrough(newExpense.Id);
             await LoadTagsAsync();
             await RefreshBudgetAsync();
 
@@ -281,6 +294,7 @@ public partial class Home
             }
 
             await LoadExpensesAsync();
+            ShowThrough(expense.Id);
             await LoadTagsAsync();
             await RefreshBudgetAsync();
             lastDeleted = null;
@@ -344,6 +358,7 @@ public partial class Home
             var restored = await ExpenseService.AddAsync(ownerId, input);
             lastDeleted = null;
             await LoadExpensesAsync();
+            ShowThrough(restored.Id);
             await LoadTagsAsync();
             await RefreshBudgetAsync();
             await LoadSuggestionsAsync();

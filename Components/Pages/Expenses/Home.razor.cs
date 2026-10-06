@@ -32,6 +32,9 @@ public partial class Home
     private bool paymentBusy;
     private string? paymentError;
     private List<MemoSuggestion> memoSuggestions = [];
+    // 지출 내역은 처음에 PageSize건만 그리고 ‘더 보기’로 늘립니다. 합계·건수·통계는 전체 목록 기준입니다.
+    private const int PageSize = 50;
+    private int visibleCount = PageSize;
     private string tagsText = string.Empty;
     private string editTagsText = string.Empty;
     private List<TagUsage> tagUsage = [];

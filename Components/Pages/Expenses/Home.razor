@@ -145,6 +145,7 @@
 
             <ExpenseList Expenses="expenses" FilterActive="activeFilter.IsActive"
                          GroupByDate="@(activeFilter.Sort is ExpenseSort.Newest or ExpenseSort.Oldest)" EditingId="editingId"
+                         Limit="visibleCount" PageSize="PageSize" OnShowMore="ShowMore" OnShowAll="ShowAll"
                          IsSavingEdit="isSavingEdit" EditError="@editError" EditCategories="EditCategories"
                          CategoryLabel="CategoryLabel" PaymentMethods="paymentMethods"
                          @bind-EditDate="editDate" @bind-EditAmount="editAmount" @bind-EditCategory="editCategory"

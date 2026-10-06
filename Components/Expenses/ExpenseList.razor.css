@@ -263,3 +263,19 @@
 }
 
 .tag-chip:hover { background: #d9e5f2; }
+
+.list-more { margin-top: 1rem; padding: 1rem; border: 1px dashed #dbe4ee; border-radius: 12px; background: #f8fafc; text-align: center; }
+.list-more p { margin: 0 0 .7rem; color: #63758d; font-size: .85rem; }
+.list-more-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: .5rem; }
+
+.more-button, .more-all {
+    min-height: 42px;
+    padding: 0 1.1rem;
+    border: 1px solid #285889;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.more-button { background: #285889; color: #fff; }
+.more-all { background: #fff; color: #285889; }

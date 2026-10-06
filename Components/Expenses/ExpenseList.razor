@@ -10,8 +10,9 @@
 }
 else
 {
+    var shown = Math.Min(Limit, Expenses.Count);
     <div class="expense-list">
-        @for (var index = 0; index < Expenses.Count; index++)
+        @for (var index = 0; index < shown; index++)
         {
             var expense = Expenses[index];
             if (GroupByDate && (index == 0 || Expenses[index - 1].Date.Date != expense.Date.Date))
@@ -106,10 +107,24 @@ else
             </div>
         }
     </div>
+    @if (shown < Expenses.Count)
+    {
+        var remaining = Expenses.Count - shown;
+        <div class="list-more">
+            <p role="status">@Expenses.Count.ToString("N0")건 중 @shown.ToString("N0")건을 표시하고 있어요.</p>
+            <div class="list-more-actions">
+                <button type="button" class="more-button" @onclick="() => OnShowMore.InvokeAsync()">@(Math.Min(PageSize, remaining))건 더 보기</button>
+                @if (remaining > PageSize)
+                {
+                    <button type="button" class="more-all" @onclick="() => OnShowAll.InvokeAsync()">모두 보기</button>
+                }
+            </div>
+        </div>
+    }
 }
 
 @code {
-    // 날짜별 묶음의 합계는 지금 표시된 목록만으로 계산합니다.
+    // 날짜별 묶음의 합계는 숨겨진 항목까지 포함한 전체 목록으로 계산하므로, 목록이 잘려도 그날의 합계는 달라지지 않습니다.
     private Dictionary<DateTime, long> DayTotals = [];
     private Dictionary<DateTime, int> DayCounts = [];
 
@@ -120,6 +135,11 @@ else
         DayCounts = days.ToDictionary(g => g.Key, g => g.Count());
     }
     [Parameter] public bool GroupByDate { get; set; }
+    // 화면에 그리는 건수입니다. 기본값은 제한 없음입니다.
+    [Parameter] public int Limit { get; set; } = int.MaxValue;
+    [Parameter] public int PageSize { get; set; } = 50;
+    [Parameter] public EventCallback OnShowMore { get; set; }
+    [Parameter] public EventCallback OnShowAll { get; set; }
 
     [Parameter] public List<ExpenseRecord> Expenses { get; set; } = [];
     [Parameter] public bool FilterActive { get; set; }
