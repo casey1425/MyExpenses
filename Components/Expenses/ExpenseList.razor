@@ -1,4 +1,5 @@
 @using MyExpenses.Data
+@using Microsoft.AspNetCore.Components.Web
 
 @if (Expenses.Count == 0)
 {
@@ -24,7 +25,7 @@ else
                 </div>
             }
             <div class="expense-item" @key="expense.Id">
-                <div class="expense-row">
+                <div class="expense-row @(EditingId == expense.Id ? "editing" : "")" @onclick="() => RowClickedAsync(expense)" title="눌러서 수정">
                     <div class="category-icon" aria-hidden="true">@ExpenseCategories.Icon(expense.Category)</div>
                     <div class="expense-details">
                         <strong>@expense.Category</strong>
@@ -35,23 +36,33 @@ else
                             <span class="expense-tags">
                                 @foreach (var link in expense.TagLinks.Where(l => l.Tag is not null).OrderBy(l => l.Tag!.Name, StringComparer.Ordinal))
                                 {
-                                    <button type="button" class="tag-chip" title="이 태그가 붙은 지출만 보기" @onclick="() => OnTagClick.InvokeAsync(link.TagId)">#@link.Tag!.Name</button>
+                                    <button type="button" class="tag-chip" title="이 태그가 붙은 지출만 보기" @onclick="() => OnTagClick.InvokeAsync(link.TagId)" @onclick:stopPropagation>#@link.Tag!.Name</button>
                                 }
                             </span>
                         }
                     </div>
                     <div class="expense-actions">
                         <strong>-@expense.Amount.ToString("N0")원</strong>
-                        <div class="row-actions">
-                            <button type="button" class="edit-button" @onclick="() => OnStartEdit.InvokeAsync(expense)" disabled="@IsSavingEdit" aria-label="@expense.Category 지출 수정">수정</button>
-                            <button type="button" class="delete-button" @onclick="() => OnDelete.InvokeAsync(expense.Id)" disabled="@IsSavingEdit" aria-label="@expense.Category 지출 삭제">삭제</button>
+                        <div class="row-menu">
+                            <button type="button" class="menu-button" aria-haspopup="true" aria-expanded="@(menuId == expense.Id ? "true" : "false")"
+                                    aria-label="@expense.Category 지출 메뉴" disabled="@IsSavingEdit"
+                                    @onclick="() => ToggleMenu(expense.Id)" @onclick:stopPropagation>⋯</button>
+                            @if (menuId == expense.Id)
+                            {
+                                <div class="menu-backdrop" @onclick="CloseMenu" @onclick:stopPropagation></div>
+                                <div class="menu-list" role="menu">
+                                    <button type="button" role="menuitem" class="edit-button" @onclick="() => StartEditFromMenuAsync(expense)" @onclick:stopPropagation aria-label="@expense.Category 지출 수정">수정</button>
+                                    <button type="button" role="menuitem" class="delete-button" @onclick="() => DeleteFromMenuAsync(expense.Id)" @onclick:stopPropagation aria-label="@expense.Category 지출 삭제">삭제</button>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
 
                 @if (EditingId == expense.Id)
                 {
-                    <form class="edit-form" @onsubmit="() => OnSaveEdit.InvokeAsync()" @onsubmit:preventDefault>
+                    <div class="sheet-backdrop" @onclick="() => OnCancelEdit.InvokeAsync()"></div>
+                    <form class="edit-form" role="dialog" aria-label="지출 수정" @onsubmit="() => OnSaveEdit.InvokeAsync()" @onsubmit:preventDefault @onkeydown="EditKeyDownAsync">
                         <h3>지출 수정</h3>
                         <div class="field-grid">
                             <div class="field">
@@ -61,7 +72,7 @@ else
                             <div class="field">
                                 <label for="edit-amount">금액</label>
                                 <div class="amount-input">
-                                    <input id="edit-amount" type="number" min="1" step="1" @bind="EditAmount" @bind:after="() => EditAmountChanged.InvokeAsync(EditAmount)" required />
+                                    <input id="edit-amount" type="number" inputmode="numeric" min="1" step="1" @ref="editAmountInput" @bind="EditAmount" @bind:after="() => EditAmountChanged.InvokeAsync(EditAmount)" required />
                                     <span>원</span>
                                 </div>
                             </div>
@@ -124,6 +135,53 @@ else
 }
 
 @code {
+    private int? menuId;
+    private int? focusedEditId;
+    private ElementReference editAmountInput;
+
+    private void ToggleMenu(int id) => menuId = menuId == id ? null : id;
+    private void CloseMenu() => menuId = null;
+
+    // 줄 어디든 누르면 수정 창이 열립니다(태그·⋯ 메뉴는 따로 동작).
+    private async Task RowClickedAsync(ExpenseRecord expense)
+    {
+        menuId = null;
+        if (IsSavingEdit || EditingId == expense.Id) return;
+        await OnStartEdit.InvokeAsync(expense);
+    }
+
+    private async Task StartEditFromMenuAsync(ExpenseRecord expense)
+    {
+        menuId = null;
+        if (!IsSavingEdit) await OnStartEdit.InvokeAsync(expense);
+    }
+
+    private async Task DeleteFromMenuAsync(int id)
+    {
+        menuId = null;
+        await OnDelete.InvokeAsync(id);
+    }
+
+    private async Task EditKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape" && !IsSavingEdit) await OnCancelEdit.InvokeAsync();
+    }
+
+    // 수정 창이 열리면 금액 칸에 포커스를 줍니다.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (EditingId is not int id)
+        {
+            focusedEditId = null;
+            return;
+        }
+        if (focusedEditId == id) return;
+        focusedEditId = id;
+        try { await editAmountInput.FocusAsync(); }
+        catch (InvalidOperationException) { }
+        catch (Microsoft.JSInterop.JSException) { }
+    }
+
     // 날짜별 묶음의 합계는 숨겨진 항목까지 포함한 전체 목록으로 계산하므로, 목록이 잘려도 그날의 합계는 달라지지 않습니다.
     private Dictionary<DateTime, long> DayTotals = [];
     private Dictionary<DateTime, int> DayCounts = [];

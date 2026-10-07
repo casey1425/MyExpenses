@@ -25,13 +25,26 @@
         </div>
 
         <div class="field">
-            <label for="expense-category">카테고리</label>
-            <select id="expense-category" @bind="Category" @bind:after="() => CategoryChanged.InvokeAsync(Category)">
-                @foreach (var option in Categories)
-                {
-                    <option value="@option">@CategoryLabel(option)</option>
-                }
-            </select>
+            <label id="expense-category-label" for="expense-category">카테고리</label>
+            @if (UseCategoryChips)
+            {
+                <div class="choice-chips" role="radiogroup" aria-labelledby="expense-category-label">
+                    @foreach (var option in Categories)
+                    {
+                        <button type="button" role="radio" class="choice-chip @(option == Category ? "selected" : "")" aria-checked="@(option == Category ? "true" : "false")"
+                                @onclick="() => SelectCategoryAsync(option)">@ExpenseCategories.Icon(option) @CategoryLabel(option)</button>
+                    }
+                </div>
+            }
+            else
+            {
+                <select id="expense-category" @bind="Category" @bind:after="() => CategoryChanged.InvokeAsync(Category)">
+                    @foreach (var option in Categories)
+                    {
+                        <option value="@option">@CategoryLabel(option)</option>
+                    }
+                </select>
+            }
         </div>
 
         <div class="field">
@@ -43,6 +56,16 @@
                     <option value="@suggestion.Memo">@suggestion.Category · @suggestion.Amount.ToString("N0")원</option>
                 }
             </datalist>
+            @if (Suggestions.Count > 0)
+            {
+                <div class="choice-chips memo-chips" role="group" aria-label="자주 쓰는 메모">
+                    @foreach (var suggestion in Suggestions.Take(MemoChipCount))
+                    {
+                        <button type="button" class="choice-chip small @(string.Equals(Memo?.Trim(), suggestion.Memo, StringComparison.OrdinalIgnoreCase) ? "selected" : "")"
+                                title="@suggestion.Category · @suggestion.Amount.ToString("N0")원" @onclick="() => SelectMemoAsync(suggestion.Memo)">@suggestion.Memo</button>
+                    }
+                </div>
+            }
             @if (!string.IsNullOrEmpty(AutofillNotice))
             {
                 <p class="autofill-notice" role="status">@AutofillNotice</p>
@@ -115,6 +138,24 @@
 
 @code {
     private ElementReference amountInput;
+
+    // 카테고리가 많지 않으면 칩으로 한 번에 고르고, 많으면 기존 선택 목록을 씁니다.
+    private const int MaxCategoryChips = 12;
+    private const int MemoChipCount = 6;
+    private bool UseCategoryChips => Categories.Count is > 0 and <= MaxCategoryChips;
+
+    private async Task SelectCategoryAsync(string option)
+    {
+        Category = option;
+        await CategoryChanged.InvokeAsync(option);
+    }
+
+    // 자주 쓰는 메모를 누르면 메모 입력과 같은 자동 채우기가 일어납니다.
+    private async Task SelectMemoAsync(string value)
+    {
+        Memo = value;
+        await MemoChanged.InvokeAsync(value);
+    }
 
     // 태그·템플릿은 평소에는 접어 두고, 값이 있거나 오류·안내가 있을 때만 펼칩니다.
     private bool MoreOpen => !string.IsNullOrWhiteSpace(TagsText) || !string.IsNullOrEmpty(SelectedTemplateId)

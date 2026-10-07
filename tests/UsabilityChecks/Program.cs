@@ -316,6 +316,28 @@ var lastPageHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new(
 Check(lastPageHtml.Contains("1건 더 보기") && !lastPageHtml.Contains("모두 보기"), "Last page footer wrong");
 Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "a" } }, ["Limit"] = 50, ["EditCategories"] = new[] { "식비" } })).Contains("더 보기"), "Footer shown although everything is visible");
 
+// 입력 칩: 카테고리가 12개 이하면 칩, 그보다 많으면 선택 목록. 메모 칩은 최대 6개.
+{
+    var few = new[] { "식비", "교통", "쇼핑" };
+    var memos = Enumerable.Range(1, 9).Select(i => new MemoSuggestion($"메모{i}", "식비", null, 1000 * i, 1)).ToList();
+    var chipHtml = await Render<MyExpenses.Components.Expenses.ExpenseForm>(new() { ["Categories"] = few, ["Category"] = "교통", ["Suggestions"] = memos, ["Memo"] = "메모2" });
+    Check(!chipHtml.Contains("id=\"expense-category\"") && chipHtml.Contains("role=\"radiogroup\""), "Few categories must render as chips");
+    Check(System.Text.RegularExpressions.Regex.Matches(chipHtml, "role=\"radio\"").Count == 3 && chipHtml.Contains("aria-checked=\"true\""), "One chip per category, selected one marked");
+    Check(System.Text.RegularExpressions.Regex.Matches(chipHtml, "class=\"choice-chip small").Count == 6, "Memo chips must be capped at 6");
+    Check(chipHtml.Contains(">메모2<") && !chipHtml.Contains(">메모7<"), "Memo chips must keep the suggestion order");
+    var manyHtml = await Render<MyExpenses.Components.Expenses.ExpenseForm>(new() { ["Categories"] = Enumerable.Range(1, 13).Select(i => $"분류{i}").ToArray(), ["Category"] = "분류1" });
+    Check(manyHtml.Contains("id=\"expense-category\"") && !manyHtml.Contains("role=\"radiogroup\""), "Many categories must fall back to the select list");
+    var noMemoHtml = await Render<MyExpenses.Components.Expenses.ExpenseForm>(new() { ["Categories"] = few, ["Category"] = "식비" });
+    Check(!noMemoHtml.Contains("memo-chips"), "No memo chips without suggestions");
+
+    // 지출 목록: 줄 전체가 누를 수 있고, 수정·삭제는 ⋯ 메뉴에만 있어야 합니다.
+    var rowHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 5000, Category = "식비", Memo = "a" } }, ["EditCategories"] = new[] { "식비" } });
+    Check(rowHtml.Contains("class=\"menu-button\"") && !rowHtml.Contains("class=\"edit-button\"") && !rowHtml.Contains("class=\"delete-button\""), "Edit/delete must live in the closed ⋯ menu");
+    Check(rowHtml.Contains("title=\"눌러서 수정\"") && !rowHtml.Contains("class=\"edit-form\""), "Row must be tappable and no edit form while idle");
+    var editHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 5000, Category = "식비", Memo = "a" } }, ["EditingId"] = 1, ["EditAmount"] = 5000L, ["EditCategory"] = "식비", ["EditDate"] = today, ["EditCategories"] = new[] { "식비" } });
+    Check(editHtml.Contains("class=\"sheet-backdrop\"") && editHtml.Contains("role=\"dialog\"") && editHtml.Contains("id=\"edit-amount\""), "Edit mode must render the sheet with a backdrop");
+}
+
 // 하단 탭바 "지출 추가": 링크·스크립트·입력 칸·쿼리 매개변수가 서로 어긋나지 않아야 합니다.
 {
     var root = new DirectoryInfo(AppContext.BaseDirectory);

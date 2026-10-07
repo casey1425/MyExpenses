@@ -220,9 +220,10 @@ public partial class Home
             autofillNotice = null;
             lastDeleted = null;
             errorMessage = null;
-            saveNotice = activeFilter.IsActive && !activeFilter.Matches(newExpense)
-                ? "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다."
-                : null;
+            if (activeFilter.IsActive && !activeFilter.Matches(newExpense))
+                saveNotice = "저장했습니다. 현재 조회 조건에 맞지 않아 목록에는 표시되지 않습니다.";
+            else
+                ShowSavedToast($"✓ {newExpense.Category} {newExpense.Amount:N0}원을 저장했습니다.");
             showDeleteAllConfirmation = false;
             await LoadSuggestionsAsync();
             if (entryForm is not null) await entryForm.FocusAmountAsync();
@@ -236,6 +237,34 @@ public partial class Home
             Logger.LogError(ex, "지출 내역을 저장하지 못했습니다.");
             errorMessage = "지출 내역을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.";
         }
+    }
+
+    // 저장 확인 문구는 몇 초 뒤에 저절로 사라집니다. 그 사이 다른 안내로 바뀌었다면 건드리지 않습니다.
+    private void ShowSavedToast(string text)
+    {
+        saveNotice = text;
+        toastTimer?.Cancel();
+        toastTimer = new CancellationTokenSource();
+        _ = ClearSavedToastAsync(text, toastTimer.Token);
+    }
+
+    private async Task ClearSavedToastAsync(string text, CancellationToken cancellation)
+    {
+        try
+        {
+            await Task.Delay(ToastDuration, cancellation);
+            await InvokeAsync(() =>
+            {
+                if (saveNotice == text)
+                {
+                    saveNotice = null;
+                    StateHasChanged();
+                }
+            });
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
     }
 
     private void StartEdit(ExpenseRecord expense)

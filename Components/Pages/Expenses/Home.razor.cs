@@ -7,7 +7,7 @@ using MyExpenses.Services;
 
 namespace MyExpenses.Components.Pages;
 
-public partial class Home
+public partial class Home : IDisposable
 {
     // 달력 화면 등에서 /?date=2026-10-05 로 들어오면 그 날짜로 지출을 입력합니다.
     [Parameter, SupplyParameterFromQuery(Name = "date")] public string? DateParameter { get; set; }
@@ -18,6 +18,14 @@ public partial class Home
     [Parameter, SupplyParameterFromQuery(Name = "add")] public string? AddParameter { get; set; }
 
     private bool focusHandled;
+    private static readonly TimeSpan ToastDuration = TimeSpan.FromSeconds(4);
+    private CancellationTokenSource? toastTimer;
+
+    public void Dispose()
+    {
+        toastTimer?.Cancel();
+        toastTimer?.Dispose();
+    }
     // 예산·통계 영역은 접어 두고, 예산 요약 카드를 누르면 펼칩니다.
     private bool budgetOpen;
 

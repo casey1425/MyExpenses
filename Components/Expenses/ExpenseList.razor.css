@@ -279,3 +279,95 @@
 
 .more-button { background: #285889; color: #fff; }
 .more-all { background: #fff; color: #285889; }
+
+/* 줄을 눌러 수정, ⋯ 메뉴로 수정·삭제 */
+.expense-row { cursor: pointer; }
+
+.expense-row:hover { background: #f8fafc; }
+
+.expense-row.editing { background: #f4f8fd; cursor: default; }
+
+.row-menu { position: relative; }
+
+.menu-button {
+    min-width: 44px;
+    min-height: 32px;
+    padding: 0 .5rem;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #64748b;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.menu-button:hover, .menu-button[aria-expanded="true"] { background: #eef2f7; }
+
+.menu-backdrop { position: fixed; inset: 0; z-index: 9; }
+
+.menu-list {
+    position: absolute;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    min-width: 7rem;
+    margin-top: .2rem;
+    padding: .3rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(31, 52, 82, .16);
+}
+
+.menu-list .edit-button, .menu-list .delete-button {
+    min-height: 40px;
+    padding: 0 .8rem;
+    border-radius: 8px;
+    font-size: .9rem;
+    text-align: left;
+}
+
+.menu-list .edit-button:hover, .menu-list .delete-button:hover { background: #f1f5fa; text-decoration: none; }
+
+.menu-list .delete-button { color: #a54a51; }
+
+.sheet-backdrop { display: none; }
+
+/* 모바일에서는 수정 창이 화면 아래에서 올라오는 시트로 열립니다. */
+@media (max-width: 640px) {
+    .sheet-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 59;
+        display: block;
+        background: rgba(15, 23, 42, .45);
+    }
+
+    .edit-form {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 60;
+        max-height: 88vh;
+        margin: 0;
+        padding: 1.2rem 1.2rem calc(1.2rem + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        border: 0;
+        border-radius: 20px 20px 0 0;
+        background: #fff;
+        box-shadow: 0 -10px 40px rgba(15, 23, 42, .25);
+    }
+
+    .edit-form h3 { font-size: 1.05rem; }
+
+    .edit-form .field input, .edit-form .field select { min-height: 50px; font-size: 1rem; }
+
+    .edit-cancel, .edit-save { min-height: 48px; padding: 0 1.2rem; font-size: .95rem; }
+
+    .edit-form-actions { position: sticky; bottom: 0; }
+
+    .edit-save { flex: 1; }
+}

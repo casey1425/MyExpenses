@@ -182,3 +182,28 @@
 }
 
 .payment-tools { margin-top: .25rem; font-size: .85rem; color: #64748b; }
+
+/* 카테고리·메모를 한 번 눌러 고르는 칩 */
+.choice-chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+
+.memo-chips { margin-top: .5rem; }
+
+.choice-chip {
+    min-height: 40px;
+    padding: 0 .85rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 999px;
+    background: #fff;
+    color: #40516a;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.choice-chip.small { min-height: 34px; padding: 0 .7rem; font-size: .8rem; font-weight: 600; }
+
+.choice-chip:hover { border-color: #9db8d6; }
+
+.choice-chip.selected { border-color: #285889; background: #285889; color: #fff; }
+
+.choice-chip:focus-visible { outline: 2px solid #4279ba; outline-offset: 2px; }
