@@ -26,7 +26,7 @@
 
     @if (isLoading)
     {
-        <p class="loading" role="status">지출 추이를 불러오고 있습니다...</p>
+        <LoadingState Text="지출 추이를 불러오고 있습니다..." />
     }
     @if (!string.IsNullOrEmpty(errorMessage))
     {

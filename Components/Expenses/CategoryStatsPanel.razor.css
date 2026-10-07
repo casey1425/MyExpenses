@@ -1,15 +1,15 @@
 .section-kicker {
     margin: 0 0 .45rem;
-    color: #537cbb;
+    color: var(--c-4a75b7, #4a75b7);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .16em;
 }
 
 .panel {
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--c-e4eaf2, #e4eaf2);
     border-radius: 18px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
 }
 
@@ -26,13 +26,13 @@
 
 .statistics-period {
     margin: .35rem 0 0;
-    color: #8a9aad;
+    color: var(--c-63768d, #63768d);
     font-size: .82rem;
 }
 
 .statistics-total {
     flex-shrink: 0;
-    color: #285889;
+    color: var(--c-285889, #285889);
     font-size: 1.2rem;
     letter-spacing: -.03em;
 }
@@ -40,7 +40,7 @@
 .statistics-empty {
     margin: 0;
     padding: 1.15rem 0;
-    color: #8a9aad;
+    color: var(--c-63768d, #63768d);
     font-size: .9rem;
     text-align: center;
 }
@@ -77,7 +77,7 @@
 
 .statistic-name small {
     margin-left: .25rem;
-    color: #97a6b7;
+    color: var(--c-62768e, #62768e);
     font-size: .75rem;
     font-weight: 400;
 }
@@ -94,7 +94,7 @@
 }
 
 .statistic-values span {
-    color: #6885a5;
+    color: var(--c-5a7797, #5a7797);
     font-size: .78rem;
 }
 
@@ -102,14 +102,14 @@
     height: 9px;
     overflow: hidden;
     border-radius: 999px;
-    background: #eaf0f7;
+    background: var(--c-eaf0f7, #eaf0f7);
 }
 
 .statistic-fill {
     min-width: 3px;
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #2d598b, #79a8d6);
+    background: linear-gradient(90deg, var(--c-2d598b, #2d598b), var(--c-79a8d6, #79a8d6));
 }
 
 .panel {

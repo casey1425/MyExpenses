@@ -1,5 +1,7 @@
 @inherits LayoutComponentBase
 
+<a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+
 <div class="page">
     <div class="sidebar">
         <NavMenu />
@@ -7,6 +9,9 @@
 
     <main>
         <div class="top-row px-4">
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="어두운 화면으로 전환">
+                <span class="theme-icon-to-dark" aria-hidden="true">☾</span><span class="theme-icon-to-light" aria-hidden="true">☀</span>
+            </button>
             <AuthorizeView>
                 <Authorized>
                     <span class="signed-in-user">@context.User.Identity?.Name</span>
@@ -21,7 +26,7 @@
             </AuthorizeView>
         </div>
 
-        <article class="content px-4">
+        <article class="content px-4" id="main-content" tabindex="-1">
             @Body
         </article>
 

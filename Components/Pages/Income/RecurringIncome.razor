@@ -55,7 +55,7 @@
         <h2 id="rules-title">등록한 규칙</h2>
         @if (rules.Count == 0)
         {
-            <p class="help">아직 등록한 정기 수입이 없습니다.</p>
+            <EmptyState Compact="true" Icon="↻" Title="아직 등록한 정기 수입이 없어요" Description="월급처럼 매달 들어오는 수입을 위에서 등록하면 자동으로 기록됩니다." />
         }
         else
         {

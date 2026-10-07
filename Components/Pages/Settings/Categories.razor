@@ -31,7 +31,7 @@
             <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>
         </div>
         <p class="help">보관한 카테고리는 새 지출·템플릿·정기 지출의 선택 목록에서 숨깁니다. 기존 기록·필터·통계·예산은 유지되며, 등록된 정기 지출은 계속 생성됩니다. CSV로 다시 가져오려면 먼저 복원하세요.</p>
-        @if (loading) { <p>불러오는 중...</p> }
+        @if (loading) { <LoadingState /> }
         else
         {
             @for (var index = 0; index < items.Count; index++)

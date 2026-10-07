@@ -34,7 +34,7 @@
         <p class="help">목표는 최대 @(SavingsGoalService.MaxGoals)개까지 만들 수 있습니다. 목표일을 정하면 월별 필요 저축액을 계산해 드려요.</p>
     </section>
 
-    @if (loading) { <p>불러오는 중...</p> }
+    @if (loading) { <LoadingState /> }
     else
     {
         @if (goals.Count > 0)
@@ -53,7 +53,7 @@
 
         @if (goals.Count == 0)
         {
-            <section class="income-card"><p class="help">아직 만든 목표가 없어요. 위에서 첫 목표를 만들어 보세요.</p></section>
+            <section class="income-card"><EmptyState Compact="true" Icon="◎" Title="아직 만든 목표가 없어요" Description="위에서 첫 목표를 만들면 월별 필요 저축액을 계산해 드려요." /></section>
         }
 
         @foreach (var item in goals)
@@ -134,7 +134,7 @@
                 {
                     <div class="history">
                         <h4>저축 내역</h4>
-                        @if (deposits.Count == 0) { <p class="help">아직 저축 내역이 없어요.</p> }
+                        @if (deposits.Count == 0) { <EmptyState Compact="true" Icon="◎" Title="아직 저축 내역이 없어요" Description="저축한 금액을 입력하면 이곳에 쌓입니다." /> }
                         @foreach (var deposit in deposits)
                         {
                             <div class="history-row" @key="deposit.Id">

@@ -41,11 +41,11 @@
             <button type="button" class="secondary" @onclick="RefreshAsync" disabled="@busy">새로고침</button>
         </div>
         <p class="help">선택한 달 전체의 지출입니다. 지출 화면의 검색 조건과 무관하며, 기존 기록·CSV 4열 파일·정기 지출은 기본적으로 미지정입니다.</p>
-        @if (loading) { <p>불러오는 중...</p> }
+        @if (loading) { <LoadingState /> }
         else
         {
             <p class="total" role="status">@month.ToString("yyyy년 M월") · 합계 @totals.Sum(t => t.Amount).ToString("N0")원 · @totals.Sum(t => t.Count)건</p>
-            @if (methods.Count == 0) { <p class="help">아직 결제수단이 없어요. 위에서 자주 쓰는 결제수단을 등록하세요.</p> }
+            @if (methods.Count == 0) { <EmptyState Compact="true" Icon="💳" Title="아직 결제수단이 없어요" Description="위에서 자주 쓰는 결제수단을 등록하면 지출마다 고를 수 있어요." /> }
             @foreach (var total in totals)
             {
                 <article class="method-item">

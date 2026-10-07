@@ -10,7 +10,7 @@
 
 h1 {
     margin: 0;
-    color: #1e293b;
+    color: var(--c-1e293b, #1e293b);
     font-size: clamp(1.7rem, 3.4vw, 2.3rem);
     font-weight: 800;
     letter-spacing: -.04em;
@@ -19,7 +19,7 @@ h1 {
 .page-header-description, .page-header-text ::deep p {
     max-width: 62ch;
     margin: .5rem 0 0;
-    color: #64748b;
+    color: var(--c-64748b, #64748b);
     line-height: 1.6;
     word-break: keep-all;
 }

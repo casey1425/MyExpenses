@@ -25,6 +25,26 @@
         <a class="account-export-link" href="/backup">전체 데이터 백업·복원</a>
     </section>
 
+    <section class="account-management-card" aria-labelledby="display-title">
+        <h2 id="display-title">화면 설정</h2>
+        <div class="setting-row">
+            <span id="theme-label">화면 모드</span>
+            <div class="segmented" role="group" aria-labelledby="theme-label">
+                <button type="button" data-theme-choice="system" aria-pressed="false">시스템</button>
+                <button type="button" data-theme-choice="light" aria-pressed="false">밝게</button>
+                <button type="button" data-theme-choice="dark" aria-pressed="false">어둡게</button>
+            </div>
+        </div>
+        <div class="setting-row">
+            <span id="font-label">글자 크기</span>
+            <div class="segmented" role="group" aria-labelledby="font-label">
+                <button type="button" data-font-choice="normal" aria-pressed="true">보통</button>
+                <button type="button" data-font-choice="large" aria-pressed="false">크게</button>
+            </div>
+        </div>
+        <p class="setting-note">이 기기의 브라우저에만 저장됩니다.</p>
+    </section>
+
     <section class="account-management-card danger-zone" aria-labelledby="delete-account-title">
         <p class="danger-kicker">DANGER ZONE</p>
         <h2 id="delete-account-title">계정과 데이터 삭제</h2>

@@ -49,7 +49,7 @@
             <a href="/income/import">CSV 가져오기</a>
             <a href="/recurring-income">정기 수입 관리</a>
         </div>
-        @if (loading) { <p>불러오는 중...</p> }
+        @if (loading) { <LoadingState /> }
         else
         {
             <div class="summary" role="status">
@@ -59,7 +59,7 @@
                 <div><span>저축률</span><strong>@(cashflow.SavingsRate is double rate ? $"{rate.ToString("0.#", CultureInfo.InvariantCulture)}%" : "-")</strong></div>
             </div>
             <p class="help">지출은 선택한 달 전체의 지출 기록 합계입니다. 저축률은 (수입 − 지출) ÷ 수입이며, 수입이 없으면 표시하지 않습니다.</p>
-            @if (incomes.Count == 0) { <p class="help">@month.ToString("yyyy년 M월")에 기록된 수입이 없어요. 위에서 등록해 보세요.</p> }
+            @if (incomes.Count == 0) { <EmptyState Compact="true" Icon="＋" Title="@($"{month:yyyy년 M월}에 기록된 수입이 없어요")" Description="위에서 첫 수입을 등록해 보세요." /> }
             @foreach (var income in incomes)
             {
                 <article class="income-item">

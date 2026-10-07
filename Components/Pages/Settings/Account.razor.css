@@ -6,7 +6,7 @@
 
 .danger-kicker {
     margin: 0 0 .45rem;
-    color: #537cbb;
+    color: var(--c-4a75b7, #4a75b7);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .15em;
@@ -15,15 +15,15 @@
 .account-management-card {
     margin-top: 1rem;
     padding: 1.5rem;
-    border: 1px solid #e3e8f0;
+    border: 1px solid var(--c-e3e8f0, #e3e8f0);
     border-radius: 16px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 12px 32px rgba(31, 52, 82, .06);
 }
 
 .account-management-card h2 {
     margin: 0 0 1rem;
-    color: #263247;
+    color: var(--c-263247, #263247);
     font-size: 1.2rem;
 }
 
@@ -35,35 +35,35 @@
 }
 
 .account-details dt {
-    color: #788397;
+    color: var(--c-6a7589, #6a7589);
 }
 
 .account-details dd {
     margin: 0;
-    color: #263247;
+    color: var(--c-263247, #263247);
     overflow-wrap: anywhere;
 }
 
 .account-export-link {
     display: inline-flex;
     padding: .65rem .9rem;
-    border: 1px solid #cad5e3;
+    border: 1px solid var(--c-cad5e3, #cad5e3);
     border-radius: 9px;
-    color: #405e91;
+    color: var(--c-405e91, #405e91);
     font-weight: 700;
     text-decoration: none;
 }
 
 .danger-zone {
-    border-color: #f3c7c4;
+    border-color: var(--c-f3c7c4, #f3c7c4);
 }
 
 .danger-kicker {
-    color: #b42318;
+    color: var(--c-b42318, #b42318);
 }
 
 .danger-zone > p:not(.danger-kicker) {
-    color: #697386;
+    color: var(--c-697386, #697386);
     line-height: 1.65;
 }
 
@@ -74,14 +74,14 @@
 }
 
 .delete-account-form > label:first-of-type {
-    color: #3d485d;
+    color: var(--c-3d485d, #3d485d);
 }
 
 .delete-account-form input[type="text"] {
     width: 100%;
     min-height: 46px;
     padding: .7rem .8rem;
-    border: 1px solid #cfd7e3;
+    border: 1px solid var(--c-cfd7e3, #cfd7e3);
     border-radius: 9px;
 }
 
@@ -89,7 +89,7 @@
     display: flex;
     align-items: flex-start;
     gap: .6rem;
-    color: #596579;
+    color: var(--c-596579, #596579);
     font-size: .9rem;
     line-height: 1.5;
 }
@@ -102,26 +102,49 @@
     min-height: 46px;
     border: 0;
     border-radius: 9px;
-    background: #b42318;
-    color: #fff;
+    background: var(--c-b42318, #b42318);
+    color: var(--c-ffffff, #fff);
     font-weight: 800;
 }
 
 .delete-account-button:hover {
-    background: #912018;
+    background: var(--c-912018, #912018);
 }
 
 .account-management-error {
     padding: .85rem 1rem;
     border-radius: 10px;
-    background: #fff0ef;
-    color: #a3241b;
+    background: var(--c-fff0ef, #fff0ef);
+    color: var(--c-a3241b, #a3241b);
 }
 
 @media (max-width: 520px) {
     .account-details {grid-template-columns: 1fr;}
+    .account-export-link + .account-export-link {margin-left: 0;}
 }
 
 .account-export-link + .account-export-link {
     margin-left: .5rem;
 }
+
+.setting-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; padding: .6rem 0; }
+
+.setting-row > span { color: var(--c-40516a, #40516a); font-weight: 700; }
+
+.segmented { display: inline-flex; border: 1px solid var(--c-dbe4ee, #dbe4ee); border-radius: 10px; overflow: hidden; }
+
+.segmented button {
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 0;
+    border-right: 1px solid var(--c-dbe4ee, #dbe4ee);
+    background: var(--c-ffffff, #fff);
+    color: var(--c-40516a, #40516a);
+    font-weight: 700;
+}
+
+.segmented button:last-child { border-right: 0; }
+
+.segmented button[aria-pressed="true"] { background: var(--c-285889, #285889); color: var(--c-ffffff, #fff); }
+
+.setting-note { margin: .4rem 0 0; color: var(--c-64748b, #64748b); font-size: .8rem; }

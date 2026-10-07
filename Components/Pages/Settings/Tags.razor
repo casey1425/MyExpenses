@@ -35,13 +35,13 @@
 
     @if (isLoading)
     {
-        <p class="loading" role="status">태그를 불러오고 있습니다...</p>
+        <LoadingState Text="태그를 불러오고 있습니다..." />
     }
     else if (tags.Count == 0)
     {
         <section class="panel empty">
-            <p>아직 태그가 없어요.</p>
-            <p class="help">지출을 기록할 때 ‘태그’ 칸에 <strong>여행, 경조사</strong>처럼 입력하면 자동으로 만들어집니다. <a href="/">지출 기록으로 가기</a></p>
+            <EmptyState Icon="#" Title="아직 태그가 없어요" Description="지출을 기록할 때 ‘태그’ 칸에 여행, 경조사처럼 입력하면 자동으로 만들어집니다."
+                        ActionText="지출 기록하러 가기" ActionHref="/?add=1" QuickAdd="true" />
         </section>
     }
     else

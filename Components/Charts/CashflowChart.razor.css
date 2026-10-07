@@ -1,19 +1,19 @@
 .chart-viewport { overflow-x: auto; }
 .trend-chart { display: block; width: 100%; min-width: 640px; height: auto; }
-.chart-grid { stroke: #e9eef5; stroke-dasharray: 4 5; }
-.chart-baseline { stroke: #d6dfeb; }
-.income-bar { fill: #3f9d73; }
-.expense-bar { fill: #285889; }
-.chart-month { fill: #40516a; font-size: 15px; }
-.chart-partial { fill: #537cbb; font-size: 12px; }
-.net-positive { fill: #287452; font-size: 13px; font-weight: 600; }
-.net-negative { fill: #b34850; font-size: 13px; font-weight: 600; }
-td.net-positive { fill: unset; color: #287452; font-size: inherit; font-weight: inherit; }
-td.net-negative { fill: unset; color: #b34850; font-size: inherit; font-weight: inherit; }
-.chart-empty { padding: 2.5rem 1rem; text-align: center; color: #64748b; background: #f8fafc; border-radius: 12px; }
-.chart-details { margin-top: .8rem; color: #40516a; font-size: .85rem; }
+.chart-grid { stroke: var(--c-e9eef5, #e9eef5); stroke-dasharray: 4 5; }
+.chart-baseline { stroke: var(--c-d6dfeb, #d6dfeb); }
+.income-bar { fill: var(--c-3f9d73, #3f9d73); }
+.expense-bar { fill: var(--c-285889, #285889); }
+.chart-month { fill: var(--c-40516a, #40516a); font-size: 15px; }
+.chart-partial { fill: var(--c-537cbb, #537cbb); font-size: 12px; }
+.net-positive { fill: var(--c-287452, #287452); font-size: 13px; font-weight: 600; }
+.net-negative { fill: var(--c-b34850, #b34850); font-size: 13px; font-weight: 600; }
+td.net-positive { fill: unset; color: var(--c-287452, #287452); font-size: inherit; font-weight: inherit; }
+td.net-negative { fill: unset; color: var(--c-b34850, #b34850); font-size: inherit; font-weight: inherit; }
+.chart-empty { padding: 2.5rem 1rem; text-align: center; color: var(--c-64748b, #64748b); background: var(--c-f8fafc, #f8fafc); border-radius: 12px; }
+.chart-details { margin-top: .8rem; color: var(--c-40516a, #40516a); font-size: .85rem; }
 summary { cursor: pointer; }
 .chart-table-wrap { overflow-x: auto; }
 table { width: 100%; margin-top: .8rem; border-collapse: collapse; }
-th, td { padding: .7rem; text-align: right; border-bottom: 1px solid #e4eaf2; white-space: nowrap; }
+th, td { padding: .7rem; text-align: right; border-bottom: 1px solid var(--c-e4eaf2, #e4eaf2); white-space: nowrap; }
 th:first-child { text-align: left; }

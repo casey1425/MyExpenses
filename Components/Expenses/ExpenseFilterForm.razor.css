@@ -5,9 +5,9 @@
     align-items: end;
     margin-bottom: 1.1rem;
     padding: .9rem;
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--c-e4eaf2, #e4eaf2);
     border-radius: 12px;
-    background: #f8fafc;
+    background: var(--c-f8fafc, #f8fafc);
 }
 
 .filter-field {
@@ -19,10 +19,10 @@
 
 .filter-help, .filter-buttons { grid-column: 1 / -1; }
 
-.filter-help { margin: 0; color: #64748b; font-size: .8rem; }
+.filter-help { margin: 0; color: var(--c-64748b, #64748b); font-size: .8rem; }
 
 .filter-field label {
-    color: #40516a;
+    color: var(--c-40516a, #40516a);
     font-size: .78rem;
     font-weight: 700;
 }
@@ -31,17 +31,17 @@
     width: 100%;
     min-height: 40px;
     padding: .5rem .65rem;
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--c-dbe4ee, #dbe4ee);
     border-radius: 8px;
-    background: #fff;
-    color: #1e293b;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-1e293b, #1e293b);
     font-size: .85rem;
 }
 
 .filter-field input:focus, .filter-field select:focus {
-    border-color: #4279ba;
+    border-color: var(--c-4279ba, #4279ba);
     outline: none;
-    box-shadow: 0 0 0 3px #4279ba20;
+    box-shadow: 0 0 0 3px var(--c-4279ba20, #4279ba20);
 }
 
 .filter-buttons {
@@ -59,19 +59,19 @@
 }
 
 .filter-apply {
-    border: 1px solid #285889;
-    background: #285889;
-    color: #fff;
+    border: 1px solid var(--c-285889, #285889);
+    background: var(--c-285889, #285889);
+    color: var(--c-ffffff, #fff);
 }
 
 .filter-apply:hover {
-    background: #1b426e;
+    background: var(--c-1b426e, #1b426e);
 }
 
 .filter-reset {
-    border: 1px solid #d8dfe7;
-    background: #fff;
-    color: #4d5d70;
+    border: 1px solid var(--c-d8dfe7, #d8dfe7);
+    background: var(--c-ffffff, #fff);
+    color: var(--c-4d5d70, #4d5d70);
 }
 
 @media (max-width: 1100px) {

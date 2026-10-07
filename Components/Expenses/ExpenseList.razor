@@ -3,11 +3,15 @@
 
 @if (Expenses.Count == 0)
 {
-    <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">↗</div>
-        <h3>@(FilterActive ? "조건에 맞는 기록이 없어요" : "아직 기록이 없어요")</h3>
-        <p>@(FilterActive ? "검색어 또는 기간·금액 조건을 바꾸거나 필터를 초기화해 보세요." : "첫 지출을 입력하면 이곳에 내역이 표시됩니다.")</p>
-    </div>
+    @if (FilterActive)
+    {
+        <EmptyState Icon="🔍" Title="조건에 맞는 기록이 없어요" Description="검색어 또는 기간·금액 조건을 바꾸거나 필터를 초기화해 보세요." />
+    }
+    else
+    {
+        <EmptyState Icon="✎" Title="아직 기록이 없어요" Description="첫 지출을 입력하면 이곳에 내역이 표시됩니다."
+                    ActionText="+ 첫 지출 기록하기" ActionHref="/?add=1" QuickAdd="true" />
+    }
 }
 else
 {

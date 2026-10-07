@@ -29,7 +29,7 @@
     }
     @if (isLoading)
     {
-        <p class="loading" role="status">달력을 불러오고 있습니다...</p>
+        <LoadingState Text="달력을 불러오고 있습니다..." />
     }
 
     @if (data is not null && !isLoading)

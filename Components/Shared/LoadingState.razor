@@ -1,0 +1,9 @@
+@* 불러오는 동안 보여 주는 자리 표시입니다. 화면 낭독기에는 문구만 읽힙니다. *@
+<div class="loading-state" role="status" aria-live="polite">
+    <span class="loading-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="loading-text">@(Text ?? "불러오는 중입니다...")</span>
+</div>
+
+@code {
+    [Parameter] public string? Text { get; set; }
+}

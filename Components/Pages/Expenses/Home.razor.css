@@ -2,12 +2,12 @@
     max-width: 1180px;
     margin: 0 auto;
     padding: 1.4rem 0 3rem;
-    color: #1e293b;
+    color: var(--c-1e293b, #1e293b);
 }
 
 .section-kicker {
     margin: 0 0 .45rem;
-    color: #537cbb;
+    color: var(--c-4a75b7, #4a75b7);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .16em;
@@ -16,10 +16,10 @@
 .today-chip {
     flex-shrink: 0;
     padding: .6rem .9rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--c-e2e8f0, #e2e8f0);
     border-radius: 999px;
-    background: #fff;
-    color: #53657d;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-53657d, #53657d);
     font-size: .88rem;
 }
 
@@ -54,8 +54,8 @@
 .count-badge {
     padding: .35rem .65rem;
     border-radius: 999px;
-    background: #eef4fb;
-    color: #315784;
+    background: var(--c-eef4fb, #eef4fb);
+    color: var(--c-315784, #315784);
     font-size: .8rem;
     font-weight: 700;
 }
@@ -66,10 +66,10 @@
     gap: .75rem;
 }
 
-.filter-result { color: #40516a; overflow-wrap: anywhere; font-size: .85rem; }
+.filter-result { color: var(--c-40516a, #40516a); overflow-wrap: anywhere; font-size: .85rem; }
 
 .export-link {
-    color: #285889;
+    color: var(--c-285889, #285889);
     font-size: .82rem;
     font-weight: 700;
     text-decoration: underline;
@@ -77,12 +77,12 @@
 }
 
 .export-link:hover {
-    color: #1b426e;
+    color: var(--c-1b426e, #1b426e);
 }
 
 .filter-hint {
     margin: -.25rem 0 1rem;
-    color: #7b8b9d;
+    color: var(--c-667789, #667789);
     font-size: .78rem;
 }
 
@@ -90,23 +90,23 @@
     padding: .25rem 0;
     border: 0;
     background: transparent;
-    color: #a54a51;
+    color: var(--c-a54a51, #a54a51);
     font-size: .82rem;
     font-weight: 600;
 }
 
 .delete-all-trigger:hover {
-    color: #842e36;
+    color: var(--c-842e36, #842e36);
     text-decoration: underline;
 }
 
 .delete-confirm {
     margin-bottom: 1rem;
     padding: 1rem;
-    border: 1px solid #f0c9cc;
+    border: 1px solid var(--c-f0c9cc, #f0c9cc);
     border-radius: 12px;
-    background: #fff7f7;
-    color: #75363c;
+    background: var(--c-fff7f7, #fff7f7);
+    color: var(--c-75363c, #75363c);
 }
 
 .delete-confirm strong {
@@ -133,19 +133,19 @@
 }
 
 .cancel-button {
-    border: 1px solid #d8dfe7;
-    background: #fff;
-    color: #4d5d70;
+    border: 1px solid var(--c-d8dfe7, #d8dfe7);
+    background: var(--c-ffffff, #fff);
+    color: var(--c-4d5d70, #4d5d70);
 }
 
 .confirm-delete-button {
-    border: 1px solid #a73e48;
-    background: #a73e48;
-    color: #fff;
+    border: 1px solid var(--c-a73e48, #a73e48);
+    background: var(--c-a73e48, #a73e48);
+    color: var(--c-ffffff, #fff);
 }
 
 .confirm-delete-button:hover:not(:disabled) {
-    background: #8f3039;
+    background: var(--c-8f3039, #8f3039);
 }
 
 .cancel-button:disabled, .confirm-delete-button:disabled {
@@ -155,13 +155,13 @@
 
 .form-error {
     margin: 0 0 .75rem;
-    color: #be3f47;
+    color: var(--c-be3f47, #be3f47);
     font-size: .86rem;
 }
 
 .history-notice {
     margin: 0 0 .9rem;
-    color: #246a4d;
+    color: var(--c-246a4d, #246a4d);
     font-size: .86rem;
 }
 
@@ -178,13 +178,13 @@
     height: 6px;
     margin: .2rem 0 .1rem;
     border-radius: 3px;
-    background: #e8eef6;
+    background: var(--c-e8eef6, #e8eef6);
     overflow: hidden;
 }
 
-.summary-meter i { display: block; height: 100%; background: #4279ba; }
+.summary-meter i { display: block; height: 100%; background: var(--c-4279ba, #4279ba); }
 
-.summary-meter i.over-budget { background: #be3f47; }
+.summary-meter i.over-budget { background: var(--c-be3f47, #be3f47); }
 
 .filter-box { margin-bottom: 1rem; }
 
@@ -193,10 +193,10 @@
     align-items: center;
     min-height: 44px;
     padding: 0 1rem;
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--c-dbe4ee, #dbe4ee);
     border-radius: 10px;
-    background: #f8fafc;
-    color: #285889;
+    background: var(--c-f8fafc, #f8fafc);
+    color: var(--c-285889, #285889);
     font-weight: 700;
     cursor: pointer;
 }
@@ -214,10 +214,10 @@
 
 .month-step, .month-today {
     min-height: 40px;
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--c-dbe4ee, #dbe4ee);
     border-radius: 10px;
-    background: #fff;
-    color: #285889;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-285889, #285889);
     font-weight: 700;
     cursor: pointer;
 }
@@ -232,18 +232,18 @@
     flex-shrink: 0;
     min-height: 36px;
     padding: 0 .9rem;
-    border: 1px solid #285889;
+    border: 1px solid var(--c-285889, #285889);
     border-radius: 8px;
-    background: #fff;
-    color: #285889;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-285889, #285889);
     font-weight: 700;
     cursor: pointer;
 }
 
 .panel {
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--c-e4eaf2, #e4eaf2);
     border-radius: 18px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
 }
 
@@ -308,10 +308,10 @@
     justify-content: center;
     width: 40px;
     height: 36px;
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--c-dbe4ee, #dbe4ee);
     border-radius: 10px;
-    background: #fff;
-    color: #40516a;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-40516a, #40516a);
     font-size: 1.2rem;
     line-height: 1;
     cursor: pointer;
@@ -330,9 +330,9 @@
     min-width: 12rem;
     margin-top: .35rem;
     padding: .4rem;
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--c-dbe4ee, #dbe4ee);
     border-radius: 12px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 12px 30px rgba(31, 52, 82, .16);
 }
 
@@ -345,9 +345,9 @@
     text-decoration: none;
 }
 
-.more-menu-list .export-link:hover { background: #f1f5fa; }
+.more-menu-list .export-link:hover { background: var(--c-f1f5fa, #f1f5fa); }
 
-.more-menu-list .delete-all-trigger { border-top: 1px solid #eef1f5; border-radius: 0 0 8px 8px; }
+.more-menu-list .delete-all-trigger { border-top: 1px solid var(--c-eef1f5, #eef1f5); border-radius: 0 0 8px 8px; }
 
 /* 예산 설정·통계 영역: 평소에는 접어 둡니다. */
 .budget-details { margin-top: 1.5rem; }
@@ -357,10 +357,10 @@
     align-items: center;
     min-height: 52px;
     padding: 0 1.2rem;
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--c-e4eaf2, #e4eaf2);
     border-radius: 14px;
-    background: #fff;
-    color: #1e293b;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-1e293b, #1e293b);
     font-size: 1.05rem;
     font-weight: 800;
     cursor: pointer;

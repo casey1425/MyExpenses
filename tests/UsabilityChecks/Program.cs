@@ -338,6 +338,41 @@ Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expen
     Check(editHtml.Contains("class=\"sheet-backdrop\"") && editHtml.Contains("role=\"dialog\"") && editHtml.Contains("id=\"edit-amount\""), "Edit mode must render the sheet with a backdrop");
 }
 
+// 공용 안내 컴포넌트: 로딩·빈 화면은 화면 낭독기가 읽을 수 있고 다음 행동을 보여 줘야 합니다.
+{
+    var loading = await Render<MyExpenses.Components.Shared.LoadingState>(new() { ["Text"] = "통계를 불러오고 있습니다..." });
+    Check(loading.Contains("role=\"status\"") && loading.Contains("통계를 불러오고 있습니다...") && loading.Contains("aria-hidden=\"true\""), "Loading state must announce its text and hide the bars from readers");
+    Check((await Render<MyExpenses.Components.Shared.LoadingState>(new())).Contains("불러오는 중입니다..."), "Loading state needs a default text");
+    var empty = await Render<MyExpenses.Components.Shared.EmptyState>(new() { ["Title"] = "아직 없어요", ["Description"] = "설명", ["ActionText"] = "추가하기", ["ActionHref"] = "/?add=1", ["QuickAdd"] = true });
+    Check(empty.Contains("아직 없어요") && empty.Contains("href=\"/?add=1\"") && empty.Contains("data-quick-add") && empty.Contains("추가하기"), "Empty state must show title and an action");
+    var plain = await Render<MyExpenses.Components.Shared.EmptyState>(new() { ["Title"] = "비었어요" });
+    Check(!plain.Contains("<a ") && !plain.Contains("<p>"), "Empty state without action/description must not render them");
+    var firstUse = await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord>(), ["EditCategories"] = new[] { "식비" } });
+    Check(firstUse.Contains("첫 지출 기록하기") && firstUse.Contains("data-quick-add"), "Empty expense list must invite the first entry");
+    var noMatch = await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord>(), ["FilterActive"] = true, ["EditCategories"] = new[] { "식비" } });
+    Check(noMatch.Contains("조건에 맞는 기록이 없어요") && !noMatch.Contains("첫 지출 기록하기"), "Filtered empty list must explain the filter, not ask for a first entry");
+}
+
+// 화면 설정(다크 모드·글자 크기)과 건너뛰기 링크: 스크립트·마크업·스타일이 서로 맞아야 합니다.
+{
+    var root = new DirectoryInfo(AppContext.BaseDirectory);
+    while (root is not null && !File.Exists(Path.Combine(root.FullName, "MyExpenses.csproj"))) root = root.Parent;
+    string Read(string path) => File.ReadAllText(Path.Combine(root!.FullName, path));
+    var app = Read("Components/App.razor");
+    Check(app.Contains("theme.css") && app.Contains("theme.js"), "App must load theme.css and theme.js");
+    Check(app.IndexOf("theme.js", StringComparison.Ordinal) < app.IndexOf("<HeadOutlet", StringComparison.Ordinal) || app.IndexOf("theme.js", StringComparison.Ordinal) < app.IndexOf("<body>", StringComparison.Ordinal), "theme.js must load in <head> so the theme is set before first paint");
+    var themeJs = Read("wwwroot/theme.js");
+    var themeCss = Read("wwwroot/theme.css");
+    Check(themeJs.Contains("data-theme-choice") && themeJs.Contains("data-theme-toggle") && themeJs.Contains("data-font-choice") && themeJs.Contains("prefers-color-scheme"), "theme.js lost a feature");
+    Check(themeCss.Contains(":root[data-theme=\"dark\"]") && themeCss.Contains("--c-ffffff"), "theme.css must define dark tokens");
+    var layout = Read("Components/Layout/MainLayout.razor");
+    Check(layout.Contains("data-theme-toggle") && layout.Contains("href=\"#main-content\"") && layout.Contains("id=\"main-content\""), "Layout needs the theme toggle and a working skip link");
+    var account = Read("Components/Pages/Settings/Account.razor");
+    foreach (var choice in new[] { "data-theme-choice=\"system\"", "data-theme-choice=\"light\"", "data-theme-choice=\"dark\"", "data-font-choice=\"normal\"", "data-font-choice=\"large\"" })
+        Check(account.Contains(choice), "Account display settings lost " + choice);
+    Check(Read("wwwroot/app.css").Contains("prefers-reduced-motion") && Read("wwwroot/app.css").Contains("focus-visible"), "Global focus ring and reduced-motion rules are required");
+}
+
 // 하단 탭바 "지출 추가": 링크·스크립트·입력 칸·쿼리 매개변수가 서로 어긋나지 않아야 합니다.
 {
     var root = new DirectoryInfo(AppContext.BaseDirectory);

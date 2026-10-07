@@ -29,7 +29,7 @@
 
     @if (isLoading)
     {
-        <p class="loading" role="status">통계를 불러오고 있습니다...</p>
+        <LoadingState Text="통계를 불러오고 있습니다..." />
     }
     @if (!string.IsNullOrEmpty(errorMessage))
     {

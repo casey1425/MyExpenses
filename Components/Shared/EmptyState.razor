@@ -1,0 +1,27 @@
+@* 기록이 아직 없을 때 보여 주는 안내입니다. 다음에 할 일을 버튼이나 링크로 함께 보여 줍니다. *@
+<div class="empty-state @(Compact ? "compact" : "")">
+    <div class="empty-icon" aria-hidden="true">@Icon</div>
+    <h3>@Title</h3>
+    @if (!string.IsNullOrEmpty(Description))
+    {
+        <p>@Description</p>
+    }
+    @if (!string.IsNullOrEmpty(ActionHref) && !string.IsNullOrEmpty(ActionText))
+    {
+        <a class="empty-action" href="@ActionHref" data-quick-add="@(QuickAdd ? "" : null)">@ActionText</a>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public string Icon { get; set; } = "✦";
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Description { get; set; }
+    [Parameter] public string? ActionText { get; set; }
+    [Parameter] public string? ActionHref { get; set; }
+    // 하단 탭바의 "지출 추가"처럼, 지출 화면이면 입력 칸으로 바로 이동합니다.
+    [Parameter] public bool QuickAdd { get; set; }
+    // 카드 안의 짧은 목록처럼 좁은 곳에서는 작게 보여 줍니다.
+    [Parameter] public bool Compact { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

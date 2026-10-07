@@ -7,19 +7,19 @@
 .import-card {
     margin-top: 1rem;
     padding: 1.5rem;
-    border: 1px solid #e3e8f0;
+    border: 1px solid var(--c-e3e8f0, #e3e8f0);
     border-radius: 16px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 12px 32px rgba(31, 52, 82, .06);
 }
 
-.import-card h2 { margin: 0 0 .65rem; color: #263247; font-size: 1.2rem; }
+.import-card h2 { margin: 0 0 .65rem; color: var(--c-263247, #263247); font-size: 1.2rem; }
 
-.import-card > p { color: #68758c; line-height: 1.5; }
+.import-card > p { color: var(--c-68758c, #68758c); line-height: 1.5; }
 
 .import-card input[type="file"] { display: block; max-width: 100%; margin: 1.1rem 0; }
 
-.format-hint { margin: .45rem 0; color: #788397; font-size: .82rem; }
+.format-hint { margin: .45rem 0; color: var(--c-6a7589, #6a7589); font-size: .82rem; }
 
 .format-hint code { overflow-wrap: anywhere; }
 
@@ -29,11 +29,11 @@
     border-radius: 10px;
 }
 
-.import-status { background: #edf4fb; color: #285889; }
+.import-status { background: var(--c-edf4fb, #edf4fb); color: var(--c-285889, #285889); }
 
-.import-error, .import-issues { background: #fff0ef; color: #a3241b; }
+.import-error, .import-issues { background: var(--c-fff0ef, #fff0ef); color: var(--c-a3241b, #a3241b); }
 
-.import-success { background: #ecf8f0; color: #1c6840; }
+.import-success { background: var(--c-ecf8f0, #ecf8f0); color: var(--c-1c6840, #1c6840); }
 
 .import-success p { margin: 0 0 .4rem; }
 
@@ -51,9 +51,9 @@
 
 .import-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
 
-.import-table th, .import-table td { padding: .6rem .5rem; border-bottom: 1px solid #e5eaf1; text-align: left; }
+.import-table th, .import-table td { padding: .6rem .5rem; border-bottom: 1px solid var(--c-e5eaf1, #e5eaf1); text-align: left; }
 
-.import-table th { color: #57677d; white-space: nowrap; }
+.import-table th { color: var(--c-57677d, #57677d); white-space: nowrap; }
 
 .import-table td { white-space: nowrap; }
 
@@ -68,12 +68,12 @@
     padding: .55rem 1rem;
     border: 0;
     border-radius: 9px;
-    background: #285889;
-    color: #fff;
+    background: var(--c-285889, #285889);
+    color: var(--c-ffffff, #fff);
     font-weight: 700;
 }
 
-.import-actions button:hover:not(:disabled) { background: #1b426e; }
+.import-actions button:hover:not(:disabled) { background: var(--c-1b426e, #1b426e); }
 
 .import-actions button:disabled { opacity: .55; cursor: not-allowed; }
 

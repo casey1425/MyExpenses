@@ -3,13 +3,13 @@ html, body {
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--c-006bb7, #006bb7);
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    color: var(--c-ffffff, #fff);
+    background-color: var(--c-1b6ec2, #1b6ec2);
+    border-color: var(--c-1861ac, #1861ac);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
@@ -25,15 +25,15 @@ h1:focus {
 }
 
 .valid.modified:not([type=checkbox]) {
-    outline: 1px solid #26b050;
+    outline: 1px solid var(--c-26b050, #26b050);
 }
 
 .invalid {
-    outline: 1px solid #e50000;
+    outline: 1px solid var(--c-e50000, #e50000);
 }
 
 .validation-message {
-    color: #e50000;
+    color: var(--c-e50000, #e50000);
 }
 
 .blazor-error-boundary {
@@ -43,11 +43,11 @@ h1:focus {
 }
 
     .blazor-error-boundary::after {
-        content: "An error has occurred."
+        content: "오류가 발생했어요. 페이지를 새로 고쳐 주세요."
     }
 
 .darker-border-checkbox.form-check-input {
-    border-color: #929292;
+    border-color: var(--c-929292, #929292);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -69,22 +69,22 @@ h1:focus {
 .account-card {
     width: min(100%, 440px);
     padding: 2rem;
-    border: 1px solid #e4eaf2;
+    border: 1px solid var(--c-e4eaf2, #e4eaf2);
     border-radius: 18px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 16px 40px rgba(31, 52, 82, .08);
 }
 
 .account-card h1 {
     margin: 0;
-    color: #1e293b;
+    color: var(--c-1e293b, #1e293b);
     font-size: 2rem;
     letter-spacing: -.04em;
 }
 
 .account-kicker {
     margin: 0 0 .45rem;
-    color: #537cbb;
+    color: var(--c-4a75b7, #4a75b7);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .16em;
@@ -92,7 +92,7 @@ h1:focus {
 
 .account-description {
     margin: .65rem 0 1.4rem;
-    color: #718096;
+    color: var(--c-67768b, #67768b);
     line-height: 1.6;
 }
 
@@ -102,22 +102,22 @@ h1:focus {
     align-items: center;
     gap: .65rem;
     min-height: 48px;
-    border: 1px solid #d8dfe7;
+    border: 1px solid var(--c-d8dfe7, #d8dfe7);
     border-radius: 9px;
-    background: #fff;
-    color: #2f3e52;
+    background: var(--c-ffffff, #fff);
+    color: var(--c-2f3e52, #2f3e52);
     font-weight: 700;
     text-decoration: none;
 }
 
 .google-login-button:hover {
-    border-color: #aebdce;
-    background: #f8fafc;
-    color: #1e293b;
+    border-color: var(--c-aebdce, #aebdce);
+    background: var(--c-f8fafc, #f8fafc);
+    color: var(--c-1e293b, #1e293b);
 }
 
 .google-login-button span {
-    color: #4285f4;
+    color: var(--c-4285f4, #4285f4);
     font-size: 1.1rem;
     font-weight: 800;
 }
@@ -126,8 +126,8 @@ h1:focus {
     margin: 0 0 1rem;
     padding: .75rem;
     border-radius: 8px;
-    background: #fff2f2;
-    color: #ae3e47;
+    background: var(--c-fff2f2, #fff2f2);
+    color: var(--c-ae3e47, #ae3e47);
     font-size: .86rem;
 }
 
@@ -135,22 +135,22 @@ h1:focus {
     margin: 0;
     padding: .85rem;
     border-radius: 9px;
-    background: #eef4fb;
-    color: #40516a;
+    background: var(--c-eef4fb, #eef4fb);
+    color: var(--c-40516a, #40516a);
     font-size: .86rem;
     line-height: 1.55;
 }
 
 .account-consent {
     margin: 1rem 0 0;
-    color: #7a8497;
+    color: var(--c-6a7588, #6a7588);
     font-size: .78rem;
     line-height: 1.55;
     text-align: center;
 }
 
 .account-consent a {
-    color: #526f9d;
+    color: var(--c-526f9d, #526f9d);
 }
 
 .legal-page {
@@ -165,19 +165,19 @@ h1:focus {
 
 .legal-heading h1 {
     margin: 0;
-    color: #172033;
+    color: var(--c-172033, #172033);
     font-size: clamp(2rem, 5vw, 2.75rem);
     letter-spacing: -.04em;
 }
 
 .legal-heading > p:last-child {
     margin: .6rem 0 0;
-    color: #7a8497;
+    color: var(--c-6a7588, #6a7588);
 }
 
 .legal-kicker {
     margin: 0 0 .45rem;
-    color: #537cbb;
+    color: var(--c-4a75b7, #4a75b7);
     font-size: .72rem;
     font-weight: 800;
     letter-spacing: .16em;
@@ -185,17 +185,17 @@ h1:focus {
 
 .legal-card {
     padding: clamp(1.25rem, 4vw, 2.5rem);
-    border: 1px solid #e3e8f0;
+    border: 1px solid var(--c-e3e8f0, #e3e8f0);
     border-radius: 18px;
-    background: #fff;
+    background: var(--c-ffffff, #fff);
     box-shadow: 0 14px 38px rgba(31, 52, 82, .06);
-    color: #4d596d;
+    color: var(--c-4d596d, #4d596d);
     line-height: 1.75;
 }
 
 .legal-card h2 {
     margin: 2rem 0 .65rem;
-    color: #263247;
+    color: var(--c-263247, #263247);
     font-size: 1.15rem;
 }
 
@@ -204,16 +204,38 @@ h1:focus {
 }
 
 .legal-card a {
-    color: #3269a8;
+    color: var(--c-3269a8, #3269a8);
 }
 
 .legal-card code {
-    color: #405e91;
+    color: var(--c-405e91, #405e91);
 }
 
 .legal-setup-notice {
     padding: .85rem 1rem;
     border-radius: 10px;
-    background: #fff6e7;
-    color: #8a5a12;
+    background: var(--c-fff6e7, #fff6e7);
+    color: var(--c-8a5a12, #8a5a12);
 }
+
+/* 키보드로 이동할 때 현재 위치가 보이도록 합니다. */
+a:focus-visible, button:focus-visible, summary:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 3px solid var(--c-4279ba, #4279ba);
+    outline-offset: 2px;
+}
+
+#main-content:focus { outline: none; }
+
+/* 움직임을 줄이도록 설정한 사용자에게는 애니메이션과 부드러운 스크롤을 끕니다. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* 글자 크기 "크게": rem 기준 글자가 모두 함께 커집니다. */
+html[data-font="large"] { font-size: 112.5%; }

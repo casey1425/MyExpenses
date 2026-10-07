@@ -53,8 +53,8 @@
             <h2 id="template-list-title">내 템플릿 (@templates.Count)</h2>
             <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>
         </div>
-        @if (loading) { <p>불러오는 중...</p> }
-        else if (templates.Count == 0) { <p class="help">아직 저장한 템플릿이 없어요. 위에서 첫 템플릿을 만들어 보세요.</p> }
+        @if (loading) { <LoadingState /> }
+        else if (templates.Count == 0) { <EmptyState Compact="true" Icon="★" Title="아직 저장한 템플릿이 없어요" Description="자주 쓰는 지출을 위에서 템플릿으로 만들어 두면 한 번에 채울 수 있어요." /> }
         else
         {
             @foreach (var template in templates)
