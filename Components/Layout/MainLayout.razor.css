@@ -77,6 +77,18 @@ main {
     }
 
 @media (max-width: 640.98px) {
+    /* 하단 탭바에 내용이 가리지 않도록 아래 여백을 둡니다. */
+    main {
+        padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+    }
+
+    /* 위쪽 이름 막대는 항상 보이게 고정하고, 전체 메뉴는 그 아래로 펼칩니다. */
+    .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
+
     .top-row {
         justify-content: space-between;
     }

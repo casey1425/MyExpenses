@@ -14,6 +14,13 @@ public partial class Home
     // 태그 관리 화면 등에서 /?tag=3 으로 들어오면 그 태그의 지출만 보여 줍니다.
     [Parameter, SupplyParameterFromQuery(Name = "tag")] public string? TagParameter { get; set; }
 
+    // 하단 탭바의 "지출 추가"로 들어오면(/?add=1) 금액 칸에 바로 포커스를 줍니다.
+    [Parameter, SupplyParameterFromQuery(Name = "add")] public string? AddParameter { get; set; }
+
+    private bool focusHandled;
+    // 예산·통계 영역은 접어 두고, 예산 요약 카드를 누르면 펼칩니다.
+    private bool budgetOpen;
+
     private List<UserCategory> categoryItems = [];
     private IReadOnlyList<string> categories = ExpenseCategories.All;
     private IReadOnlyList<string> allCategories => categoryItems.Count == 0 ? categories : categoryItems.Select(c => c.Name).ToList();
@@ -180,6 +187,15 @@ public partial class Home
         await RefreshTemplatesAsync();
         await LoadSuggestionsAsync();
         await LoadTagsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !focusHandled && AddParameter == "1" && entryForm is not null)
+        {
+            focusHandled = true;
+            await entryForm.FocusAmountAsync();
+        }
     }
 
     private async Task LoadCategoriesAsync()

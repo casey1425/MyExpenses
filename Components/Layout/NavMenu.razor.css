@@ -32,6 +32,21 @@
     display: block;
 }
 
+@media (max-width: 640.98px) {
+    /* 모바일에서는 전체 메뉴를 화면 위에 덮어 열어, 스크롤 위치와 상관없이 보이게 합니다. */
+    .navbar-toggler:checked ~ .nav-scrollable {
+        position: fixed;
+        top: 3.5rem;
+        left: 0;
+        right: 0;
+        bottom: calc(4rem + env(safe-area-inset-bottom));
+        overflow-y: auto;
+        padding-bottom: 1rem;
+        background-image: linear-gradient(180deg, #052767 0%, #123b73 100%);
+        z-index: 35;
+    }
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;

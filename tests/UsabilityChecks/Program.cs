@@ -316,6 +316,26 @@ var lastPageHtml = await Render<MyExpenses.Components.Expenses.ExpenseList>(new(
 Check(lastPageHtml.Contains("1건 더 보기") && !lastPageHtml.Contains("모두 보기"), "Last page footer wrong");
 Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expenses"] = new List<ExpenseRecord> { new() { Id = 1, OwnerId = "R", Date = today, Amount = 1, Category = "식비", Memo = "a" } }, ["Limit"] = 50, ["EditCategories"] = new[] { "식비" } })).Contains("더 보기"), "Footer shown although everything is visible");
 
+// 하단 탭바 "지출 추가": 링크·스크립트·입력 칸·쿼리 매개변수가 서로 어긋나지 않아야 합니다.
+{
+    var root = new DirectoryInfo(AppContext.BaseDirectory);
+    while (root is not null && !File.Exists(Path.Combine(root.FullName, "MyExpenses.csproj"))) root = root.Parent;
+    string Read(string path) => File.ReadAllText(Path.Combine(root!.FullName, path));
+    var addQuery = typeof(Home).GetProperty("AddParameter")?.GetCustomAttributes(typeof(SupplyParameterFromQueryAttribute), false).Cast<SupplyParameterFromQueryAttribute>().SingleOrDefault();
+    Check(addQuery?.Name == "add", "Home must read ?add= to focus the amount field");
+    var bottomNav = Read("Components/Layout/BottomNav.razor");
+    Check(bottomNav.Contains("href=\"/?add=1\"") && bottomNav.Contains("data-quick-add"), "Bottom nav add tab must link to /?add=1 and carry data-quick-add");
+    foreach (var tab in new[] { "href=\"\"", "href=\"calendar\"", "href=\"statistics\"", ".navbar-toggler" })
+        Check(bottomNav.Contains(tab), "Bottom nav lost a tab: " + tab);
+    Check(Read("Components/Layout/MainLayout.razor").Contains("<BottomNav />"), "MainLayout must render the bottom nav");
+    Check(Read("Components/App.razor").Contains("quick-add.js"), "App must load quick-add.js");
+    var quickAdd = Read("wwwroot/quick-add.js");
+    Check(quickAdd.Contains("[data-quick-add]") && quickAdd.Contains("expense-amount"), "quick-add.js must target the add tab and the amount field");
+    Check(Read("Components/Expenses/ExpenseForm.razor").Contains("id=\"expense-amount\""), "Amount input id changed; quick-add.js depends on it");
+    var homeMarkup = Read("Components/Pages/Expenses/Home.razor");
+    Check(homeMarkup.Contains("id=\"budget-section\"") && homeMarkup.Contains("href=\"#budget-section\""), "Budget card must point at the collapsed budget section");
+}
+
 // 화면 조립 가드: 문자열 매개변수에 변수 이름을 @ 없이 넘기면 변수가 아니라 그 글자가 전달됩니다(예: Memo="memo").
 var componentTypes = typeof(Home).Assembly.GetTypes().Where(t => typeof(IComponent).IsAssignableFrom(t)).ToDictionary(t => t.Name);
 var markupFiles = new[] { "Components/Pages/Expenses/Home.razor" };

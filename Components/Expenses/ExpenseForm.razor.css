@@ -156,3 +156,29 @@
 }
 
 .tag-choice.selected { border-color: #285889; background: #285889; color: #fff; }
+
+.more-fields { margin-bottom: 1.1rem; }
+
+.more-fields > summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 1rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #285889;
+    font-size: .9rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.more-fields[open] > summary { margin-bottom: .75rem; }
+
+/* 금액·카테고리처럼 자주 쓰는 칸은 모바일에서 손가락으로 누르기 쉽게 키웁니다. */
+@media (max-width: 640px) {
+    .field input, .field select { min-height: 50px; font-size: 1rem; }
+    .add-button { min-height: 52px; font-size: 1rem; }
+}
+
+.payment-tools { margin-top: .25rem; font-size: .85rem; color: #64748b; }

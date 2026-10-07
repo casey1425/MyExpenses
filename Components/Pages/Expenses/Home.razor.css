@@ -23,62 +23,6 @@
     font-size: .88rem;
 }
 
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.25rem;
-}
-
-.summary-card, .panel {
-    border: 1px solid #e4eaf2;
-    border-radius: 18px;
-    background: #fff;
-    box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
-}
-
-.summary-card {
-    display: flex;
-    flex-direction: column;
-    min-height: 156px;
-    padding: 1.4rem 1.6rem;
-}
-
-.primary-summary {
-    border-color: #274a78;
-    background: linear-gradient(135deg, #18345b, #2d598b);
-    color: #fff;
-}
-
-.summary-label {
-    color: #63758d;
-    font-size: .9rem;
-    font-weight: 600;
-}
-
-.primary-summary .summary-label, .primary-summary .summary-note {
-    color: #c5d6e9;
-}
-
-.summary-card strong {
-    margin: .5rem 0 .2rem;
-    font-size: 2rem;
-    line-height: 1.2;
-    letter-spacing: -.04em;
-}
-
-.summary-card small {
-    margin-left: .25rem;
-    font-size: .95rem;
-    font-weight: 600;
-    letter-spacing: 0;
-}
-
-.summary-note {
-    color: #94a3b8;
-    font-size: .78rem;
-}
-
 .content-grid {
     display: grid;
     grid-template-columns: minmax(320px, .9fr) minmax(0, 1.25fr);
@@ -123,13 +67,6 @@
 }
 
 .filter-result { color: #40516a; overflow-wrap: anywhere; font-size: .85rem; }
-
-.export-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .5rem 1rem;
-    margin: -.35rem 0 1.1rem;
-}
 
 .export-link {
     color: #285889;
@@ -233,19 +170,8 @@
 }
 
 @media (max-width: 600px) {
-    .summary-grid {gap: .7rem;}
-    .summary-card {min-height: 135px; padding: 1rem;}
-    .summary-card strong {font-size: 1.5rem;}
     .panel {padding: 1.2rem;}
 }
-
-.budget-summary { color: inherit; text-decoration: none; }
-
-.budget-summary:hover { border-color: #b9c9de; }
-
-.budget-summary strong { font-size: 1.5rem; }
-
-.budget-summary strong.over-budget { color: #a73e48; }
 
 .summary-meter {
     display: block;
@@ -259,20 +185,6 @@
 .summary-meter i { display: block; height: 100%; background: #4279ba; }
 
 .summary-meter i.over-budget { background: #be3f47; }
-
-.section-heading {
-    margin: 2rem 0 1rem;
-    color: #1e293b;
-    font-size: 1.25rem;
-    font-weight: 800;
-    letter-spacing: -.02em;
-}
-
-@media (max-width: 800px) {
-    .summary-grid {grid-template-columns: repeat(2, minmax(0, 1fr));}
-    .primary-summary {grid-column: 1 / -1;}
-    .summary-card {min-height: 120px;}
-}
 
 .filter-box { margin-bottom: 1rem; }
 
@@ -290,10 +202,6 @@
 }
 
 .filter-box[open] > summary { margin-bottom: .75rem; }
-
-@media (max-width: 800px) {
-    .budget-summary strong { font-size: 1.25rem; }
-}
 
 .month-nav {
     display: flex;
@@ -331,3 +239,141 @@
     font-weight: 700;
     cursor: pointer;
 }
+
+.panel {
+    border: 1px solid #e4eaf2;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 9px 28px rgba(31, 52, 82, .045);
+}
+
+/* 요약: 이번 달 지출과 남은 예산을 한 장에 보여 줍니다. */
+.hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    margin-bottom: 1.25rem;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #18345b, #2d598b);
+    box-shadow: 0 9px 28px rgba(31, 52, 82, .12);
+    color: #fff;
+    overflow: hidden;
+}
+
+.hero-main, .hero-budget {
+    display: flex;
+    flex-direction: column;
+    gap: .25rem;
+    padding: 1.3rem 1.6rem;
+}
+
+.hero-budget {
+    border-left: 1px solid rgba(255, 255, 255, .18);
+    color: inherit;
+    text-decoration: none;
+}
+
+.hero-budget:hover { background: rgba(255, 255, 255, .06); }
+
+.hero-label { color: #c5d6e9; font-size: .85rem; font-weight: 600; }
+
+.hero-note { color: #c5d6e9; font-size: .78rem; overflow-wrap: anywhere; }
+
+.hero-amount { font-size: 2.2rem; line-height: 1.15; letter-spacing: -.04em; }
+
+.hero-amount small { margin-left: .25rem; font-size: 1rem; font-weight: 600; letter-spacing: 0; }
+
+.hero-budget strong { font-size: 1.35rem; line-height: 1.3; }
+
+.hero-budget strong.over-budget { color: #ffb4ba; }
+
+.hero .summary-meter { background: rgba(255, 255, 255, .22); }
+
+.hero .summary-meter i { background: #9cc7f5; }
+
+.hero .summary-meter i.over-budget { background: #ff8a93; }
+
+@media (max-width: 600px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-main, .hero-budget { padding: 1rem 1.2rem; }
+    .hero-budget { border-left: 0; border-top: 1px solid rgba(255, 255, 255, .18); }
+    .hero-amount { font-size: 2rem; }
+}
+
+/* 내역 머리말의 ⋯ 메뉴: 내보내기·가져오기·전체 삭제 */
+.more-menu { position: relative; }
+
+.more-menu > summary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 36px;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #fff;
+    color: #40516a;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    list-style: none;
+}
+
+.more-menu > summary::-webkit-details-marker { display: none; }
+
+.more-menu-list {
+    position: absolute;
+    right: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+    min-width: 12rem;
+    margin-top: .35rem;
+    padding: .4rem;
+    border: 1px solid #dbe4ee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgba(31, 52, 82, .16);
+}
+
+.more-menu-list .export-link, .more-menu-list .delete-all-trigger {
+    display: block;
+    width: 100%;
+    padding: .65rem .75rem;
+    border-radius: 8px;
+    text-align: left;
+    text-decoration: none;
+}
+
+.more-menu-list .export-link:hover { background: #f1f5fa; }
+
+.more-menu-list .delete-all-trigger { border-top: 1px solid #eef1f5; border-radius: 0 0 8px 8px; }
+
+/* 예산 설정·통계 영역: 평소에는 접어 둡니다. */
+.budget-details { margin-top: 1.5rem; }
+
+.budget-details > summary {
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 0 1.2rem;
+    border: 1px solid #e4eaf2;
+    border-radius: 14px;
+    background: #fff;
+    color: #1e293b;
+    font-size: 1.05rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.budget-details[open] > summary { margin-bottom: 1rem; }
+
+/* 모바일에서는 요약이 첫 화면에 보이도록 머리말을 줄입니다. */
+@media (max-width: 600px) {
+    .expense-page { padding-top: .6rem; }
+    .expense-page ::deep .page-header-description { display: none; }
+    .expense-page ::deep .page-header { margin-bottom: .8rem; }
+    .today-chip { display: none; }
+}
+
+.budget-details { scroll-margin-top: 4.5rem; }

@@ -1,0 +1,22 @@
+<nav class="bottom-nav" aria-label="빠른 이동">
+    <NavLink class="tab" href="" Match="NavLinkMatch.All" onclick="@CloseMenu">
+        <NavIcon Name="expense" /><span>홈</span>
+    </NavLink>
+    <NavLink class="tab" href="calendar" onclick="@CloseMenu">
+        <NavIcon Name="calendar" /><span>달력</span>
+    </NavLink>
+    <a class="tab add-tab" href="/?add=1" data-quick-add onclick="@CloseMenu" aria-label="지출 추가">
+        <span class="add-circle" aria-hidden="true">+</span><span>지출 추가</span>
+    </a>
+    <NavLink class="tab" href="statistics" onclick="@CloseMenu">
+        <NavIcon Name="stats" /><span>통계</span>
+    </NavLink>
+    <button type="button" class="tab" onclick="document.querySelector('.navbar-toggler')?.click()" aria-label="전체 메뉴 열기·닫기">
+        <NavIcon Name="category" /><span>더보기</span>
+    </button>
+</nav>
+
+@code {
+    // 전체 메뉴가 열려 있으면 탭을 눌렀을 때 함께 닫습니다.
+    private const string CloseMenu = "var t=document.querySelector('.navbar-toggler');if(t&&t.checked)t.click()";
+}

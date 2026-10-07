@@ -26,30 +26,27 @@
         <Actions><div class="today-chip">@KoreanClock.Today.ToString("yyyy년 M월 d일")</div></Actions>
     </PageHeader>
 
-    <section class="summary-grid" aria-label="지출 요약">
-        <div class="summary-card primary-summary">
-            <span class="summary-label">@(activeFilter.IsActive ? "필터 결과 합계" : "이번 달 지출")</span>
-            <strong>@((activeFilter.IsActive ? FilteredTotal : MonthlyTotal).ToString("N0"))<small>원</small></strong>
-            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : $"{KoreanClock.Today:yyyy년 M월} 기준")</span>
+    <section class="hero" aria-label="지출 요약">
+        <div class="hero-main">
+            <span class="hero-label">@(activeFilter.IsActive ? "필터 결과 합계" : "이번 달 지출")</span>
+            <strong class="hero-amount">@((activeFilter.IsActive ? FilteredTotal : MonthlyTotal).ToString("N0"))<small>원</small></strong>
+            <span class="hero-note">@(activeFilter.IsActive ? FilterDescription : $"{KoreanClock.Today:yyyy년 M월} 기준") · @(expenses.Count)건</span>
         </div>
-        <div class="summary-card">
-            <span class="summary-label">@(activeFilter.IsActive ? "조회된 지출" : "기록한 지출")</span>
-            <strong>@expenses.Count<small>건</small></strong>
-            <span class="summary-note">@(activeFilter.IsActive ? FilterDescription : "전체 기록")</span>
-        </div>
-        <a class="summary-card budget-summary" href="#budget-title" aria-label="@budgetMonth.ToString("yyyy년 M월") 예산 현황, 예산 설정으로 이동">
-            <span class="summary-label">@budgetMonth.ToString("M월") 예산</span>
+        <a class="hero-budget" href="#budget-section" @onclick="() => budgetOpen = true"
+           aria-label="@budgetMonth.ToString("yyyy년 M월") 예산 현황, 예산 설정으로 이동">
             @if (budgetAmount is long limit)
             {
                 var remaining = limit - budgetSpent;
+                <span class="hero-label">@budgetMonth.ToString("M월") 예산</span>
                 <strong class="@(remaining < 0 ? "over-budget" : "")">@(remaining < 0 ? $"{-remaining:N0}원 초과" : $"{remaining:N0}원 남음")</strong>
                 <span class="summary-meter" aria-hidden="true"><i class="@(remaining < 0 ? "over-budget" : "")" style="width: @(Math.Min(limit > 0 ? (decimal)budgetSpent / limit * 100 : 0, 100).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%"></i></span>
-                <span class="summary-note">예산 @limit.ToString("N0")원 · @budgetSpent.ToString("N0")원 사용</span>
+                <span class="hero-note">예산 @limit.ToString("N0")원 · @budgetSpent.ToString("N0")원 사용</span>
             }
             else
             {
+                <span class="hero-label">@budgetMonth.ToString("M월") 예산</span>
                 <strong>미설정</strong>
-                <span class="summary-note">탭해서 예산 설정하기 ↓</span>
+                <span class="hero-note">눌러서 예산 설정하기 ›</span>
             }
         </a>
     </section>
@@ -74,10 +71,18 @@
                 </div>
                 <div class="history-actions">
                     <span class="count-badge">@(expenses.Count)건</span>
-                    @if (expenses.Count > 0 && !activeFilter.IsActive && editingId is null)
-                    {
-                        <button type="button" class="delete-all-trigger" @onclick="ShowDeleteAllConfirmation">전체 삭제</button>
-                    }
+                    <details class="more-menu">
+                        <summary aria-label="내보내기·삭제 메뉴">⋯</summary>
+                        <div class="more-menu-list">
+                            <a class="export-link" href="@FilteredExportUrl">현재 조회 결과 CSV</a>
+                            <a class="export-link" href="/export/expenses.csv?scope=all">전체 기록 CSV</a>
+                            <a class="export-link" href="/import">CSV 가져오기</a>
+                            @if (expenses.Count > 0 && !activeFilter.IsActive && editingId is null)
+                            {
+                                <button type="button" class="delete-all-trigger" @onclick="ShowDeleteAllConfirmation">전체 삭제</button>
+                            }
+                        </div>
+                    </details>
                 </div>
             </div>
 
@@ -96,12 +101,6 @@
             </details>
 
             <p class="filter-result" role="status">@FilterDescription · @expenses.Count 건 · 합계 @FilteredTotal.ToString("N0")원</p>
-
-            <div class="export-actions" aria-label="CSV 내보내기">
-                <a class="export-link" href="@FilteredExportUrl">현재 조회 결과 CSV</a>
-                <a class="export-link" href="/export/expenses.csv?scope=all">전체 기록 CSV</a>
-                <a class="export-link" href="/import">CSV 가져오기</a>
-            </div>
 
             @if (!string.IsNullOrEmpty(filterError))
             {
@@ -155,17 +154,19 @@
                          OnCancelEdit="CancelEdit" />
         </section>
     </div>
-    <h2 class="section-heading" id="budget-section">예산과 통계</h2>
-    <BudgetPanel Month="budgetMonth" MonthInput="@budgetMonthInput" OnMonthChanged="OnBudgetMonthChangedAsync"
-                 Disabled="@(savingCategoryBudget is not null || isSavingBudget)"
-                 @bind-Input="budgetInput" IsSaving="isSavingBudget" Amount="budgetAmount" Spent="budgetSpent"
-                 Error="@budgetError" Notice="@budgetNotice" OnSave="SaveBudgetAsync" OnDelete="DeleteBudgetAsync" />
+    <details class="budget-details" id="budget-section" open="@budgetOpen">
+        <summary>예산 설정 · 카테고리 통계</summary>
+        <BudgetPanel Month="budgetMonth" MonthInput="@budgetMonthInput" OnMonthChanged="OnBudgetMonthChangedAsync"
+                     Disabled="@(savingCategoryBudget is not null || isSavingBudget)"
+                     @bind-Input="budgetInput" IsSaving="isSavingBudget" Amount="budgetAmount" Spent="budgetSpent"
+                     Error="@budgetError" Notice="@budgetNotice" OnSave="SaveBudgetAsync" OnDelete="DeleteBudgetAsync" />
 
-    <CategoryBudgetPanel Month="budgetMonth" Error="@categoryBudgetError" Notice="@categoryBudgetNotice"
-                         Categories="allCategories" Label="CategoryLabel" Spent="categoryBudgetSpent"
-                         Amounts="categoryBudgetAmounts" Inputs="categoryBudgetInputs" Saving="@savingCategoryBudget"
-                         OnSave="SaveCategoryBudgetAsync" OnDelete="DeleteCategoryBudgetAsync" />
+        <CategoryBudgetPanel Month="budgetMonth" Error="@categoryBudgetError" Notice="@categoryBudgetNotice"
+                             Categories="allCategories" Label="CategoryLabel" Spent="categoryBudgetSpent"
+                             Amounts="categoryBudgetAmounts" Inputs="categoryBudgetInputs" Saving="@savingCategoryBudget"
+                             OnSave="SaveCategoryBudgetAsync" OnDelete="DeleteCategoryBudgetAsync" />
 
-    <CategoryStatsPanel Statistics="categoryStatistics" PeriodLabel="@StatisticsPeriodLabel" Total="StatisticsTotal"
-                        FilterActive="activeFilter.IsActive" />
+        <CategoryStatsPanel Statistics="categoryStatistics" PeriodLabel="@StatisticsPeriodLabel" Total="StatisticsTotal"
+                            FilterActive="activeFilter.IsActive" />
+    </details>
 </div>

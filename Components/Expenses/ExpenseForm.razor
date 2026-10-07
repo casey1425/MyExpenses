@@ -5,31 +5,11 @@
 <section class="panel entry-panel" aria-labelledby="entry-title">
     <div class="panel-heading">
         <div>
-            <p class="section-kicker">NEW ENTRY</p>
             <h2 id="entry-title">새 지출 추가</h2>
         </div>
     </div>
 
     <form @onsubmit="() => OnSubmit.InvokeAsync()" @onsubmit:preventDefault>
-        <div class="template-picker">
-            <div class="field">
-                <label for="expense-template">즐겨찾기 템플릿</label>
-                <select id="expense-template" value="@SelectedTemplateId" @onchange="OnTemplateSelected" disabled="@TemplateBusy">
-                    <option value="">템플릿 선택 (선택 사항)</option>
-                    @foreach (var template in Templates)
-                    {
-                        <option value="@template.Id">@template.Name · @template.Amount.ToString("N0")원</option>
-                    }
-                </select>
-            </div>
-            <div class="template-picker-actions">
-                <a href="/templates">템플릿 관리</a>
-                <button type="button" class="filter-reset" disabled="@TemplateBusy" @onclick="() => OnRefreshTemplates.InvokeAsync()">목록 새로고침</button>
-            </div>
-            <p class="template-help">금액·카테고리·메모를 채웁니다. 날짜는 유지되며 기록 버튼을 눌러야 저장됩니다.</p>
-            @if (TemplateError is not null) { <p class="form-error" role="alert">@TemplateError</p> }
-            @if (TemplateNotice is not null) { <p class="save-notice" role="status">@TemplateNotice</p> }
-        </div>
         <div class="field-grid">
             <div class="field">
                 <label for="expense-date">날짜</label>
@@ -38,7 +18,7 @@
             <div class="field">
                 <label for="expense-amount">금액</label>
                 <div class="amount-input">
-                    <input id="expense-amount" type="number" min="1" step="1" placeholder="0" @ref="amountInput" @bind="Amount" @bind:after="() => AmountChanged.InvokeAsync(Amount)" required />
+                    <input id="expense-amount" type="number" inputmode="numeric" min="1" step="1" placeholder="0" @ref="amountInput" @bind="Amount" @bind:after="() => AmountChanged.InvokeAsync(Amount)" required />
                     <span>원</span>
                 </div>
             </div>
@@ -69,31 +49,55 @@
             }
         </div>
         <div class="field">
-            <label for="expense-tags">태그 <span class="optional">선택 · 쉼표로 구분, 최대 @(TagNames.MaxPerExpense)개</span></label>
-            <input id="expense-tags" type="text" placeholder="예: 여행, 경조사" autocomplete="off" @bind="TagsText" @bind:after="() => TagsTextChanged.InvokeAsync(TagsText)" />
-            @if (TagChoices.Count > 0)
-            {
-                <div class="tag-choices" role="group" aria-label="자주 쓰는 태그">
-                    @foreach (var choice in TagChoices)
-                    {
-                        <button type="button" class="tag-choice @(IsSelected(choice.Name) ? "selected" : "")" aria-pressed="@(IsSelected(choice.Name) ? "true" : "false")"
-                                @onclick="() => OnToggleTag.InvokeAsync(choice.Name)">#@choice.Name</button>
-                    }
-                </div>
-            }
-        </div>
-        <div class="field">
             <label for="expense-payment">결제수단 <span class="optional">선택</span></label>
             <select id="expense-payment" @bind="PaymentMethodId" @bind:after="() => PaymentMethodIdChanged.InvokeAsync(PaymentMethodId)">
                 <option value="">미지정</option>
                 @foreach (var method in PaymentMethods) { <option value="@method.Id">@method.Name (@method.Type)</option> }
             </select>
-            <div class="template-picker-actions">
-                <a href="/payment-methods">결제수단 관리·월별 합계</a>
-                <button type="button" class="filter-reset" @onclick="() => OnRefreshPaymentMethods.InvokeAsync()" disabled="@PaymentBusy">목록 새로고침</button>
-            </div>
             @if (PaymentError is not null) { <p class="form-error" role="alert">@PaymentError</p> }
         </div>
+
+        <details class="more-fields" open="@MoreOpen">
+            <summary>태그 · 템플릿 · 결제수단 관리@(MoreOpen ? "" : " (선택)")</summary>
+            <div class="template-picker">
+                <div class="field">
+                    <label for="expense-template">즐겨찾기 템플릿</label>
+                    <select id="expense-template" value="@SelectedTemplateId" @onchange="OnTemplateSelected" disabled="@TemplateBusy">
+                        <option value="">템플릿 선택 (선택 사항)</option>
+                        @foreach (var template in Templates)
+                        {
+                            <option value="@template.Id">@template.Name · @template.Amount.ToString("N0")원</option>
+                        }
+                    </select>
+                </div>
+                <div class="template-picker-actions">
+                    <a href="/templates">템플릿 관리</a>
+                    <button type="button" class="filter-reset" disabled="@TemplateBusy" @onclick="() => OnRefreshTemplates.InvokeAsync()">목록 새로고침</button>
+                </div>
+                <p class="template-help">금액·카테고리·메모를 채웁니다. 날짜는 유지되며 기록 버튼을 눌러야 저장됩니다.</p>
+                @if (TemplateError is not null) { <p class="form-error" role="alert">@TemplateError</p> }
+                @if (TemplateNotice is not null) { <p class="save-notice" role="status">@TemplateNotice</p> }
+            </div>
+            <div class="field">
+                <label for="expense-tags">태그 <span class="optional">선택 · 쉼표로 구분, 최대 @(TagNames.MaxPerExpense)개</span></label>
+                <input id="expense-tags" type="text" placeholder="예: 여행, 경조사" autocomplete="off" @bind="TagsText" @bind:after="() => TagsTextChanged.InvokeAsync(TagsText)" />
+                @if (TagChoices.Count > 0)
+                {
+                    <div class="tag-choices" role="group" aria-label="자주 쓰는 태그">
+                        @foreach (var choice in TagChoices)
+                        {
+                            <button type="button" class="tag-choice @(IsSelected(choice.Name) ? "selected" : "")" aria-pressed="@(IsSelected(choice.Name) ? "true" : "false")"
+                                    @onclick="() => OnToggleTag.InvokeAsync(choice.Name)">#@choice.Name</button>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="template-picker-actions payment-tools">
+                <span>결제수단</span>
+                <a href="/payment-methods">관리·월별 합계</a>
+                <button type="button" class="filter-reset" @onclick="() => OnRefreshPaymentMethods.InvokeAsync()" disabled="@PaymentBusy">목록 새로고침</button>
+            </div>
+        </details>
 
         @if (!string.IsNullOrEmpty(ErrorMessage))
         {
@@ -111,6 +115,10 @@
 
 @code {
     private ElementReference amountInput;
+
+    // 태그·템플릿은 평소에는 접어 두고, 값이 있거나 오류·안내가 있을 때만 펼칩니다.
+    private bool MoreOpen => !string.IsNullOrWhiteSpace(TagsText) || !string.IsNullOrEmpty(SelectedTemplateId)
+        || TemplateError is not null || TemplateNotice is not null;
 
     // 지출을 기록한 뒤 바로 다음 금액을 입력할 수 있게 금액 칸으로 포커스를 옮깁니다.
     public async Task FocusAmountAsync()
