@@ -1,21 +1,21 @@
 .import-page {
     width: min(100%, 950px);
     margin: 0 auto;
-    padding: 2rem 0 3rem;
+    padding: 1.4rem 0 3rem;
 }
 
 .import-card {
     margin-top: 1rem;
-    padding: 1.5rem;
+    padding: 1.6rem;
     border: 1px solid var(--c-e3e8f0, #e3e8f0);
-    border-radius: 16px;
+    border-radius: 18px;
     background: var(--c-ffffff, #fff);
     box-shadow: 0 12px 32px rgba(31, 52, 82, .06);
 }
 
-.import-card h2 { margin: 0 0 .65rem; color: var(--c-263247, #263247); font-size: 1.2rem; }
+.import-card h2 { margin: 0 0 .65rem; color: var(--c-263247, #263247); font-size: 1.25rem; font-weight: 750; letter-spacing: -.02em; }
 
-.import-card > p { color: var(--c-68758c, #68758c); line-height: 1.5; }
+.import-card > p { color: var(--c-68758c, #68758c); line-height: 1.7; }
 
 .import-card input[type="file"] { display: block; max-width: 100%; margin: 1.1rem 0; }
 

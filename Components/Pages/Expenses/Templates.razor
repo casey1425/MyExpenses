@@ -13,13 +13,13 @@
 
 <PageTitle>즐겨찾기 지출 | MyExpenses</PageTitle>
 
-<main class="templates-page">
+<main class="templates-page ui-page">
     <PageHeader Title="즐겨찾기 지출 템플릿" Description="커피·점심처럼 자주 입력하는 지출을 저장해 두세요. 자동으로 지출을 생성하지는 않습니다." />
 
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
 
-    <section class="template-card" aria-labelledby="template-form-title">
+    <section class="template-card ui-card" aria-labelledby="template-form-title">
         <h2 id="template-form-title">@(editingId is null ? "새 템플릿" : "템플릿 수정")</h2>
         <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
             <fieldset disabled="@busy">
@@ -48,7 +48,7 @@
         <p class="help"><a href="/payment-methods">결제수단 관리</a>에서 등록한 뒤 목록을 새로고침해 주세요.</p>
     </section>
 
-    <section class="template-card" aria-labelledby="template-list-title">
+    <section class="template-card ui-card" aria-labelledby="template-list-title">
         <div class="list-heading">
             <h2 id="template-list-title">내 템플릿 (@templates.Count)</h2>
             <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>

@@ -39,7 +39,7 @@ def dark(hexv):
 
 def main(check=False):
     stale = []
-    files = list((ROOT / "Components").rglob("*.css")) + [ROOT / "wwwroot" / "app.css"]
+    files = list((ROOT / "Components").rglob("*.css")) + [ROOT / "wwwroot" / "app.css", ROOT / "wwwroot" / "ui.css"]
     tokens = set()
     for p in files:
         if any(k in p.name for k in SKIP_FILES):

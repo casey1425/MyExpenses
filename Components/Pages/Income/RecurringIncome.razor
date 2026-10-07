@@ -10,12 +10,12 @@
 
 <PageTitle>정기 수입 | MyExpenses</PageTitle>
 
-<main class="recurring-page">
+<main class="recurring-page ui-page">
     <PageHeader Title="정기 수입" Description="월급처럼 매월 같은 날 들어오는 수입을 자동으로 기록합니다. 29~31일은 해당 월의 마지막 날에 기록돼요.">
         <p>앱에 접속할 때 지난 접속 이후 도래한 수입을 채웁니다. 규칙을 중지한 기간은 소급하지 않습니다.</p>
     </PageHeader>
 
-    <section class="rule-card" aria-labelledby="new-rule-title">
+    <section class="rule-card ui-card" aria-labelledby="new-rule-title">
         <h2 id="new-rule-title">새 정기 수입</h2>
         <form @onsubmit="CreateAsync" @onsubmit:preventDefault>
             <div class="rule-fields">
@@ -51,7 +51,7 @@
         <p class="notice" role="status">@notice</p>
     }
 
-    <section class="rule-card" aria-labelledby="rules-title">
+    <section class="rule-card ui-card" aria-labelledby="rules-title">
         <h2 id="rules-title">등록한 규칙</h2>
         @if (rules.Count == 0)
         {

@@ -353,6 +353,27 @@ Check(!(await Render<MyExpenses.Components.Expenses.ExpenseList>(new() { ["Expen
     Check(noMatch.Contains("조건에 맞는 기록이 없어요") && !noMatch.Contains("첫 지출 기록하기"), "Filtered empty list must explain the filter, not ask for a first entry");
 }
 
+// 공통 디자인 기준: ui.css 를 불러오고, 옛 스타일이던 화면이 같은 틀(ui-page/ui-card)을 쓰는지 확인합니다.
+{
+    var root = new DirectoryInfo(AppContext.BaseDirectory);
+    while (root is not null && !File.Exists(Path.Combine(root.FullName, "MyExpenses.csproj"))) root = root.Parent;
+    string Read(string path) => File.ReadAllText(Path.Combine(root!.FullName, path));
+    Check(Read("Components/App.razor").Contains("ui.css"), "App must load ui.css");
+    var ui = Read("wwwroot/ui.css");
+    Check(ui.Contains("Apple SD Gothic Neo") && ui.Contains("Malgun Gothic") && ui.Contains("Noto Sans KR"), "Body font stack must cover Korean system fonts");
+    Check(ui.Contains("word-break: keep-all") && ui.Contains("tabular-nums"), "Korean word wrapping and tabular numbers are required");
+    Check(ui.Contains("--control-height: 46px"), "Form controls must keep the 46px touch height");
+    foreach (var uiPage in new[] { "Income/Income", "Savings/Savings", "Settings/PaymentMethods", "Expenses/Templates", "Expenses/Recurring", "Income/RecurringIncome", "Settings/Categories" })
+    {
+        var markup = Read($"Components/Pages/{uiPage}.razor");
+        Check(markup.Contains("ui-page") && markup.Contains("ui-card"), $"{uiPage} must use the shared ui-page/ui-card frame");
+        var css = Read($"Components/Pages/{uiPage}.razor.css");
+        // 공통 규칙을 페이지 CSS에서 다시 정의하면 화면마다 모양이 달라집니다.
+        foreach (var duplicated in new[] { "\ninput, select {", "\nbutton {", "\nlabel {", "\nh2 {" })
+            Check(!css.Contains(duplicated), $"{uiPage}.razor.css must not redefine shared control styles ({duplicated.Trim()})");
+    }
+}
+
 // 화면 설정(다크 모드·글자 크기)과 건너뛰기 링크: 스크립트·마크업·스타일이 서로 맞아야 합니다.
 {
     var root = new DirectoryInfo(AppContext.BaseDirectory);

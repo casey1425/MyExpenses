@@ -10,12 +10,12 @@
 @inject ILogger<Savings> Logger
 
 <PageTitle>목표 저축 | MyExpenses</PageTitle>
-<main class="income-page">
+<main class="income-page ui-page">
     <PageHeader Title="목표 저축" Description="여행 자금, 비상금처럼 모으고 싶은 금액을 목표로 정하고 저축할 때마다 기록합니다. 저축은 수입·지출과 자동으로 연결되지 않으며, 직접 기록한 금액만 진행률에 반영됩니다." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
 
-    <section class="income-card" aria-labelledby="goal-form-title">
+    <section class="income-card ui-card" aria-labelledby="goal-form-title">
         <h2 id="goal-form-title">@(editingId is null ? "새 목표 만들기" : "목표 수정")</h2>
         <form @onsubmit="SaveGoalAsync" @onsubmit:preventDefault>
             <fieldset disabled="@busy">
@@ -39,9 +39,9 @@
     {
         @if (goals.Count > 0)
         {
-            <section class="income-card" aria-labelledby="overview-title">
+            <section class="income-card ui-card" aria-labelledby="overview-title">
                 <h2 id="overview-title">한눈에 보기</h2>
-                <div class="summary" role="status">
+                <div class="summary ui-tiles" role="status">
                     <div><span>저축 합계</span><strong class="plus">@totalSaved.ToString("N0")원</strong></div>
                     <div><span>목표 합계</span><strong>@totalTarget.ToString("N0")원</strong></div>
                     <div><span>필요 월 저축액 합계</span><strong>@requiredTotal.ToString("N0")원</strong></div>
@@ -53,14 +53,14 @@
 
         @if (goals.Count == 0)
         {
-            <section class="income-card"><EmptyState Compact="true" Icon="◎" Title="아직 만든 목표가 없어요" Description="위에서 첫 목표를 만들면 월별 필요 저축액을 계산해 드려요." /></section>
+            <section class="income-card ui-card"><EmptyState Compact="true" Icon="◎" Title="아직 만든 목표가 없어요" Description="위에서 첫 목표를 만들면 월별 필요 저축액을 계산해 드려요." /></section>
         }
 
         @foreach (var item in goals)
         {
             var goal = item.Goal;
             var progress = item.Progress;
-            <section class="income-card goal" @key="goal.Id" aria-label="@goal.Name">
+            <section class="income-card ui-card goal" @key="goal.Id" aria-label="@goal.Name">
                 <div class="income-row">
                     <div>
                         <h3>@goal.Name <span class="badge @StatusClass(progress)">@StatusText(progress)</span></h3>

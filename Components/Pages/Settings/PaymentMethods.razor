@@ -10,11 +10,11 @@
 @inject ILogger<PaymentMethods> Logger
 
 <PageTitle>결제수단 | MyExpenses</PageTitle>
-<main class="methods-page">
+<main class="methods-page ui-page">
     <PageHeader Title="결제수단별 지출 관리" Description="현금·카드·계좌이체를 구분해 기록합니다. 금융기관과 연결하지 않으며 카드번호나 계좌번호는 입력하지 마세요." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
-    <section class="method-card" aria-labelledby="method-form-title">
+    <section class="method-card ui-card" aria-labelledby="method-form-title">
         <h2 id="method-form-title">@(editingId is null ? "결제수단 등록" : "결제수단 수정")</h2>
         <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
             <fieldset disabled="@busy">
@@ -33,7 +33,7 @@
             </fieldset>
         </form>
     </section>
-    <section class="method-card" aria-labelledby="method-totals-title">
+    <section class="method-card ui-card" aria-labelledby="method-totals-title">
         <h2 id="method-totals-title">내 결제수단과 월별 합계</h2>
         <div class="month-selector">
             <label for="method-month">조회 월</label>

@@ -7,11 +7,11 @@
 @inject ILogger<Categories> Logger
 
 <PageTitle>카테고리 관리 | MyExpenses</PageTitle>
-<main class="categories-page">
+<main class="categories-page ui-page">
     <PageHeader Title="카테고리 관리" Description="나에게 맞는 분류를 만들고 표시 순서를 바꿔 보세요." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
-    <section class="card">
+    <section class="card ui-card">
         <h2>@(editingId is null ? "카테고리 추가" : "카테고리 이름 변경")</h2>
         <p class="help">이름을 바꾸면 기존 지출·예산·템플릿·정기 지출에도 함께 반영됩니다.</p>
         <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
@@ -25,7 +25,7 @@
             </fieldset>
         </form>
     </section>
-    <section class="card">
+    <section class="card ui-card">
         <div class="heading">
             <h2>내 카테고리</h2>
             <button type="button" class="secondary" disabled="@busy" @onclick="RefreshAsync">새로고침</button>

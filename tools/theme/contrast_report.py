@@ -36,7 +36,7 @@ def darken(hexv, target=4.6):
 
 
 def files():
-    for p in list((ROOT / "Components").rglob("*.css")) + [ROOT / "wwwroot" / "app.css"]:
+    for p in list((ROOT / "Components").rglob("*.css")) + [ROOT / "wwwroot" / "app.css", ROOT / "wwwroot" / "ui.css"]:
         if not any(k in p.name for k in SKIP_FILES):
             yield p
 

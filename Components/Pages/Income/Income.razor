@@ -11,11 +11,11 @@
 @inject ILogger<Income> Logger
 
 <PageTitle>수입 기록 | MyExpenses</PageTitle>
-<main class="income-page">
+<main class="income-page ui-page">
     <PageHeader Title="수입 기록" Description="월급·부수입·용돈을 기록하고 같은 달 지출과 비교해 순수지와 저축률을 확인합니다. 금액은 원 단위입니다." />
     @if (error is not null) { <p class="error" role="alert">@error</p> }
     @if (notice is not null) { <p class="notice" role="status">@notice</p> }
-    <section class="income-card" aria-labelledby="income-form-title">
+    <section class="income-card ui-card" aria-labelledby="income-form-title">
         <h2 id="income-form-title">@(editingId is null ? "수입 등록" : "수입 수정")</h2>
         <form @onsubmit="SaveAsync" @onsubmit:preventDefault>
             <fieldset disabled="@busy">
@@ -36,14 +36,14 @@
             </fieldset>
         </form>
     </section>
-    <section class="income-card" aria-labelledby="income-list-title">
+    <section class="income-card ui-card" aria-labelledby="income-list-title">
         <h2 id="income-list-title">월별 수입과 순수지</h2>
         <div class="month-selector">
             <label for="income-month">조회 월</label>
             <input id="income-month" type="month" value="@monthInput" @onchange="MonthChangedAsync" disabled="@busy" />
             <button type="button" class="secondary" @onclick="RefreshAsync" disabled="@busy">새로고침</button>
         </div>
-        <div class="csv-links" aria-label="수입 CSV">
+        <div class="csv-links ui-links" aria-label="수입 CSV">
             <a href="/export/income.csv?month=@monthInput">선택한 달 CSV</a>
             <a href="/export/income.csv">전체 수입 CSV</a>
             <a href="/income/import">CSV 가져오기</a>
@@ -52,7 +52,7 @@
         @if (loading) { <LoadingState /> }
         else
         {
-            <div class="summary" role="status">
+            <div class="summary ui-tiles" role="status">
                 <div><span>수입</span><strong class="plus">@cashflow.Income.ToString("N0")원</strong></div>
                 <div><span>지출</span><strong>@cashflow.Expense.ToString("N0")원</strong></div>
                 <div><span>순수지</span><strong class="@(cashflow.Net < 0 ? "minus" : "plus")">@(cashflow.Net < 0 ? "-" : "")@Math.Abs(cashflow.Net).ToString("N0")원</strong></div>
